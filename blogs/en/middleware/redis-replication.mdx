@@ -1,0 +1,555 @@
+---
+title: Redis Replication
+cover: '/cover/Red-Material-DB.jpeg'
+date: 2023-12-12
+tags: ['Redis']
+---
+
+To ensure service availability, Redis provides replication mechanism to maintain consistent data state across multiple processes.
+
+[comment]:summary
+
+## Observing Replication with tcpdump
+
+Redis supports a master-slave replication architecture, which is simplified to a single `SLAVEOF` command. 
+Let's use this command to analyze the replication mechanism of Redis master and slave.
+
+Start two services on the local machine using redis-server, 
+and then observe the interaction between master and slave using tcpdump:
+```sh
+redis-server --port 6379 --requirepass 123456 # Start master
+redis-server --port 6380 --masterauth 123456  # Start slave
+tcpdump -t -i lo0 host localhost and port 6379 | awk -F ']' '{print $1"]"$3}'
+
+# Establish a synchronous connection on localhost:6380 to localhost:6379 and enter Full-ReSync phase
+localhost.59297 > localhost.6379: Flags [S]
+localhost.6379 > localhost.59297: Flags [S.]
+localhost.59297 > localhost.6379: Flags [P.] "PING"
+localhost.6379 > localhost.59297: Flags [P.] "NOAUTH Authentication required."
+localhost.59297 > localhost.6379: Flags [P.] "AUTH 123456"
+localhost.6379 > localhost.59297: Flags [P.] "OK"
+localhost.59297 > localhost.6379: Flags [P.] "REPLCONF listening-port 6380"
+localhost.6379 > localhost.59297: Flags [P.] "OK":
+localhost.59297 > localhost.6379: Flags [P.] "REPLCONF capa eof"
+localhost.6379 > localhost.59297: Flags [P.] "OK":
+localhost.59297 > localhost.6379: Flags [P.] "PSYNC ? -1"
+localhost.6379 > localhost.59297: Flags [P.] "FULLRESYNC 8efb6ca4edf1258c05a5ced43b0c73fe4deb1908 1"
+localhost.6379 > localhost.59297: Flags [P.] [|RESP:
+localhost.6379 > localhost.59297: Flags [P.] "REDIS0007M-z^Iredis-ver^F3.2.11M-z" [|RESP
+
+# After Full-ReSync enter the Propagation phase
+localhost.59297 > localhost.6379: Flags [P.] "REPLCONF" "ACK" "1"
+localhost.59297 > localhost.6379: Flags [P.] "REPLCONF" "ACK" "1"
+localhost.6379 > localhost.59297: Flags [P.] "PING"
+localhost.59297 > localhost.6379: Flags [P.] "REPLCONF" "ACK" "15"
+localhost.59297 > localhost.6379: Flags [P.] "REPLCONF" "ACK" "15"
+localhost.6379 > localhost.59297: Flags [P.] "SELECT" "0" "SET" "KEY" "VALUE"
+localhost.59297 > localhost.6379: Flags [P.] "REPLCONF" "ACK" "85"
+localhost.59297 > localhost.6379: Flags [P.] "REPLCONF" "ACK" "85"
+localhost.6379 > localhost.59297: Flags [P.] "SET" "KEY2" "VALUE2"
+localhost.6379 > localhost.59297: Flags [P.] "MSET" "KEY3" "VALUE3" "KEY4" "VALUE4" "KEY5" "VALUE5"
+localhost.59297 > localhost.6379: Flags [P.] "REPLCONF" "ACK" "256"
+localhost.59297 > localhost.6379: Flags [P.] "REPLCONF" "ACK" "256"
+localhost.6379 > localhost.59297: Flags [P.] "PING"
+localhost.59297 > localhost.6379: Flags [P.] "REPLCONF" "ACK" "270"
+localhost.59297 > localhost.6379: Flags [P.] "REPLCONF" "ACK" "270"
+
+# Execute DEBUG SLEEP 60 on localhost:6380 to simulate network interruption
+localhost.6379 > localhost.59297: Flags [P.] "PING"
+localhost.6379 > localhost.59297: Flags [P.] "SET" "KEY6" "VALUE6"
+localhost.6379 > localhost.59297: Flags [P.] "SET" "KEY7" "VALUE7"
+localhost.6379 > localhost.59297: Flags [P.] "PING"
+localhost.6379 > localhost.59297: Flags [P.] "MSET" "KEY8" "VALUE8" "KEY9" "VALUE9"
+localhost.6379 > localhost.59297: Flags [P.] "PING"
+localhost.6379 > localhost.59297: Flags [P.] "PING"
+localhost.59297 > localhost.6379: Flags [.]
+localhost.59297 > localhost.6379: Flags [R.]
+
+# After the old connection is disconnected, new connection establised and enter the Partial-ReSync stage.
+localhost.59313 > localhost.6379: Flags [S]
+localhost.6379 > localhost.59313: Flags [S.]
+localhost.59313 > localhost.6379: Flags [P.] "PING"
+localhost.6379 > localhost.59313: Flags [P.] "NOAUTH Authentication required."
+localhost.59313 > localhost.6379: Flags [P.] "AUTH 123456"
+localhost.6379 > localhost.59313: Flags [P.] "OK"
+localhost.59313 > localhost.6379: Flags [P.] "REPLCONF listening-port 6380"
+localhost.6379 > localhost.59313: Flags [P.] "OK"
+localhost.59313 > localhost.6379: Flags [P.] "REPLCONF capa eof"
+localhost.6379 > localhost.59313: Flags [P.] "OK"
+localhost.59313 > localhost.6379: Flags [P.] "PSYNC 8efb6ca4edf1258c05a5ced43b0c73fe4deb1908 271"
+localhost.6379 > localhost.59313: Flags [P.] "CONTINUE"
+localhost.6379 > localhost.59313: Flags [P.] "PING" "PING" "SET" "KEY6" "VALUE6" "PING" "SET" "KEY7" "VALUE7" "PING" "MSET" "KEY8" "VALUE8" "KEY9" "VALUE9" "PING" "PING"
+localhost.59313 > localhost.6379: Flags [P.] "REPLCONF" "ACK" "519"
+localhost.59313 > localhost.6379: Flags [P.] "REPLCONF" "ACK" "519"
+localhost.6379 > localhost.59313: Flags [P.] "PING"
+localhost.59313 > localhost.6379: Flags [P.]: "REPLCONF" "ACK" "533"
+localhost.59313 > localhost.6379: Flags [P.]: "REPLCONF" "ACK" "533"
+```
+
+The replication process can be divided into 3 stages:
+- **Full-ReSync** 
+- **Command-Propagate**
+- **Partical-ReSync**
+```text
+             +----------------------+                +---------------------+
+             | redisServer (master) |                | redisServer (slave) |
+             |    localhost:6379    |                |    localhost:6380   |
+             +----------------------+                +---------------------+ 
+             |        slaves        |                |        master       | 
+             +----------------------+                +---------------------+ 
+                        |                                       |
+                 +----------------+                      +-------------+
+                 | redisClient[?] |                      | redisClient |  
+                 +----------------+                      +-------------+
+                                                                |
+       ^                <<<<<<<<<<<<<<<<<< PING <<<<<<<<<<<<<<<<<                
+       |                |                                               Step 1 : Check socket and master status
+       |                >>>>>>>>>>>>> PONG / NOAUTH >>>>>>>>>>>>>                
+       |                                                        |                
+       |                <<<<<<<<<<<<<<<<<< AUTH <<<<<<<<<<<<<<<<<                
+       |                |                                               Step 2 : Authentication
+       |                >>>>>>>>>>>>>>>>>>> OK >>>>>>>>>>>>>>>>>>                
+       |                                                        |                
+       |                <<<< REPLCONF listening-port [port] <<<<<                
+       |                |                                               Step 3 : Send slave port 
+   Full-ReSync          >>>>>>>>>>>>>>>>>>> OK >>>>>>>>>>>>>>>>>>           
+       |                                                        |                
+       |                <<<<<< REPLCONF capa [eof|psync2] <<<<<<<                
+       |                |                                               Step 4 : Check command compatibility
+       |                >>>>>>>>>>>>>>>>>>> OK >>>>>>>>>>>>>>>>>>                
+       |                                                        |                
+       |                <<<<<<<<<<<<<< PSYNC ? -1 <<<<<<<<<<<<<<<                
+       |                |                                                        
+       |                >>>>>> FULLRESYNC [replid] [offset] >>>>>       Step 6 : Execute full sync
+       |                V                                                        
+       |              BGSAVE                                                     
+       |                V                                                        
+       v                >>>>>>>>>>>>> RDB Snapshot >>>>>>>>>>>>>>                
+
+
+       ^                <<<<<<<<< REPLCONF ACK [offset] <<<<<<<<<               
+       |                >>>>>>>>>>>>>>> COMMAND 1 >>>>>>>>>>>>>>>                
+       |                >>>>>>>>>>>>>>> COMMAND 2 >>>>>>>>>>>>>>>                
+       |                <<<<<<<< REPLCONF ACK [offset+?] <<<<<<<<       Heartbeat check & Command propagation         
+Command-Propagation       >>>>>>>>>>>>>>>>>> PING >>>>>>>>>>>>>>>>>          
+       |                >>>>>>>>>>>>>>> COMMAND 3 >>>>>>>>>>>>>>>                
+       |                <<<<<<<< REPLCONF ACK [offset+?] <<<<<<<<                
+       |                <<<<<<<< REPLCONF ACK [offset+?] <<<<<<<<                
+       v                >>>>>>>>>>>>>>>>>> PING >>>>>>>>>>>>>>>>>                
+
+
+       ^                =========================================                
+       |                ====== The Same With Full-ReSync ========                
+       |                =========================================                
+       |                                                        |                
+  Partical-ReSync       <<<<<<<< PSYNC [replid] [offset] <<<<<<<<       Partial sync after reconnection
+       |                |                                                        
+       |                >>>>>>>>>>>>>>> CONTINUE >>>>>>>>>>>>>>>>                
+       |                >>>>>>>>>>>>>>> COMMAND N >>>>>>>>>>>>>>>                
+       v                >>>>>>>>>>>>>>> COMMAND ... >>>>>>>>>>>>>                
+
+```
+
+## PSYNC Command
+
+The original Redis command for synchronization was `SYNC`. 
+Each time a slave reconnected, it would generate, transmit, and load the entire RDB snapshot, which consumed a significant amount of machine resources and network bandwidth. 
+
+To address this issue, later versions of Redis added the `PSYNC` command, which supports the following two synchronization modes:
+
+
+- Full-ReSync
+  - The slave connects to the master for the first time.
+  - The state difference between the master and slave is too large.
+
+- Partical-ReSync
+  - A network jitter causes the synchronization connection to be disconnected and reconnected.
+  - The sentinel mechanism causes a change in the master node.
+
+
+
+### Data Structure
+
+Let's take a look at the data structures related to `PSYNC` in redisServer:
+```c
+
+struct redisServer {
+    /*
+     *  Node ID and replication offset
+     *
+     *     If the current node is a master
+     *     server.replid is server.runid
+     *
+     *     If the current node was originally a master and was converted to a slave node
+     *     server.replid and server.master_repl_offset are overwritten with the synchronization information of the new master
+     *
+     *     If the current node was originally a slave and was promoted to a master node
+     *     rserver.eplid2 and server.second_replid_offset will record the synchronization information when the current node was a slave
+     */
+    char runid[CONFIG_RUN_ID_SIZE+1];   /* Current node's runtime ID (changes each time it restarts) */
+    char replid[CONFIG_RUN_ID_SIZE+1];  /* The runid of the current master node */
+    char replid2[CONFIG_RUN_ID_SIZE+1]; /* The runid of the master node that the current master node was connected to when it was a slave node */
+    long long master_repl_offset;   /* Replication offset of the current master node */
+    long long second_replid_offset; /* Replication offset of the current master node when it was a slave node */
+
+    /*
+     * Replication backlog buffer
+     *
+     *     The master maintains a single global server.repl_backlog, which is shared by all slave nodes
+     *     To reduce memory usage, server.repl_backlog is only created on demand when a slave node is present
+     */
+    char *repl_backlog;             /* Replication backlog buffer (circular buffer)*/
+    long long repl_backlog_size;    /* Backlog size */
+    long long repl_backlog_histlen; /* Backlog data length */
+    long long repl_backlog_idx;     /* Tail of the backlog buffer (writable position)*/
+    long long repl_backlog_off;     /* Synchronization offset (master offset) corresponding to the first byte of the backlog buffer */
+}
+```
+#### **RunID**
+
+Whether master or slave, each Redis server generates a 40-character hexadecimal string as its **runid** when it starts up:
+
+- When a slave requests synchronization for the first time, it saves the `server.runid` returned by the master to `server.replid`
+- When a slave requests synchronization again, it sends the previously saved `server.replid` to the master:
+  - If this ID is not consistent with the master's current `server.runid`, a full resynchronization must be performed
+  - If this ID is consistent with the master's current `server.runid`, a partial synchronization operation can be attempted
+
+
+#### **Replication Offset**
+Both the master and slave maintain a **replication offset** offset in bytes, which can be used to determine whether the state of the master and slave is consistent:
+
+- The master increases its replication offset by N after transmitting N bytes of data to the slave
+- When the slave receives N bytes of data from the master, it increases its replication offset by N
+
+When the master receives the offset in the `REPLCONF ACK`, it can use it to determine whether any data sent to the slave has been lost and resends the lost data.
+
+
+#### **Backlog Buffer**
+
+The master maintains a fixed-length `backlog queue`:
+- The master puts commands into this queue when it transmits them to the slave, so some of the latest commands are retained in the buffer
+- When a slave issues a synchronization request, and the data which offset behind behind the slave's offset exists in the backlog buffer, the master will perform partial synchronization
+
+
+## Synchronization Process
+
+### Slave Perspective
+
+After receiving the `SLAVEOF` command, the slave calls replicaofCommand to start master-slave synchronization:
+
+```c
+void replicaofCommand(client *c) {
+    // ...
+
+    if (!strcasecmp(c->argv[1]->ptr,"no") &&
+        !strcasecmp(c->argv[2]->ptr,"one")) {
+        if (server.masterhost) { // If the received command is SLAVE NO ONE, then disconnect from the master-slave synchronization
+            // ...
+        }
+    } else { 
+        if (c->flags & CLIENT_SLAVE) {
+            return; // If the client is already a slave node, then reject this command
+        }
+
+        if (server.masterhost && !strcasecmp(server.masterhost,c->argv[1]->ptr) && server.masterport == port) {
+            return; // If the master node specified in SLAVEOF has already been connected to, then return directly
+        }
+
+        // If no master node has been connected yet, establish a TCP connection according to masterhost and masterport
+        // And register the listener function syncWithMaster
+    }
+}
+
+void syncWithMaster(connection *conn) {
+    // Send the PING command to the master node
+    if (server.repl_state == REPL_STATE_CONNECTING) {
+        server.repl_state = REPL_STATE_RECEIVE_PONG;
+        err = sendSynchronousCommand(SYNC_CMD_WRITE,conn,"PING",NULL); // Send the PING command
+        // ...
+    }
+
+    // Listen to the master's response to the PING command
+    if (server.repl_state == REPL_STATE_RECEIVE_PONG) {
+        if (err[0] != '+' &&
+            strncmp(err,"-NOAUTH",7) != 0 &&
+            strncmp(err,"-NOPERM",7) != 0 &&
+            strncmp(err,"-ERR operation not permitted",28) != 0)
+        {
+            goto error;
+        }
+        server.repl_state = REPL_STATE_SEND_AUTH; // Only handle the master's response values of PONG, NOAUTH, NOPERM
+    }
+
+    // According to the master's response value to PING, determine whether authorization is required
+    if (server.repl_state == REPL_STATE_SEND_AUTH) {
+        if (server.masteruser && server.masterauth) {
+            err = sendSynchronousCommand(SYNC_CMD_WRITE,conn,"AUTH",
+                                         server.masteruser,server.masterauth,NULL); // Send the AUTH command
+            // ...
+            server.repl_state = REPL_STATE_RECEIVE_AUTH;
+        } else {
+            // If the server.masteruser and server.masterauth authorization information is not set, skip AUTH
+            server.repl_state = REPL_STATE_SEND_PORT;
+        }
+    }
+
+    // Omit the following steps:
+    // Use the REPLCONF listening-port command to inform the slave's port to the master
+    // Use the REPLCONF ip-address command to inform the slave's IP to the master
+    // Use the REPLCONF capa eof / capa psync2 command to inform the slave's compatibility (supported features) to the master
+
+     // Start sending PSYNC command
+    if (server.repl_state == REPL_STATE_SEND_PSYNC) {
+        if (slaveTryPartialResynchronization(conn,0) == PSYNC_WRITE_ERROR) {
+            goto write_error;
+        }
+        server.repl_state = REPL_STATE_RECEIVE_PSYNC;
+        return;
+    }
+
+    // Read the response to the PSYNC command
+    psync_result = slaveTryPartialResynchronization(conn,1);
+
+    // If the response is CONTINUE, skip full synchronization
+    if (psync_result == PSYNC_CONTINUE) return;
+
+    // If the return value is PSYNC_FULLRESYNC or PSYNC_NOT_SUPPORTED
+    // Start performing full synchronization, register readSyncBulkPayload to listen for RDB file download
+    if (connSetReadHandler(conn, readSyncBulkPayload) == C_ERR) {
+        // ...
+        goto error;
+    }
+
+    server.repl_state = REPL_STATE_TRANSFER;
+
+    // ...
+}
+
+int slaveTryPartialResynchronization(connection *conn, int read_reply) {
+    if (!read_reply) {
+        if (server.cached_master) { // server.cached_master not empty, try to perform partial synchronization
+            psync_replid = server.cached_master->replid;
+        } else {
+            psync_replid = "?"; // server.cached_master is empty, only full synchronization can be performed
+        }
+        //Initiate PSYNC command
+        reply = sendSynchronousCommand(SYNC_CMD_WRITE,conn,"PSYNC",psync_replid,psync_offset,NULL);
+        // ...
+        return PSYNC_WAIT_REPLY;
+    }
+
+    reply = sendSynchronousCommand(SYNC_CMD_READ,conn,NULL); // Read PSYNC response
+
+    // If the master responds to FULLRESYNC, full synchronization will be performed directly
+    if (!strncmp(reply,"+FULLRESYNC",11)) {
+        // ...
+        return PSYNC_FULLRESYNC;
+    }
+
+    // If master responds with CONTINUE, try to perform partial synchronization
+    if (!strncmp(reply,"+CONTINUE",9)) {
+        // ...
+        return PSYNC_CONTINUE;
+    }
+
+    // master is temporarily unable to process the PSYNC command —> PSYNC_TRY_LATER
+    // master does not support PSYNC command -> PSYNC_NOT_SUPPORTED
+}
+```
+
+### Master Perspective
+
+After receiving the `PSYNC` command, the master calls `syncCommand` to start the synchronization process:
+
+```c
+void syncCommand(client *c) {
+    // Received the PSYNC command sent by the slave
+    if (!strcasecmp(c->argv[0]->ptr,"psync")) {
+        if (masterTryPartialResynchronization(c) == C_OK) {
+            return; // No need for full synchronization, return directly
+        }
+    }
+
+    // If the code runs to this point, it means that partial synchronization fails and full synchronization is required
+    // The master will execute the BGSAVE command to generate a snapshot and transmit it to the slave
+    // There are two ways to synchronize the RDB snapshot:
+    //     Disk-backed: Generate RDB snapshot files on disk and then transmit them to the slave
+    //     Diskless: Write RDB snapshot data directly to the slave socket
+
+}
+
+int masterTryPartialResynchronization(client *c) {
+    long long psync_offset; // The latest synchronization offset of this slave
+    char *master_replid;    // The runid of the master corresponding to the slave's synchronization offset
+
+    /*
+     * The following conditions can avoid full synchronization:
+     * 1. The master of the slave's last synchronization is the current instance (network jitter)
+     * 2. The slave and the current node were originally slave nodes of the same master, and the current node's synchronization offset second_replid_offset is larger (maintenance restart, failover)
+     */
+
+    if (strcasecmp(master_replid, server.replid) &&
+       (strcasecmp(master_replid, server.replid2) ||psync_offset > server.second_replid_offset))
+    {
+        goto need_full_resync; // Does not meet PSYNC conditions, need full synchronization
+    }
+
+    /*
+     * The following conditions can only perform full synchronization:
+     * 1. The master has not initialized the backlog buffer
+     * 2. The slave's synchronization offset is behind the backlog buffer
+     */
+    if (!server.repl_backlog || 
+        psync_offset < server.repl_backlog_off ||
+        psync_offset > (server.repl_backlog_off + server.repl_backlog_histlen))
+    {
+        goto need_full_resync; // Perform full synchronization
+    }
+
+    // If the code runs to this point, it means that partial synchronization can be performed
+    listAddNodeTail(server.slaves,c);
+
+    // Return different CONTINUE responses according to whether the client is compatible with PSYNC2
+    if (c->slave_capa & SLAVE_CAPA_PSYNC2) {
+        buflen = snprintf(buf,sizeof(buf),"+CONTINUE %s\r\n", server.replid);
+    } else {
+        buflen = snprintf(buf,sizeof(buf),"+CONTINUE\r\n");
+    }
+
+    // The CONTINUE command is followed by the content of server.repl_backlog
+    psync_len = addReplyReplicationBacklog(c,psync_offset);
+
+    // ...
+
+}
+```
+
+## Heartbeats & Command Propagation
+
+Redis executes the timed task `replicationCron` once a second, which includes heartbeats between the master and slave. 
+It can be found that the heartbeat frequencies of the master and slave are inconsistent:
+
+```c
+void replicationCron(void) {
+
+    // The slave sends the REPLCONF ACK command to the master regularly
+    if (server.masterhost && server.master &&
+        !(server.master->flags & CLIENT_PRE_PSYNC)) {
+        addReplyArrayLen(c,3);
+        addReplyBulkCString(c,"REPLCONF");
+        addReplyBulkCString(c,"ACK");
+        addReplyBulkLongLong(c,c->reploff);
+    }
+
+    // The master sends the PING command to the slave regularly
+    if ((replication_cron_loops % server.repl_ping_slave_period) == 0 &&
+        listLength(server.slaves))
+    {
+        robj *ping_argv[1];
+        ping_argv[0] = createStringObject("PING",4);
+        replicationFeedSlaves(server.slaves, server.slaveseldb, ping_argv, 1);
+        decrRefCount(ping_argv[0]);
+    }
+}
+```
+When the master `calls` the call function to execute the command passed by the client, it will propagate the command to the slave and write it to the replication backlog at the same time:
+
+```c
+void call(client *c, int flags) {
+    // ...
+    if (flags & CMD_CALL_PROPAGATE && (c->flags & CLIENT_PREVENT_PROP) != CLIENT_PREVENT_PROP)
+    {
+        // Does the current command need to be propagated?
+        if (propagate_flags != PROPAGATE_NONE && !(c->cmd->flags & CMD_MODULE))
+            propagate(c->cmd,c->db->id,c->argv,c->argc,propagate_flags);
+    }
+}
+
+void propagate(struct redisCommand *cmd, int dbid, robj **argv, int argc,
+               int flags)
+{
+    // ...
+    if (flags & PROPAGATE_REPL)
+        replicationFeedSlaves(server.slaves,dbid,argv,argc);
+}
+
+void replicationFeedSlaves(list *slaves, int dictid, robj **argv, int argc) {
+
+    // If the current node does not have slave nodes or replication backlog, return immediately
+    if (server.repl_backlog == NULL && listLength(slaves) == 0) return;
+
+    // Write commands to repl_backlog in batches
+    if (server.repl_backlog) {
+        char aux[LONG_STR_SIZE+3]; // Command buffer for serializing Redis commands
+
+        /* Write the number of commands in the current batch */
+        aux[0] = '*';
+        len = ll2string(aux+1,sizeof(aux)-1,argc);
+        aux[len+1] = '\r';
+        aux[len+2] = '\n';
+        feedReplicationBacklog(aux,len+3);
+
+        /* Iterate over the commands and write them to repl_backlog after serialization */
+        for (j = 0; j < argc; j++) {
+            long objlen = stringObjectLen(argv[j]);
+            
+            aux[0] = '$';
+            len = ll2string(aux+1,sizeof(aux)-1,objlen);
+            aux[len+1] = '\r';
+            aux[len+2] = '\n';
+            feedReplicationBacklog(aux,len+3);
+            feedReplicationBacklogWithObject(argv[j]);
+            feedReplicationBacklog(aux+len+1,2);
+        }
+    }
+
+    // Propagate commands in batches to all clients corresponding to slaves
+    listRewind(slaves,&li);
+    while((ln = listNext(&li))) {
+        client *slave = ln->value;
+
+        /* Write the number of commands in the current batch */
+        addReplyArrayLen(slave,argc);
+
+        /* Iterate over the commands and propagate them to the slave node */
+        for (j = 0; j < argc; j++)
+            addReplyBulk(slave,argv[j]);
+    }
+}
+```
+
+## Relevant Configuration
+
+### slave-serve-stale-data
+
+How the slave responds to client requests when the master-slave connection is broken or synchronization is not complete:
+- **yes**: Respond to commands normally, but do not guarantee data quality
+- **no**: Refuse to respond to commands and return `SYNC with master in progress`
+
+
+### repl-diskless-sync
+How the master transfers the RDB snapshot to the slave when performing full synchronization:
+- **no**: Generate RDB snapshot files on disk first and then transfer them (low bandwidth network)
+- **yes**: Write the RDB snapshot directly to the slave's socket (low speed disk + high bandwidth network)
+
+
+### repl-ping-slave-period
+The interval at which the master sends the `PING` heartbeat to the slave, the default is 10 seconds.
+
+
+### repl-backlog-size
+The size of the replication backlog buffer, the default value is 1MB.
+
+Since all commands will be backlogged here after the master-slave connection is broken, if this value is too small, the `PSYNC` command will not be able to perform partial synchronization.
+
+If the master needs to execute a large number of write commands, or the slave takes a long time to reconnect successfully, you need to estimate it based on the actual situation.
+
+
+### min-slaves-to-write & min-slaves-max-lag
+
+When the following conditions are not met, the master will refuse to write commands until they are restored:
+
+- **min-slaves-to-write** or more slave nodes connected to the current master are healthy
+- At least **min-slaves-to-write** of the healthy slave nodes have a replication lag of less than **min-slaves-max-lag** seconds
+
+With these two options enabled, write commands are more likely to be replicated to **min-slaves-to-write** slave nodes, reducing the likelihood of command loss.

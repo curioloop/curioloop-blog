@@ -1,0 +1,370 @@
+---
+title: 'Opening remarks - the evolution of front-end technology I have experienced'
+cover: '/cover/Human-Evolution-Timeline.jpeg'
+date: '2023-12-02'
+tags: ['Frontend Dev']
+---
+
+As a full-stack developer who knows a little about front-end, here is a brief review of what I have seen and heard in recent years as the beginning of this blog.
+
+[comment]:summary
+
+
+## jQuery: The Old King
+
+Upon graduating, I joined an e-commerce company as a web application developer. 
+The company was in its early stages, and everything seemed free-spirited, especially the technology stack.
+
+At that time, the architect sneaked in some personal preferences, using the "full-featured online shopping system" he tinkered with in his spare time as the development template for all projects. 
+As expected, an unexpected issue arose: during the first online flash sale, the system collapsed with less than 200 TPS...
+
+Few months later, the company went under. While the boss suffered losses and I lost my job, the architect bought himself a luxury home in the city center. 
+Checking his recent status, I discovered that the shopping system had been packaged into Software as a Service (SaaS), quietly waiting for the next victim.
+
+As one of the victims of this system, I'll briefly share the frontend technology stack:
+Since the project's development language was Java, all HTML pages were dynamically rendered through JSP.
+ Additionally, the following two frontend frameworks were introduced on this basis:
+
+### JQuery 
+jQuery was released in 2006 as a fast and lightweight JavaScript library designed to simplify client-side scripting for HTML.
+```js
+(function($) { // Classic closure
+
+  var hiddenBox = $( "#banner-message" ); // Event listening + DOM animation
+  $( "#button-container button" ).on( "click", function( event ) {
+    hiddenBox.show();
+  });
+
+  $.ajax({ // Ajax asynchronous communication
+    url: "/api/getWeather",
+    data: {
+      zipcode: 97201
+    },
+    success: function( result ) {
+      $( "#weather-temp" ).html( "<strong>" + result + "</strong> degrees" );
+    }
+  });
+
+})(jQuery);
+```
+
+### Bootstrap
+
+Bootstrap was released in 2011, providing a standardized set of CSS styles based on pre-defined class names. 
+It is designed to create consistent user interfaces across multiple platforms.
+```html
+<!DOCTYPE html>
+  <head>
+    <link rel="stylesheet" href="./css/bootstrap.min.css">
+  </head>
+  <body>
+    <div class="container">
+      <div class="row">
+        <button type="button" class="btn btn-primary">Large</button> <!-- Blue regular-sized button -->
+        <button type="button" class="btn btn-success btn-lg">Large</button> <!-- Green large-sized button -->
+        <button type="button" class="btn btn-warning btn-sm">Small</button> <!-- Orange small-sized button -->
+      </div>
+    </div>
+  </body>
+</html>
+```
+
+The popularity of these two frameworks is closely related to the historical context of that time - browser compatibility. 
+During that period, the HTML5 specification had not yet become widespread, and the support for this standard by most browsers was far from perfect. 
+Developers had to deal not only with the new and somewhat unstable browsers like Firefox and Chrome, 
+but also with the notorious IE due to its high market share on Windows.
+
+In this era, both jQuery and Bootstrap not only provided out-of-the-box cross-browser compatibility but also offered numerous [polyfill](https://developer.mozilla.org/en-US/docs/Glossary/Polyfill) plugins. 
+These plugins enabled older browsers like IE to support some HTML5 features.
+This significantly boosted development efficiency, leading many developers to embrace these frameworks.
+
+## AngularJS: Origin Of Magic
+
+Later on, I joined a logistics company, taking on the role of full-stack development for the internal management system. 
+It was here that I first encountered the concept of frontend-backend separation and began learning about the NPM ecosystem.
+
+During this period, my technical skills were relatively modest, but my enthusiasm for learning was soaring. 
+Motivated by the promises from leadership, I utilized the Baidu Maps API to create an "Express Station Boundary Management System." 
+This marked my first independently completed project in my professional career. 
+
+Although I eventually left the company, I am sincerely grateful to my leaders and colleagues at the time.
+I learned a great deal from them, and this experience holds a special place in my career journey.
+
+
+### SPA 
+
+As the HTML5 specification gained widespread support, compatibility ceased to be a critical issue in the frontend domain. 
+The increasing demand for stringent user experiences became a new challenge for developers.
+
+Among various factors, the most significant impact was on page refresh operations:
+
+- Each page transition required a network request, and network communication latency affected the loading speed of pages.
+- Resource files such as JS and CSS needed to be reloaded and initialized, further increasing the page rendering time.
+
+
+To fundamentally address this issue, the design pattern known as Single Page Application (SPA) emerged. Its key features include:
+
+- **Dynamic Loading:** SPAs initially load HTML, CSS, and JavaScript resources, dynamically updating content as users interact with the application.
+- **Client-Side Routing:** SPAs use client-side routing to manage navigation within the application. URL changes dynamically based on user interactions, but the actual page doesn't reload.
+- **Performance Improvement:** Since SPAs only fetch data needed to update the current view, they typically reduce the amount of data transferred between the client and server, thereby enhancing performance.
+
+Applications using the SPA pattern have the following advantages:
+
+- **Enhanced User Experience:** SPAs eliminate the delay of full-page reloads, providing a smoother and more engaging user experience.
+- **Reduced Server Load:** SPAs request only necessary data, reducing the server load and optimizing bandwidth usage.
+- **Frontend-Backend Separation:** Through API integration for frontend-backend separation and specialized technical team development, SPA applications further improve organizational development efficiency.
+
+However, in the SPA pattern, the client needs to implement a considerable amount of complex DOM listening and modification logic. Taking the common example of submitting a form:
+- Real-time monitoring of user modifications to the form, promptly notifying users of any errors.
+- Disabling the submit button after the user clicks it to prevent duplicate submissions.
+- Providing user feedback upon Ajax response, indicating successful operations, and clearing the form data.
+
+```js
+$(document).ready(function() {
+  // Listen for user input
+  $('#numberInput').on('input', function() {
+    var inputValue = $(this).val();
+    if ($.isNumeric(inputValue)) { // Validate the input
+      $('button[type="submit"]').prop('disabled', false);
+    } else {
+      $('button[type="submit"]').prop('disabled', true);
+    }
+  });
+  // Listen for form submission
+  $('#myForm').submit(function(event) {
+    var inputValue = $('#numberInput').val();
+    if ($.isNumeric(inputValue)) {
+      $.ajax({ // Initiate the request
+          url: 'your_ajax_endpoint',
+          type: 'POST',
+          data: { number: inputValue },
+          success: function(response) {
+            $('#numberInput').val(''); // Clear the form
+            alert('Ajax Request Successful');
+          },
+          error: function() {
+            alert('An error occurred during the Ajax request');
+          }
+        });    
+    } else {
+      alert('Please enter a valid number');
+    }
+  });
+});
+```
+
+Note: In a real-world scenario, where the form contains multiple fields and potential interdependencies, 
+the code structure may need to be adapted to handle such complexity.
+
+### AngularJS
+
+In line with the trend of SPA, Google released a front-end JavaScript framework called AngularJS in 2010.
+AngularJS, with its more declarative and expressive syntax, pioneered a new development paradigm, significantly improving the efficiency of SPA development.
+
+AngularJS introduced two magical features:
+
+- **Two-Way Data Binding:** AngularJS seamlessly connected models and views. Any changes to the model automatically reflected in the view, and vice versa.
+- **Directives:** AngularJS extended HTML syntax, allowing the creation of custom and reusable components. These directives enhanced the structure and functionality of applications.
+
+Below is a snippet of HTML code that can be directly executed.
+Users do not need to write any JavaScript code; they can achieve interaction between DOM elements through directives:
+
+```html
+<!DOCTYPE html>
+<html>
+  <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.6.9/angular.min.js"></script>
+  <body>
+    <!-- ng-app 指令表示该 DOM 是 SPA 应用的根元素 -->
+    <form ng-app="" name="myForm">
+      <!-- ng-model 指令定义需要双向绑定的字段，可以同时指定校验条件 -->
+      <p>Number : <input type="number" min="0" max="99" ng-model="numberInput"></p>
+      <!-- ng-show 指令监听表单校验结果，并动态提示错误 -->
+      <span ng-show="!myForm.$valid">Invalid number!</span>
+    </form>
+  </body>
+</html>
+```
+
+Compared to jQuery, AngularJS provides a more concise implementation of DOM binding, and the interaction between elements is exceptionally smooth, significantly reducing repetitive template code. 
+More importantly, AngularJS transforms traditional procedural programming into directive-based declarative programming, pioneering a new paradigm in front-end development.
+
+
+## React: Efficiency First
+
+Recently, I joined a digital finance company, responsible for managing historical data and gradually transitioning to pure backend development.
+
+During a certain project, the company aimed to revitalize a massive volume of transaction details while meeting the needs of manual queries and compliance checks. 
+I proposed an implementation based on HBase, requiring only 6TB of space to store 10 years of data.
+
+Due to various reasons, big data operations and frontend resources were not adequately in place, so I had to handle the entire process myself. 
+During this period, I began to explore the React ecosystem and developed a backend management system using AntDesign.
+
+The emergence of React was to address the development challenges in increasingly complex user interaction scenarios, such as data visualization and online collaboration. 
+Unlike traditional form applications, these scenarios face two new problems:
+
+- **Complex State Management:** State changes are no longer a simple linear process; there is a need to manage dependencies and propagation between multiple change events.
+- **Low Efficiency in DOM Node Rendering:** A single change event may trigger multiple DOM redraws, and frequent changes can consume a significant amount of browser resources.
+
+To address these issues, Facebook introduced the React framework in 2013, characterized by the following features:
+
+- **Unidirectional Data Flow:** Follows a unidirectional data flow, ensuring that data changes are handled predictably, avoiding the additional complexity introduced by bidirectional binding.
+- **Declarative Syntax:** Provides a declarative syntax based on JSX templates. Developers only need to describe the desired result, and React efficiently updates the DOM.
+- **Virtual DOM:** The virtual DOM is a lightweight replica of the real DOM. Incremental updates can be achieved by comparing the differences between the two, reducing unnecessary rendering.
+
+Below is a snippet of HTML code that can be directly executed. 
+The implementation might seem somewhat complex, but the flexibility of the syntax is a level above AngularJS:
+
+```html
+<html>
+  <body>
+    <div id="root"></div>
+    <script src="https://unpkg.com/babel-standalone@6.26.0/babel.min.js"></script>
+    <script src="https://unpkg.com/react@17.0.2/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@17.0.2/umd/react-dom.development.js"></script>
+    <script type="text/babel">
+
+      // Define a functional component
+      const MyForm = () => {
+        
+        // Declare state for input validation
+        const [invalid, setInvalid] = React.useState(false) 
+        
+        // Validation function triggered on input change
+        const validateInput = (e) => {
+          const num = e.target.value
+          setInvalid(!!e.target.value && (num < 0 || num > 99))
+        }
+
+        // JSX template for the form
+        return (
+          <form id="myForm">
+            <p>Number :<input type="text" onChange={validateInput}/></p>
+            {invalid && <span>Invalid number!</span>}
+          </form>
+        )
+      }
+
+      // Render the JSX component into the root div
+      ReactDOM.render(<MyForm/>, document.getElementById('root'))
+
+    </script>
+  </body>
+</html>
+```
+
+## Nextjs: Renaissance
+
+As time passes, I increasingly feel the importance of keeping records, leading to the idea of building a personal blog. 
+
+The blog needs to meet the following requirements:
+- Articles are written in Markdown, making it easy to switch front-end technology stacks.
+- Construct a static resource site, beneficial for SEO, and reducing server costs.
+
+After exploring few solutions, I found Next.js to be a good choice. 
+After some tinkering, this article finally appears before you.
+
+
+### SSR
+While SPA can provide a decent user experience, this design pattern itself has some inherent drawbacks:
+
+- **Slow Initial Loading:** Since all client-side logic is bundled into a bundle.js file, the initial load consumes a significant amount of time downloading and executing JS code, resulting in a prolonged blank screen.
+- **Not SEO-Friendly:** All page content is dynamically rendered by the browser, which is not friendly to search engines that only parse static HTML. This affects website search rankings, hindering business promotion.
+
+To address this issue, a batch of front-end solutions supporting Server-Side Rendering (SSR) emerged:
+
+- Pre-rendering operations are performed on the server-side, reducing the rendering time required on the client-side. Unnecessary logic in the bundle.js file is compressed, improving page loading speed.
+- Files returned to the client-side include complete HTML pages, making it easy for search engines to crawl and index content, beneficial for improving website search rankings.
+
+### SSG
+Similar to SSR, there is also a feature called Static Site Generation (SSG). 
+SSG generates a set of static HTML, CSS, and JavaScript files during the webpage building process. 
+When a request is received, these files can be directly returned to the user without the need to render the page.
+
+In comparison to SSR, SSG has two additional advantages:
+
+- No need to render pages, reducing server load and providing faster loading times—a cost-effective and efficient solution.
+- Static files can be easily distributed and cached on a CDN, ensuring the site's availability worldwide and offering faster access for global users.
+
+
+### Nextjs
+
+In the React ecosystem, the most popular SSR solution is Next.js. 
+This framework simplifies the process of building server-rendered React applications and provides a set of conventions and tools to help developers focus on building application functionality rather than dealing with configuration.
+
+Next.js supports both SSR and Static Site Generation (SSG) modes, with the main difference being the deployment environment:
+
+- If a project requires SSR features, it must be deployed in a Node.js environment.
+- If the project only includes SSG features, it can be deployed on any static server, such as Nginx.
+
+In SSR mode, you need to implement the `getServerSideProps` function, which is called every time a user makes a request.
+```jsx
+import type { InferGetServerSidePropsType, GetServerSideProps } from 'next'
+ 
+type Repo = {
+  name: string
+  stargazers_count: number
+}
+ 
+// Server-side function to fetch the star count of the next.js GitHub repository
+export const getServerSideProps = (async (context) => {
+  const res = await fetch('https://api.github.com/repos/vercel/next.js')
+  const repo = await res.json()
+  return { props: { repo } }
+}) satisfies GetServerSideProps<{
+  repo: Repo
+}>
+ 
+// Render the page based on the star count of the repository and return it to the client
+export default function Page({
+  repo,
+}: InferGetServerSidePropsType<typeof getServerSideProps>) {
+  return repo.stargazers_count
+}
+```
+
+In the SSG mode, you need to implement the `getStaticProps` function, which is called only once during the page build process.
+```jsx 
+// Fetch the blog post list
+export async function getStaticProps() {
+  const res = await fetch('https://.../posts')
+  const posts = await res.json()
+  return {
+    props: {
+      posts,
+    },
+  }
+}
+// Generate a static page based on the blog post list
+export default function Blog({ posts }) {
+  return (
+    <ul>
+      {posts.map((post) => (
+        <li>{post.title}</li>
+      ))}
+    </ul>
+  )
+}
+```
+
+Additionally, Next.js provides the following important features:
+
+- **Code Splitting:** It splits the globally unified entry file bundle.js into multiple chunk.js files. Each page only loads the JS code it requires.
+- **Incremental Static Regeneration:** Allows individual static pages to be regenerated after the website is built. This enables updating specific static pages without rebuilding the entire website.
+- **Image Loading Optimization:** It offers various commonly used features using the Image component, such as automatically generating multiple thumbnail sizes and preventing layout shifts during loading.
+
+
+## The Way To The Future
+
+In the process of writing this article, I experimented with generating sample code using ChatGPT, 
+and the results were surprisingly good: the framework code produced by ChatGPT only required minor modifications to run.
+
+The AI wave that began earlier this year has had a significant impact on the gaming industry and is gradually spreading to other sectors.
+The recently released GPT-4 has the capability to convert images into HTML pages. This signifies that low-level programming could be replaced by AI in the not-too-distant future.
+
+
+Many freelancers have already discovered numerous benefits from AI:
+- Independent game developers using AI to replace graphic designers.
+- Entrepreneurs using AI to create project proposals.
+- Content creators using AI to generate articles.
+
+As developers, it is essential to acknowledge the impact of AI and explore how to leverage it to improve development efficiency.

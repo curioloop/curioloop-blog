@@ -1,0 +1,353 @@
+---
+title: '开篇闲聊 —— 我所经历的前端技术演进'
+cover: '/cover/Human-Evolution-Timeline.jpeg'
+date: '2023-12-02'
+tags: ['前端开发']
+---
+
+作为一个略懂前端的全栈开发者，在这里简单回顾一下近几年的所见所闻，以此作为这个博客的开篇。
+
+[comment]:summary
+
+
+## 初代王者 JQuery
+
+刚毕业时，进入了一家电商公司做 web 应用开发。
+公司处于初创阶段，一切事物都显得自由奔放，技术栈更是如此。
+
+
+当时的架构师夹带私货，把他业余时间鼓捣出来的“全功能商城系统”作为所有项目的的开发模版。
+不出意外地，意外出现了：第一次上线秒杀抢购活动，200 不到的 TPS 直接把系统干垮了……
+
+
+半年过后公司黄了。虽然老板亏麻了，我也失业了，但这位大佬成功市中心上车豪宅。
+看了一下他的近况，发现商城系统已经被包装成 SaaS，静静等待下个冤大头上门。
+
+作为这个系统的受害者之一，我在这里简单分享一下其前端技术栈：
+由于项目开发语言是 Java， 因此所有 HTML 页面都是通过 JSP 动态渲染生成的。
+并在此基础上，引入了下面两个前端框架：
+
+### JQuery 
+jQuery 于 2006 年发布，是一个快速而轻量的 JavaScript 库，旨在简化 HTML 的客户端脚本编写。
+```js
+(function($) { // 经典闭包
+
+  var hiddenBox = $( "#banner-message" ); // 事件响应 + DOM动画
+  $( "#button-container button" ).on( "click", function( event ) {
+    hiddenBox.show();
+  });
+
+  $.ajax({ // Ajax 异步通信
+    url: "/api/getWeather",
+    data: {
+      zipcode: 97201
+    },
+    success: function( result ) {
+      $( "#weather-temp" ).html( "<strong>" + result + "</strong> degrees" );
+    }
+  });
+
+})(jQuery);
+```
+
+### Bootstrap
+
+Bootstrap 于 2011 年发布，基于类名预定义了一套统一的 CSS 样式，用于创建多端一致的用户界面。
+```html
+<!DOCTYPE html>
+  <head>
+    <link rel="stylesheet" href="./css/bootstrap.min.css">
+  </head>
+  <body>
+    <div class="container">
+      <div class="row">
+        <button type="button" class="btn btn-primary">Large</button> <!-- 蓝色普通按钮 -->
+        <button type="button" class="btn btn-success btn-lg">Small</button> <!-- 绿色大号按钮 -->
+        <button type="button" class="btn btn-warning btn-sm">XSmall</button> <!-- 橙色小号按钮 -->
+      </div>
+    </div>
+  </body>
+</html>
+```
+
+这两个框架之所以流行，还和当时的历史背景相关 —— 浏览器兼容性。
+彼时 HTML5 规范尚未完全普及，并且大部分浏览器的对该标准的支持也并不完善。
+开发者不仅要面对 firefox、chrome 这类功能不稳定的浏览器新秀，还有凭借 windows 高占有率为祸一方的 IE。
+
+在这一时期，JQuery 与 Bootstrap 不仅提供了开箱即用的跨浏览器兼容性。
+并且还提供了众多 [polyfill](https://developer.mozilla.org/en-US/docs/Glossary/Polyfill) 插件，使 IE 这类老旧的浏览器也能支持部分 HTML5 特性。
+这极大提升了开发效率，于是众多开发者纷纷投入他们的怀抱。
+
+## 魔法起源 Angular
+
+后来入职了一家物流公司，负责内部管理系统的全栈开发。
+在这里初次接触到前后端分离的概念，并开始学习 NPM 相关生态。
+
+这段时期的我技术比较菜，但学习热情高涨。
+在领导画饼的激励下，用百度地图 API 搞出了一个 “快递站点边界管理系统”，这是我职业生涯的第一个独立完成的项目。
+虽然最终由于 ”发展机会“ 不足而离开了公司，但还是十分感谢当时的领导和同事们，从他们上学到了很多。
+
+### SPA 
+
+随着 HTML5 规范被广泛支持，兼容性不再是前端领域的重要议题。
+越来越严苛的用户体验要求，成为了开发者需要面临的新挑战。
+
+在各种因素中，影响最大的莫过于页面刷新操作：
+- 每次页面跳转都需要发起一次网络请求，网络通信延迟影响了页面的加载速度。
+- JS 与 CSS 这类资源文件需要重新加载并初始化，进一步增加了页面渲染时间。
+
+
+为了从根本上解决这一问题，**单页应用 (Single Page Application)** 这一设计模式应运而生。
+其关键特征如下：
+- **动态加载：** SPA 首次加载 HTML、CSS 和 JavaScript 资源，然后在用户与应用程序交互时动态更新内容。
+- **客户端路由：** SPA 使用客户端路由来管理应用程序内的导航。基于用户交互，URL 动态更改，但实际页面不重新加载。
+- **性能提升：** 由于 SPA 只获取更新当前视图所需的数据，因此通常减少了客户端和服务器之间传输的数据量，从而提高了性能。
+
+
+使用 SPA 模式的应用具备以下优点
+- **增强用户体验：** SPA 通过消除全页面重新加载的延迟，提供更流畅和引人入胜的用户体验。
+- **减轻服务器负担：** SPA 仅请求必要的数据，减少了服务器的负荷，优化了带宽使用。
+- **前后端分离：** 通过 API 对前后端进行分离，通过专业化的技术团队建设，进一步提升组织的开发效率。
+
+
+在 SPA 模式下，客户端需要实现大量复杂的 DOM 监听与修改逻辑，以常见的提交表单操作为例：
+- 实时监听用户对表单的修改行为，当数据有误时及时提醒用户
+- 用户点击提交按钮后，需要将其将禁用，避免重复提交
+- 监听到 Ajax 返回时，需要提示用户操作成功，并清空表单数据
+```js
+$(document).ready(function() {
+  // 监听用户修改
+  $('#numberInput').on('input', function() {
+    var inputValue = $(this).val();
+    if ($.isNumeric(inputValue)) { // 校验数据
+      $('button[type="submit"]').prop('disabled', false);
+    } else {
+      $('button[type="submit"]').prop('disabled', true);
+    }
+  });
+  // 监听表单提交
+  $('#myForm').submit(function(event) {
+    var inputValue = $('#numberInput').val();
+    if ($.isNumeric(inputValue)) {
+      $.ajax({ // 发起请求
+          url: 'your_ajax_endpoint',
+          type: 'POST',
+          data: { number: inputValue },
+          success: function(response) {
+            $('#numberInput').val(''); // 清空表单
+            alert('Ajax Request Successful');
+          },
+          error: function() {
+            alert('An error occurred during the Ajax request');
+          }
+        });    
+    } else {
+      alert('Please enter a valid number');
+    }
+  });
+});
+```
+
+注意，这还是表单仅包含一个字段的情况。
+正常情况下表单不仅会包含多个字段，并且字段间还可能产生联动。
+
+### AngularJS
+
+顺应 SPA 的潮流，Google 于 2010 年发布了名为 AngularJS 的 JavaScript 的前端框架。
+AngularJS 通过采用更具声明性和表达性的语法，引领了一种新的开发范式，极大提升了 SPA 开发效率。
+
+AngularJS 开创性地提供了两个魔法般的特性：
+- **双向数据绑定：** AngularJS 在模型和视图之间建立了无缝连接。模型的任何更改都会自动反映在视图中，反之亦然。
+- **指令：** AngularJS 扩展了HTML语法，使得可以创建定制和可重用的组件。它们增强了应用程序的结构和功能。
+
+下面是一段能够直接运行的 HTML 代码，用户无需编写任何 JS 代码，就可以通过指令实现 DOM 之间的联动：
+```html
+<!DOCTYPE html>
+<html>
+  <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.6.9/angular.min.js"></script>
+  <body>
+    <!-- ng-app 指令表示该 DOM 是 SPA 应用的根元素 -->
+    <form ng-app="" name="myForm">
+      <!-- ng-model 指令定义需要双向绑定的字段，可以同时指定校验条件 -->
+      <p>Number : <input type="number" min="0" max="99" ng-model="numberInput"></p>
+      <!-- ng-show 指令监听表单校验结果，并动态提示错误 -->
+      <span ng-show="!myForm.$valid">Invalid number!</span>
+    </form>
+  </body>
+</html>
+```
+
+相较于 jQuery，AngularJS 实现的 DOM 绑定功能更为简洁，并且元素间的联动十分顺滑，极大减少了重复的模板代码。
+更为重要的是，AngularJS 将原本的过程式编程，转换为基于指令的声明式编程，开创了新的前端开发范式。
+
+
+## 效率至上 React
+
+再后来入职了一家数字金融公司，负责一些历史数据的管理，并开始转向纯粹的后端开发。
+
+某一次公司提出要盘活海量的成交明细数据，同时满足人工查询与合规审查的需要。
+我给出了一个基于 HBase 的实现方案，存储 10 年数据只需要 6TB 空间即可。
+
+但由于各种各样的原因，大数据运维与前端资源一直没有到位，于是我只能一手包办整个流程。
+期间开始了解 React 相关生态，并使用 AntDesign 搞了个后台管理系统。
+
+
+React 的出现，是为了解决日趋复杂的用户交互场景（数据可视化、在线协作……）下的开发痛点。
+与传统的表单应用不同，这类场景面临着两个新问题：
+
+- **复杂的状态管理：** 状态变更不再是简单的线性流程，需要管理多个变更事件间的依赖与传递。
+- **DOM节点渲染效率低：** 单个变更事件可能触发多个 DOM 重绘，频繁更改会消耗大量浏览器资源。
+
+
+为了解决以上问题，Facebook 于 2013 推出了 React 框架，其特点如下：
+
+- **单向数据流：** 遵循单向数据流，确保数据变化以可预测的方式处理，避免双向绑定引入的额外复杂度。
+- **声明性语法：** 基于JSX模板提供了声明性语法，开发者只需描述期望的结果，而React负责高效地更新DOM。
+- **虚拟DOM：** 虚拟DOM是真实DOM的轻量级副本，可以通过比较两者间的差异实现增量更新，减少不必要的渲染。
+
+下面是一段能够直接运行的 HTML 代码，实现稍显复杂，但是语法灵活度比 AngularJS 高出了一个等级：
+```html
+<html>
+  <body>
+    <div id="root"></div>
+    <script src="https://unpkg.com/babel-standalone@6.26.0/babel.min.js"></script>
+    <script src="https://unpkg.com/react@17.0.2/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@17.0.2/umd/react-dom.development.js"></script>
+    <script type="text/babel">
+
+      const MyForm = () => { // 声明一个函数组件
+        
+        const [invalid, setInvalid] = React.useState(false) // 使用 hook 函数声明数值校验状态
+        
+        const validateInput = (e) => { // 通过回调函数监听变化，并实时修改校验状态
+          const num = e.target.value
+          setInvalid(!!e.target.value && (num < 0 || num > 99))
+        }
+
+        return ( // 声明 JSX 模板，当状态发生变化时，React 会根据该模板自动重绘 DOM 节点
+          <form id="myForm">
+            <p>Number :<input type="text" onChange={validateInput}/></p>
+            {invalid && <span>Invalid number!</span>}
+          </form>
+        )
+      }
+
+      // 渲染 JSX 组件
+      ReactDOM.render(<MyForm/>, document.getElementById('root'))
+
+    </script>
+  </body>
+</html>
+```
+
+## 返璞归真 Nextjs
+
+随着时间的流逝，愈发感受受到记录的重要性，于是萌发出搭建个人博客的想法。
+博客需满足以下要求：
+- 文章使用 markdown 编写，方便切换前端技术栈
+- 构建静态资源站点，有利于 SEO 并降低服务器成本
+
+市面上找了一圈，发现 Nextjs 是一个不错的选择。
+于是经过一番折腾，这篇文章最终出现在了你的眼前。
+
+### SSR
+
+虽然 SPA 能够提供不错的用户体验，但这种设计模式本身也存在一些固有的缺陷：
+
+- **首屏加载慢：** 由于所有客户端逻辑都打包进一个 bundle.js 文件中，首次加载会耗费大量时间下载与执行 JS 代码，最终导致较长的白屏时间。
+- **不利于SEO：** 所有页面内容都是浏览器动态渲染出来的，对于只解析静态 HTML 的搜索引擎很不友好，影响网站搜索排名，不利于企业推广。
+
+为了解决这一问题，出现了一批支持 **服务端渲染 (Server-Side Rendering)** 的前端解决方案。
+
+- 在服务端对页面进行预渲染操作，可以减少客户端所需的渲染时间，压缩 bundle.js 文件中不必要的逻辑，提升页面加载速度。
+- 返回给客户端的文件中包含完整的 HTML 页面，搜索引擎可以轻松抓取和索引内容，有利于提升网站的搜索排名。
+
+### SSG
+
+与 SSR 类似，还有一种被称为 **静态站点生成 (Static Site Generation)** 的功能。
+SSG 会在网页构建过程中，提前生成一组静态 HTML、CSS 和 JavaScript 文件，当接收到请求时可以直接返回给给用户，不再需要渲染页面。
+
+相较于 SSR ，SSG 具备两个额外的优势：
+- 无需渲染页面，不仅能降低服务端的负载，还能提供更快的加载时间，降本增效神器。
+- 的静态文件可以轻松分发和缓存在 CDN 上，这确保了站点在全球范围内的可用性，并为全球用户提供更快的访问速度。
+
+### Nextjs
+
+在 React 领域中最为流行的 SSR 方案是 Nextjs。
+该框架简化了构建服务器渲染 React 应用程序的过程。并提供了一套规范和工具，帮助开发人员专注于构建应用程序的功能，而不是处理配置。
+
+Nextjs 同时支持 SSR 与 SSG 模式，两者区别主要是部署环境：
+- 如果项目需要支持 SSR 特性，则必须将项目部署在 Node.js 环境中
+- 如果项目中仅包含 SSG 特性，则可以部署在任意静态服务器上，比如 Nginx
+
+
+SSR 模式需要实现 `getServerSideProps` 函数，每次用户请求时都会调用该函数。
+```jsx
+import type { InferGetServerSidePropsType, GetServerSideProps } from 'next'
+ 
+type Repo = {
+  name: string
+  stargazers_count: number
+}
+ 
+// 服务端发起请求，实时获取 github 仓库的星标数量
+export const getServerSideProps = (async (context) => {
+  const res = await fetch('https://api.github.com/repos/vercel/next.js')
+  const repo = await res.json()
+  return { props: { repo } }
+}) satisfies GetServerSideProps<{
+  repo: Repo
+}>
+ 
+ // 根据仓库星标数量渲染页面，并返回给客户端
+export default function Page({
+  repo,
+}: InferGetServerSidePropsType<typeof getServerSideProps>) {
+  return repo.stargazers_count
+}
+```
+
+SSG 模式需要实现 `getStaticProps` 函数，该函数只在构建页面时被调用一次。
+```jsx 
+// 获取博客文章列表
+export async function getStaticProps() {
+  const res = await fetch('https://.../posts')
+  const posts = await res.json()
+  return {
+    props: {
+      posts,
+    },
+  }
+}
+// 根据文章列表生成静态页面
+export default function Blog({ posts }) {
+  return (
+    <ul>
+      {posts.map((post) => (
+        <li>{post.title}</li>
+      ))}
+    </ul>
+  )
+}
+```
+
+此外，Nextjs 还提供了以下的重要功能：
+- **代码分割：** 将全局统一的入口文件 bundle.js 拆分为多个 chunk.js，每个页面仅加载自身所需的 JS 代码
+- **增量静态重生成：** 允许在网站构建完成后，对单独的静态页面进行重新生成，可以在不重新构建整个网站的情况下，更新特定静态页面。
+- **图像加载优化：** 使用 Image 组件提供了众多常用的功能，比如：自动生成多尺寸缩略图、加载时防止布局抖动...
+
+
+## 未来已来
+
+在写作这篇文章的过程中，尝试了使用生成样例代码，效果出乎意料得好：由 ChatGPT 产出的框架代码，只需稍加修改即可运行。
+
+这波兴起于年初的 AI 浪潮，已经对游戏从业者产生了巨大的冲击，并且逐渐向着其他行业蔓延。
+近期发布的 GPT-4 更是具备将图片转换为 HTML 页面的能力，这意味着低端的编程在不远的将来被 AI 取代。
+
+很多从事自由职业的人员，已经从中发掘出不少红利：
+- 独立游戏制作人使用 AI 替代美工
+- 个人创业者使用 AI 创建项目企划书
+- 自媒体从业者使用 AI 自动生成文章
+
+
+作为开发者，如何正视 AI 所带来的冲击，并使用 AI 提升开发效率，是我们不得不面对的新课题。

@@ -1,0 +1,651 @@
+---
+title: Redis Data Structures and Object Encoding
+cover: '/cover/Enigma-Rotor-Stack.jpeg'
+date: 2023-12-12
+tags: ['Redis']
+---
+
+Redis provides out-of-the-box support for commonly used data structures. This article delves into the implementation of these data structures.
+
+[comment]:summary
+
+## Data Types
+
+Redis offers support for various data structures:
+- **string**: Represents strings (can store strings, integers, bitmaps).
+- **list**: Represents lists (can be used as arrays, stacks, double-ended queues, blocking queues).
+- **hash**: Represents hash tables.
+- **set**: Represents sets.
+- **zset**: Represents sorted sets.
+
+To optimize performance, Redis authors provide different implementations for each data structure to adapt to specific application scenarios. 
+Taking the string as an example, its underlying implementation can be categorized into 3 types: **int**, **embstr**, **raw**:
+```text
+127.0.0.1:6379> SET counter 1
+OK
+127.0.0.1:6379> OBJECT ENCODING counter
+"int"
+127.0.0.1:6379> SET name "Tom"
+OK
+127.0.0.1:6379> OBJECT ENCODING name
+"embstr"
+127.0.0.1:6379> SETBIT bits 1 1
+(integer) 0
+127.0.0.1:6379> OBJECT ENCODING bits
+"raw"
+```
+
+These specific underlying implementations in Redis are referred to as **encoding**. 
+Let's check out these encoding implementations one by one.
+
+### string
+
+All keys in Redis are strings, implemented through a data structure called **Simple Dynamic Strings (SDS)**.
+```c
+    typedef char *sds; // SDS string pointer, points to sdshdr.buf
+
+    struct sdshdr? { // SDS header, [?] can be 8, 16, 32, 64
+        uint?_t len;          // Used space, actual length of the string
+        uint?_t alloc;        // Allocated space, excluding '\0'
+        unsigned char flags;  // Type tag, indicates the actual types of len and alloc, accessible through sds[-1]
+        char buf[];           // Character array, saves '\0'-terminated strings, consistent with the representation of strings in traditional C language
+    };
+```
+Memory layout:
+```text
++-------+---------+-----------+-------+
+|  len  |  alloc  |   flags   |  buf  |
++-------+---------+-----------+-------+
+                   ^--sds[-1]  ^--sds
+```
+
+Advantages over traditional C strings:
+
+- **Efficiency**: Records used space, achieving $O(1)$ for obtaining string length.
+- **Safety**: Records free space, avoiding buffer overflow issues.
+- **Memory**-friendly: By recording space information, space can be pre-allocated to reduce memory re-allocation operations.
+- **Binary safety**: String content can be non-ASCII encoded, allowing any data to be encoded as binary strings.
+- **Compatibility with C strings**: Some parts of the C standard library code can be reused, avoiding redundant code.
+
+### list
+One of the underlying implementations of lists in Redis is a doubly linked list, which supports sequential access and provides efficient element addition and deletion.
+```c
+    typedef struct listNode {
+        struct listNode *prev; // Previous node
+        struct listNode *next; // Next node
+        void *value;           // Node value
+    } listNode;
+
+    typedef struct list {
+        listNode *head; // Head node
+        listNode *tail; // Tail node
+        unsigned long len;     // Length of the list
+        void *(*dup) (void *ptr); // Node value duplication function
+        void (*free) (void *ptr); // Node value freeing function
+        int (*match) (void *ptr); // Node value comparison function
+    } list;
+```
+
+Function pointers are used here for dynamic binding during runtime. 
+
+Different **dup**, **free**, and **match** functions are specified according to the value type to achieve polymorphism.
+
+This data structure has the following characteristics:
+
+- Obtaining the length of the list is $O(1)$.
+- Supports both forward and backward traversal, with $O(1)$ for obtaining head and tail nodes.
+- No sentinel nodes are set; when the list is empty, both the head and tail are NULL.
+- Polymorphism is achieved through function pointers, enabling data structure reuse.
+
+
+### dict
+Redis uses a dictionary to store key-value pairs, and one of its underlying implementations is a hash table.
+```c
+    typedef struct dictEntry {
+        void* key;  // Key
+        union {     // Value, can be a pointer, signed long integer, unsigned long integer, or double-precision floating point
+            void *val;
+            uint64_t u64;
+            int64_t s64;
+            double d;
+        } v;
+        struct dictEntry *next;
+    } dictEntry;
+
+    typedef struct dictht {
+        dictEntry **table;      // Hash table array, each element in the array is a singly linked list
+        unsigned long size;     // Size of the hash table array
+        unsigned long sizemask; // Hash mask used for index calculation
+        unsigned long used;     // Number of existing nodes
+    } dictht;
+
+    typedef struct dictType {
+        unsigned int (*hashFunction) (const void *key);             // Hash function used for calculating hash values
+        int (*keyCompare)(void *privdata, const void *key1, const void *key2); // Key comparison function
+        void *(*keyDup)(void *privdata, const void *key);           // Key duplication function
+        void *(*valDup)(void *privdata, const void *obj);           // Value duplication function
+        void *(*keyDestructor)(void *privdata, const void *key);    // Key destruction function
+        void *(*valDestructor)(void *privdata, const void *obj);    // Value destruction function
+    } dictType;
+
+    typedef struct dict {
+        dictType *type;     // Type functions for achieving polymorphism
+        void *privdata;     // Private data for achieving polymorphism
+        dictht ht[2];       // Hash table; dict uses ht[0] as the hash table, and ht[1] is used for rehashing
+        int rehashidx;      // Rehash index, -1 when no rehash is in progress
+    } dict;
+```
+
+This data structure has the following characteristics:
+
+- Uses murmurhash2 as the hash function with a time complexity of $O(1)$.
+- Resolving collisions by adding new elements to the head of linked list.
+- Each rehash operation is completed in 3 steps:
+  1. Allocate space for `dict.ht[1]`, with its size being $2^n$
+  2. Rehash all key-value pairs from `dict.ht[0]` to `dict.ht[1]`
+  3. Free the space of `dict.ht[0]` and replace it with `dict.ht[1]`
+
+
+**Details of Rehashing**
+
+- Amortized overhead
+
+  Step 2 is gradually completed multiple times, spreading the calculation work required for rehashing key-value pairs evenly across each dictionary's addition, deletion, lookup, and update operations. 
+  
+  During this process, `dict.rehashidx` is used to record the index of `dictht.table` in `dict.ht[0]` that has already completed rehashing:
+  - Each time a rehash operation is performed, `dict.rehashidx` counter is incremented.
+  - When rehashing is completed, `dict.rehashidx` is set to -1.
+
+- Triggering conditions
+
+  Calculate the current load factor: `load_factor = ht[0].used / ht[0].size`
+
+  - **Shrinking**\
+  When load_factor < 0.1, rehashing is executed to reclaim idle space.
+  - **Expanding**
+    1. When **BGSAVE** or **BGREWRITEAOF** commands are not executed, and load_factor >= 1, rehashing is performed.
+    1. When **BGSAVE** or **BGREWRITEAOF** commands are being executed, and load_factor >= 5, rehashing is performed.
+
+  Many OS adopt **copy-on-write** technology: 
+  > Parent and child processes share the same data until the data is modified, at which point the memory space is actually copied to the child process to ensure data isolation
+
+  Redis perform **BGSAVE** or **BGREWRITEAOF** commands with child process.
+  During this time, the server increases the threshold of **loader_factor** to avoid unnecessary memory write operations during the existence of the child process, saving memory.
+
+### skiplist
+
+Skiplist is an **ordered** data structure that achieves fast access by maintaining multiple levels of pointers. 
+It is a typical space-time trade-off strategy.
+
+Its search efficiency is close to AVL or BR tree, but with lower maintenance costs and simpler implementation.
+
+```c
+    typedef struct zskiplistNode {
+        sds ele;                        // Member object
+        double score;                   // Score
+        struct zskiplistNode *backward; // Backward pointer
+        struct zskiplistLevel {
+            struct zskiplistNode *forward;  // Forward pointer
+            unsigned long span;             // Span, the distance between the current node and the forward node
+        } level[];
+    } zskiplistNode;
+
+    typedef struct zskiplist {
+        struct zskiplistNode *header, *tail;// Head and tail pointers
+        unsigned long length;               // Length
+        int level;                          // Maximum level
+    } zskiplist;
+```
+
+This data structure has the following characteristics:
+
+- Average search time is $O(\log N)$, worst-case search time is $O(N)$, and it supports range search.
+- Each time a node is created, the program generates a random number between 1 and 32 according to the power law to determine the level.
+- During the node search process, all span distances visited along the way are accumulated to obtain the ranking of the target node in the list.
+
+### intset
+An **ordered** integer set with compact memory space. The time complexity of adding operations is $O(N)$.
+```c
+    typedef struct intset {
+        uint32_t encoding;  // Encoding method, indicating the actual type of elements
+        uint32_t length;    // Number of elements
+        int8_t contents[];  // Element array, actual types can be int16_t, int32_t, int64_t,
+    } intset;
+```
+
+This data structure has the following characteristics:
+
+- Elements in the array are arranged in ascending order, with a binary search time complexity of $O(\log N)$.
+- When the size of newly-added element overflows current encoding types, the set needs to be upgraded:
+
+  1. Expand the space of array according to the type of the new element.
+  2. Convert all existing elements to the new type.
+  3. Add the new element to the array.
+
+
+### ziplist
+
+Ziplist aimed to reduce memory footprint, is a sequential data structure stored in contiguous memory blocks.
+
+A ziplist can contain any number of entry nodes, each node containing a byte array or integer.
+Redis does not explicitly define the ziplist data structure but provides a description structure zlentry for data manipulation.
+
+```c
+    typedef struct zlentry {
+        unsigned int prevrawlensize;// Used to record the number of bytes of the previous entry length
+        unsigned int prevrawlen;    // Length of the previous entry
+        unsigned int lensize        // Used to record the type/length of the current entry (variable length: 1 byte/5 bytes)
+        unsigned int len;           // Actual number of bytes used to store data
+        unsigned int headersize;    // prevrawlensize + lensize
+        unsigned char encoding;     // Used to indicate the actual encoding type of the entry data
+        unsigned char *p;           // Points to the beginning of the entry
+    } zlentry;
+```
+
+The actual memory layout is as follows:
+```text
++----------+---------+---------+--------+-----+--------+--------+
+|  zlbytes |  zltail |  zllen  | entry1 | ... | entryN |  zlend |
++----------+---------+---------+--------+-----+--------+--------+
+<--------------------------- zlbytes --------------------------->
+                                               ^--zltail
+                                <------- zllen ------->
+```
+- **zlbytes** : Number of bytes occupied by the ziplist (u_int32)
+- **zltail**: Compressed list tail offset, used to locate the table tail address for reverse traversal (u_int32)
+- **zllen**: The number of nodes in the compressed list. When it greater than 65535, the specific number needs to be obtained by traversing (u_int16)
+- **entryX**: List entries , the specific length is variable
+- **zlend** : End of list, with magic value 0xFF (u_int8)
+
+The memory layout of each entry:
+```text
++-------------------+----------+---------+
+| prev_entry_length | encoding | content |
++-------------------+----------+---------+
+```
+- **prev_entry_length**: Length of the previous node, used to calculate the starting address of the previous node based on the address of the current node (variable length: 1 byte/5 bytes).
+- **encoding**: Type and length of the data saved by the node (variable length: 1 byte/2 bytes/5 bytes).
+- **content**: Data associated with the node, can store integers or byte arrays
+
+该数据结构具有以下特征：
+- 结构紧凑：一整块连续内存，没有多余的内存碎片，更新会导致内存 realloc 与内存复制，平均时间复杂度为 $O(N)$
+- 逆向遍历：从表尾开始向表头进行遍历
+- 连锁更新：对前一条数据的更新，可能导致后一条数据的 `prev_entry_length` 与 `encoding` 所需长度变化，产生连锁反应，更新操作最坏时间为 $O(N^2)$
+
+This data structure has the following characteristics:
+
+- Only allow traversal from the tail to the head.
+- Avoding memory fragment by using single contiguous block.\
+But updating may lead to memory reallocation and copying, with an average time complexity of $O(N)$.
+- Updating the previous data may lead to changes in the number of bytes required for `prev_entry_length` and `encoding` in the next data, causing a chain reaction.\
+The worst-case time complexity for updating operations is $O(N^2)$.
+
+### quicklist
+
+In earlier versions of Redis, lists had two underlying implementations:
+- ziplist: when the length or number of elements in the list object was small
+- linkedlist: When the length or number of elements in the list object was large
+
+
+Each has its pros and cons:
+- ziplist
+  - compact memory and high access efficiency
+  - update slowly, and may cause a large amount of memory copying.
+
+- linkedlist
+  - high efficiency in node modification
+  - requires additional memory overhead, and may produce a large amount of memory fragmentation.
+
+To combine the advantages of both, Redis changed the underlying implementation of lists to a quicklist after version 3.2.
+Quicklist is a combination of linkedlist and ziplist: it contains multiple nodes with non-contiguous memory, but each node is a ziplist.
+
+```c
+    typedef struct quicklistNode {
+        struct quicklistNode *prev;  // Previous ziplist
+        struct quicklistNode *next;  // Next ziplist
+        unsigned char *zl;           // Data pointer, pointing to ziplist structure, or quicklistLZF structure
+        unsigned int sz;             // Memory size occupied by ziplist (uncompressed)
+        unsigned int count : 16;     // Number of records in ziplist
+        unsigned int encoding : 2;   // Encoding method, 1 indicates ziplist, 2 indicates quicklistLZF
+        unsigned int container : 2;  // 
+        unsigned int recompress : 1;         // Temporary decompression, 1 indicates temporary decompression for access
+        unsigned int attempted_compress : 1; // Test field
+        unsigned int extra : 10;             // Reserved space
+    } quicklistNode;
+
+    typedef struct quicklistLZF {
+        unsigned int sz;    // Compressed data length
+        char compressed[];  // Compressed data
+    } quicklistLZF;
+
+    typedef struct quicklist {
+        quicklistNode *head;        // List head
+        quicklistNode *tail;        // List tail
+        unsigned long count;        // Total number of records
+        unsigned long len;          // Number of ziplists
+        int fill : 16;              // Ziplist length limit, the length (record number/memory occupancy) of each ziplist node cannot exceed this value
+        unsigned int compress : 16; // Compression depth, indicating the number of ziplist nodes at both ends of quicklist that are not compressed, 0 indicates that all ziplist nodes are not compressed
+    } quicklist;
+```
+
+This data structure has the following characteristics:
+
+- Combining the advantages of linkedlist and ziplist, there is no need to switch between the two structures.
+- When access frequency to the middle part is very low (e.g. queue), the data in the middle can be compressed to reduce memory usage.
+
+### robj
+
+To implement dynamic encoding technology, Redis built an object system:
+Redis can determine whether specific command can be perform on a object based its type.
+
+In addition, this system implements memory sharing through reference counting and records the access time of objects, providing a basis for optimizing memory reclamation strategies.
+
+```c
+    typedef struct redisObject {
+        unsigned type:4;        // Type, the logical type of the current object, for example: set
+        unsigned encoding:4;    // Encoding, the underlying implementation data structure, for example: intset / ziplist
+        unsigned lru:24;        /* LRU time (relative to the global lru_clock time) or
+                                 * LFU data (8 bits record access frequency, 16 bits record access time). */
+        int refcount;           // Reference count
+        void *ptr;              // Data pointer, pointing to specific data structures
+    } robj;
+```
+
+This data structure has the following characteristics:
+
+- Objects of the same type in Redis can use different underlying implementations, optimizing object usage efficiency in different application scenarios.
+- For memory string objects of integer values, Redis can reduce memory copying by recording reference counts.
+- The object system records the access time of objects, facilitating the LRU algorithm to prioritize recycling less-used objects.
+
+
+## Data Encodings
+
+### string
+
+The encoding types for strings can be:
+
+- **int (OBJ_ENCODING_INT)**: Long integer type
+- **raw (OBJ_ENCODING_RAW)**: SDS string
+- **embstr (OBJ_ENCODING_EMBSTR)**: Embedded string (strings with encoded lengths less than 44 bytes)
+
+```text
+127.0.0.1:6379> SET str "1234567890 1234567890 1234567890 1234567890"
+OK
+127.0.0.1:6379> STRLEN str
+(integer) 43
+127.0.0.1:6379> OBJECT ENCODING str
+"embstr"
+127.0.0.1:6379> APPEND str _
+(integer) 44
+127.0.0.1:6379> OBJECT ENCODING str
+"raw"
+```
+
+Using **embstr** encoding is to reduce unnecessary memory allocation for short strings. 
+According to the original words of the Redis author:
+
+> REDIS_ENCODING_EMBSTR_SIZE_LIMIT set to 39.\
+The new value is the limit for the robj + SDS header + string + null-term to stay inside the 64 bytes Jemalloc arena in 64 bits systems.
+
+
+The comparison of the memory layouts reveals:
+
+- **embstr** is a complete contiguous memory block, requiring only once memory allocation
+- memory of **raw** is non-contiguous, requiring twice memory allocations
+
+```text
+
+<------------------------------------------ Jemalloc arena (64 bytes)  ---------------------------------------------->
++-------------------------------------------------------------------------------+---------------------+--------------+
+|                             redisObject (16 bytes)                            |  sdshdr8 (3 bytes)  |   45 bytes   |
++--------------------+---------------------------------+-------+----------+-----+-----+-------+-------+---------+----+
+| type(REDIS_STRING) | encoding(REDIS_ENCODING_EMBSTR) |  lru  | refcount | ptr | len | alloc | flags |   buf   | \0 |
++--------------------+---------------------------------+-------+----------+-----+-----+-------+-------+---------+----+
+
+
++--------------------+
+|    redisObject     |
++--------------------+
+|        type        |
+|    REDIS_STRING    |
++--------------------+
+|      encoding      |
+| REDIS_ENCODING_RAW |
++--------------------+      +---------+
+|         ptr        | ---> | sdshdr? |
++--------------------+      +---------+
+                            |   len   |
+                            +---------+
+                            |  alloc  |
+                            +---------+
+                            |  flags  |
+                            +---------++---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+
+                            |   buf   || T | h | e | r | e |   | i | s |   | n | o |   | c | e | r | t | a |...|
+                            +---------++---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+
+
+```
+
+### list
+
+The default encoding type for lists is **quicklist (OBJ_ENCODING_QUICKLIST)**
+
+list 默认的编码类型为 **quicklist (OBJ_ENCODING_QUICKLIST)**
+- **list-max-ziplist-size**：Length of the ziplist on each quicklist node
+- **list-compress-depth**：Number of nodes at the ends of the quicklist that are not compressed
+
+### hash
+
+Hashes have encoding types of **ziplist (OBJ_ENCODING_ZIPLIST)** and **hashtable (OBJ_ENCODING_HT)**. 
+The specific encoding used depends on the following two options:
+
+- **hash-max-ziplist-value**： Uses ziplist encoding when both key and value lengths are less than this value (default is 64)
+- **hash-max-ziplist-entries**：Uses ziplist encoding when the number of elements in the hash is less than this value (default is 512)
+
+When the key length exceeds 64:
+
+```text
+127.0.0.1:6379> HSET table x 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'
+(integer) 0
+127.0.0.1:6379> OBJECT ENCODING table
+"ziplist"
+127.0.0.1:6379> HSET table x 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'
+(integer) 0
+127.0.0.1:6379> OBJECT ENCODING table
+"hashtable"
+127.0.0.1:6379> DEL table
+(integer) 1
+127.0.0.1:6379> HSET table xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 'x'
+(integer) 1
+127.0.0.1:6379> OBJECT ENCODING table
+"ziplist"
+127.0.0.1:6379> HSET table xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 'x'
+(integer) 1
+127.0.0.1:6379> OBJECT ENCODING table
+"hashtable"
+```
+When the value length exceeds 64:
+```text
+127.0.0.1:6379> HSET table x 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'
+(integer) 0
+127.0.0.1:6379> OBJECT ENCODING table
+"ziplist"
+127.0.0.1:6379> HSET table x 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'
+(integer) 0
+127.0.0.1:6379> OBJECT ENCODING table
+"hashtable"
+127.0.0.1:6379> DEL table
+(integer) 1
+127.0.0.1:6379> HSET table xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 'x'
+(integer) 1
+127.0.0.1:6379> OBJECT ENCODING table
+"ziplist"
+127.0.0.1:6379> HSET table xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 'x'
+(integer) 1
+127.0.0.1:6379> OBJECT ENCODING table
+"hashtable"
+```
+
+When the number of elements exceeds 512:
+```text
+127.0.0.1:6379> EVAL "for i=1,512 do redis.call('HSET', KEYS[1], i, i) end" 1 numbers
+(nil)
+127.0.0.1:6379> HLEN numbers
+(integer) 512
+127.0.0.1:6379> OBJECT ENCODING numbers
+"ziplist"
+127.0.0.1:6379> DEL numbers
+(integer) 1
+127.0.0.1:6379> EVAL "for i=1,513 do redis.call('HSET', KEYS[1], i, i) end" 1 numbers
+(nil)
+127.0.0.1:6379> HLEN numbers
+(integer) 513
+127.0.0.1:6379> OBJECT ENCODING numbers
+"hashtable"
+```
+
+### set
+
+The encoding types for sets are **intset (OBJ_ENCODING_INTSET)** and **hashtable (OBJ_ENCODING_HT)**. 
+The specific encoding used depends on the following two options:
+
+- Consider using intset encoding only when all elements in the set are integers
+- **set-max-intset-entries**: Uses intset encoding when the number of elements is less than this value (default is 512)
+
+
+Cases including non-integer elements:
+```text
+127.0.0.1:6379> SADD set 1 2
+(integer) 2
+127.0.0.1:6379> OBJECT ENCODING set
+"intset"
+127.0.0.1:6379> SADD set "ABC"
+(integer) 1
+127.0.0.1:6379> OBJECT ENCODING set
+"hashtable"
+```
+
+Cases when the number of elements exceeds 512:
+```text
+127.0.0.1:6379> EVAL "for i=1,512 do redis.call('SADD', KEYS[1], i, i) end" 1 numbers
+(nil)
+127.0.0.1:6379> SCARD numbers
+(integer) 512
+127.0.0.1:6379> OBJECT ENCODING numbers
+"intset"
+127.0.0.1:6379> DEL numbers
+(integer) 1
+127.0.0.1:6379> EVAL "for i=1,513 do redis.call('SADD', KEYS[1], i, i) end" 1 numbers
+(nil)
+127.0.0.1:6379> SCARD numbers
+(integer) 513
+127.0.0.1:6379> OBJECT ENCODING numbers
+"hashtable"
+```
+
+### zset
+
+The encoding types for sorted sets are **ziplist (OBJ_ENCODING_ZIPLIST)** and **skiplist (OBJ_ENCODING_SKIPLIST)**.
+
+When using ziplist encoding, each set element is saved using two adjacent entry nodes. 
+The first node saves the member value (member), and the second node saves the element's score value (score). 
+Entries are sorted in ascending order based on the score:
+```text
++----------------------+
+|     redisObject      |
++----------------------+
+|         type         |
+|      REDIS_ZSET      |
++----------------------+
+|       encoding       |
+| OBJ_ENCODING_ZIPLIST |
++----------------------+      +----------+----------+---------+--------------------+-------------------+-----+-----------------------+--------------------+-------+
+|          ptr         | ---> |  zlbytes |  zltail  |  zllen  | entry 1 (member 1) | entry 2 (score 1) | ... | entry 2N-1 (member N) | entry 2N (score N) | zlend |
++----------------------+      +----------+----------+---------+--------------------+-------------------+-----+-----------------------+--------------------+-------+
+                                                               >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> score increase >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+```
+
+When implemented using skiplist, a data structure named **zset** is used:
+```c
+    typedef struct zset {
+        dict *dict;      // Maintains the mapping of member to score, used to look up the score of a given member
+        zskiplist *zsl;  // Saves all set elements sorted by score, supports range operations
+    } zset; // dict and zsl will share members and scores
+```
+```text
+
++----------------------+                                       +--------+     +------------+    +---------+
+|     redisObject      |                                   +-->| dictht |     |  StringObj | -> |  long   |
++----------------------+                       +-------+   |   +--------+     +------------+    +---------+
+|         type         |                   +-->| dict  |   |   | table  | --> |  StringObj | -> |  long   |
+|      REDIS_ZSET      |                   |   +-------+   |   +--------+     +------------+    +---------+
++----------------------+                   |   | ht[0] | --+                  |  StringObj | -> |  long   |
+|       encoding       |      +--------+   |   +-------+      +-----+         +------------+    +---------+
+| OBJ_ENCODING_ZIPLIST |      |  zset  |   |                  | L32 | -> NULL
++----------------------+      +--------+   |                  +-----+
+|          ptr         | ---> |  dict  | --+                  | ... |
++----------------------+      +--------+       +--------+     +-----+    +-----------+                     +-----------+
+                              |  zsl   | --->  | header | --> | L4  | -> |     L4    | ------------------> |     L4    | -> NULL
+                              +--------+       +--------+     +-----+    +-----------+                     +-----------+
+                                               | tail   |     | L3  | -> |     L3    | ------------------> |     L3    | -> NULL
+                                               +--------+     +-----+    +-----------+    +-----------+    +-----------+
+                                               | level  |     | L2  | -> |     L2    | -> |     L2    | -> |     L2    | -> NULL
+                                               +--------+     +-----+    +-----------+    +-----------+    +-----------+
+                                               | length |     | L1  | -> |     L1    | -> |     L1    | -> |     L1    | -> NULL
+                                               +--------+     +-----+    +-----------+    +-----------+    +-----------+
+                                                                 NULL <- |     BW    | <- |     BW    | <- |     BW    |
+                                                                         +-----------+    +-----------+    +-----------+
+                                                                         | StringObj |    | StringObj |    | StringObj |
+                                                                         +-----------+    +-----------+    +-----------+
+                                                                         |    long   |    |    long   |    |    long   |
+                                                                         +-----------+    +-----------+    +-----------+
+```
+
+The specific encoding used for zset depends on the following two options:
+- **zset-max-ziplist-value**：Uses ziplist encoding when all member's size is less than this value (default is 64)
+- **zset-max-ziplist-entries**：Uses ziplist encoding when the number of elements in the zset is less than this value (default is 128)
+
+
+## Overall of Redis
+Each database is a redisDb structure:
+```c
+    typedef struct redisDb {
+        dict *dict;                 /* Key space of the database */
+        dict *expires;              /* Set of keys with an associated expire */
+        dict *blocking_keys;        /* Keys with clients waiting for data (BLPOP)*/
+        dict *ready_keys;           /* Blocked keys that received a PUSH */
+        dict *watched_keys;         /* Keys that are WATCHED for MULTI/EXEC CAS */
+        int id;                     /* Database ID */
+        long long avg_ttl;          /* Average TTL, just for stats */
+        unsigned long expires_cursor; /* Cursor to iterate over expiring keys */
+        list *defrag_later;         /* List of key names to attempt to defrag one by one in the background. */
+    } redisDb;
+```
+
+All databases in Redis are stored in the `redisServer.db` array, and `redisServer.dbnum` stores the number of databases. 
+A simplified memory layout is approximately as follows:
+```text
++-------------+
+| redisServer |
++-------------+    +------------+------+-------------+
+|     db      | -> | redisDb[0] | .... | redisDb[15] |
++-------------+    +------------+------+-------------+
+|    dbnum    |      |
+|     16      |      |
++-------------+      |  +---------+                         +------------+
+                     +->| redisDb |                     +-> | ListObject |
+                        +---------+    +------------+   |   +------------+
+                        |  dict   | -> |  StringObj | --+
+                        +---------+    +------------+       +------------+
+                        | expires |    |  StringObj | ----> | HashObject |
+                        +---------+    +------------+       +------------+
+                              |        |  StringObj | --+
+                              |        +------------+   |   +------------+
+                              |                         +-> | StringObj  |
+                              |                             +------------+
+                              |
+                              |       +------------+    +-------------+
+                              +---->  |  StringObj | -> |    long     |
+                                      +------------+    +-------------+
+                                      |  StringObj | -> |    long     |
+                                      +------------+    +-------------+
+```

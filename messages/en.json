@@ -1,0 +1,35 @@
+{
+  "Default": {
+    "title": "CurioLoop",
+    "description" : "Stay Curious.",
+    "channel-link": "Channels",
+    "hot-tag": "Tags",
+    "new-post": "New Posts",
+    "new-video": "New Videos",
+    "archive-title": "Timeline",
+    "search-title": "Search",
+    "search-hint": "Enter your search term here",
+    "tag-title": "Posts about {tag}"
+  },
+  "Navbar": {
+    "title": "CurioLoop",
+    "home": "Home",
+    "search": "Search",
+    "archive": "Archive",
+    "about": "About",
+    "system-theme": "System",
+    "dark-theme": "Always Dark",
+    "light-theme": "Always Light"
+  },
+  "About": {
+    "title": "CurioLoop",
+    "description" : "Stay Curious."
+  },
+  "Pagination": {
+    "prev-page" : "Prev",
+    "next-page" : "Next"
+  },
+  "Error": {
+
+  }
+}

@@ -1,0 +1,238 @@
+---
+title: Redis Statistics With HyperLogLog
+cover: '/cover/Call-It.jpg'
+date: 2023-12-12
+tags: ['Redis']
+---
+
+Statistical features are a ubiquitous requirement in various applications. Consider the following scenario:
+>To determine whether a particular feature should be retained in the next iteration, 
+the product team requires statistics on the number of unique visitors (UV) for a page before and after its release as a decision-making basis.
+
+Now we need to choose a appropriate Redis data structure to implement statistical functions.
+
+[comment]:summary
+
+## Statistics In Redis
+
+### Aggregated Statistics
+
+To accomplish the task of statistics, the most straightforward approach is to use a `SET` to store the user IDs visiting a page on a specific day, 
+then perform statistical operations such as set difference and intersection to obtain the desired results:
+```bash
+# UV on 2020-01-01
+SADD page:uv:20200101 "Alice" "Bob" "Tom" "Jerry"
+
+# UV on 2020-01-02
+SADD page:uv:20200102 "Alice" "Bob" "Jerry" "Nancy"
+
+# New users on 2020-01-02
+SDIFFSTORE page:new:20200102 page:uv:20200102 page:uv:20200101
+
+# Number of new users on 2020-01-02
+SCARD page:new:20200102
+
+# Retained users on 2020-01-02
+SINTERSTORE page:rem:20200102 page:uv:20200102 page:uv:20200101
+
+# Number of retained users on 2020-01-02
+SCARD page:rem:20200102
+```
+
+**Pros**
+
+- Intuitive and easy to understand operations, can reuse existing data sets
+- Retains user visit details for more granular statistics
+
+**Cons**
+
+- High memory consumption; for example, recording 100 million users, each with an ID length less than 44 bytes (using embstr encoding), would require at least 6GB of memory
+- High computational complexity for `SUNION`, `SINTER`, and `SDIFF` operations, which may cause Redis instances to block under large data volumes; optimization options include:
+  - Selecting a slave node from the cluster dedicated to aggregation calculations
+  - Reading data into the client and performing aggregation statistics on the client side
+
+### Binary Statistics
+
+When user IDs are consecutive integers, binary statistics can be implemented using `BITMAP`:
+
+```bash
+# UV on 2020-01-01
+SETBIT page:uv:20200101 0 1 # "Alice"
+SETBIT page:uv:20200101 1 1 # "Bob"
+SETBIT page:uv:20200101 2 1 # "Tom"
+SETBIT page:uv:20200101 3 1 # "Jerry"
+
+# UV on 2020-01-02
+SETBIT page:uv:20200102 0 1 # "Alice"
+SETBIT page:uv:20200102 1 1 # "Bob"
+SETBIT page:uv:20200102 3 1 # "Jerry"
+SETBIT page:uv:20200102 4 1 # "Nancy"
+
+# New users on 2020-01-02
+BITOP NOT page:not:20200101 page:uv:20200101
+BITOP AND page:new:20200102 page:uv:20200102 page:not:20200101 
+
+# Number of new users on 2020-01-02
+BITCOUNT page:new:20200102
+
+# Retained users on 2020-01-02
+BITOP AND page:rem:20200102 page:uv:20200102 page:uv:20200101
+
+# Number of retained users on 2020-01-02
+BITCOUNT page:new:20200102
+```
+
+**Pros**
+
+- Low memory consumption; only 12MB memory required for recording 100 million users
+- Fast statistics; computers efficiently handle bitwise XOR operations
+
+
+**Cons**
+- Requirement for specific data types; only handles integer sets
+
+
+### Cardinality Statistics
+
+Both previous methods provide accurate statistical results but encounter issues as the collection grows:
+
+- Linear increase in storage memory required as the statistical set grows
+- Increased cost of determining whether a newly added element exists in the set as the set grows
+
+Consider the following scenario:
+> Product teams might only care about UV increments, in which case, the ultimate result desired is the number of unique users in the access set, not which users are included in the access set
+
+
+For merely counting **the number of unique elements** in a set without concerning the content of the set, we term it **cardinality counting**.
+
+For this specific statistical scenario, Redis provides support for cardinality statistics with the **[HyperLogLog](http://antirez.com/news/75)** type:
+
+```bash
+# UV on 2020-01-01
+PFADD page:uv:20200101 "Alice" "Bob" "Tom" "Jerry"
+PFCOUNT page:uv:20200101
+
+# UV on 2020-01-02
+PFADD page:uv:20200102 "Alice" "Bob" "Tom" "Jerry" "Nancy"
+PFCOUNT page:uv:20200102
+
+# Total UV on 2020-01-01 and 2020-01-02
+PFMERGE page:uv:union page:uv:20200101 page:uv:20200102
+PFCOUNT page:uv:union
+```
+
+**Pros**
+HyperLogLog requires a fixed amount of space for counting cardinality. 
+It only needs 12KB memory to estimate the cardinality of nearly $2^{64}$ elements.
+
+**Cons**
+HyperLogLog's statistics are probabilistic, resulting in certain errors. 
+It's not suitable for precise statistical scenarios.
+
+
+## HyperLogLog Analysis
+
+### Probability Estimation
+
+HyperLogLog is a probability-based statistical method. How can we understand this?
+
+Let's conduct an experiment: **continuously flipping a fair two-sided coin until it lands heads.**
+Representing heads and tails as 0 and 1 respectively, the experiment's results can be represented as a binary string:
+
+```text
+                   +-+
+1st flip (heads)   |1|
+                   +-+
+                   +--+
+2nd flip (heads)   |01|
+                   +--+
+                   +---+
+3rd flip (heads)   |001|
+                   +---+
+                   +---------+
+kth flip (heads)   |000...001|  (total of k-1 zeros)
+                   +---------+
+```
+
+Since the probability of getting heads each time is $\frac{1}{2}$, the experiment's probability of ending at the kth flip is $(\frac{1}{2})^k$ (the probability that the first 1 appears in the kth position of the binary string).
+
+After conducting n experiments, let's denote the number of flips in each experiment as $k_1, k_2,\cdots,k_n$, with the maximum value being $k_{max}$.
+
+In an ideal scenario, $k_{max} = log_2(n)$, and conversely, we can estimate the total number of experiments $n = 2^{k_{max}}$ using $k_{max}$.
+
+
+#### Handling Extreme Cases
+
+In practical experiments, extreme cases inevitably arise, such as getting 10 consecutive tails on the 1st flip.
+If we estimate using the previous formula, we would erroneously conclude that 1000 experiments have been conducted, which clearly doesn't match reality.
+
+To improve estimation accuracy, we can conduct group experiments simultaneously using m coins.
+Then calculate the average of these m groups' maximum values $\hat{k}{max} = \frac{\sum{i=0}^{m}{k_{max}}}{m}$, which provides a more accurate estimate of the actual experiment count $\hat{n}=2^{\hat{k}_{max}}$.
+
+
+### Cardinality Counting
+
+Based on the previous analysis, we can summarize the following experience:
+> The maximum position of the first 1 in the binary string, $k_{max}$, can be used to estimate the actual experiment count $n$
+
+HyperLogLog adopts this idea to count the number of distinct elements in a set:
+
+- Map each element in the set to a fixed-length binary string with a hash function
+- Improve accuracy using group statistics by distributing binary strings into m different buckets:
+  - The first $log_2{m}$ bits of the binary string determine the bucket the element belongs to
+  - The remaining bits of the binary string identify the position of the first 1, denoted as $k$; each bucket only stores the maximum value $k_{max}$
+- When estimating the number of elements in the set, use the formula $\hat{n}=2^{\hat{k}_{max}}$.
+
+
+Here's an example:
+
+Using a HyperLogLog implementation with an **8-bit** output hash function and grouping statistics into **4 buckets**, 
+we count the UVs of users Alice, Bob, Tom, Jerry, and Nancy:
+
+```text
+                 Binary String   Bucket    Calculate k
+                      |            |            |
+                      V            V            V
+                 +---------+
+hash("Alice") => |01|101000| => bucket=1, k=1
+                 +---------+                                           Group Statistics k_max
+                 +---------+                 
+hash("Bob")   => |11|010010| => bucket=3, k=2           +----------+----------+----------+----------+
+                 +---------+                            | bucket_0 | bucket_1 | bucket_2 | bucket_3 |
+                 +---------+                     ==>    +----------+----------+----------+----------+
+hash("Tom")   => |10|001000| => bucket=2, k=3           | k_max= 1 | k_max= 2 | k_max= 3 | k_max= 2 |
+                 +---------+                            +----------+----------+----------+----------+
+                 +---------+                                         
+hash("Jerry") => |00|111010| => bucket=0, k=1                
+                 +---------+                                            
+                 +---------+                               
+hash("Nancy") => |01|010001| => bucket=1, k=2
+                 +---------+                 
+```
+After group counting, we estimate the set's cardinality using the formula $2^{\hat{k}_{max}}= 2^{(\frac{1+2+3+2}{4})} = 4$.
+
+### Error Analysis
+
+In Redis's implementation, for a given input string, we first obtain a 64-bit hash value:
+- The first 14 bits locate the bucket (16384 buckets in total)
+- The remaining 50 bits represent the binary string corresponding to the element (used to update the maximum value $k_{max}$ of the first appearance of 1)
+
+
+With a 64-bit output hash function, there's practically no limit on the cardinality of the countable set.
+
+The standard error calculation formula for HyperLogLog is $\frac{1.04}{\sqrt{m}}$ ($m$ being the number of buckets). Using this, Redis's implementation yields a standard error of $0.81\%$.
+
+The following graph illustrates the relationship between statistical error and cardinality:
+
+![HyperLogLog](http://antirez.com/misc/hll_1.png)
+
+- The red and green lines represent two different datasets
+- The x-axis represents the actual cardinality of the set
+- The y-axis represents the relative error (percentage)
+
+
+Analyzing this graph leads to several conclusions:
+
+- Statistical error is independent of the data's distribution characteristics
+- The smaller the set's cardinality, the smaller the error (higher precision with small cardinalities)
+- The larger the set's cardinality, the larger the error (saving resources with large cardinalities)

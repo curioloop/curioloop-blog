@@ -1,0 +1,343 @@
+---
+title: Redis 持久化 (Persistence)
+cover: '/cover/Fossil-Leaf.jpeg'
+date: 2023-12-12
+tags: ['redis']
+---
+
+作为内存数据库，Redis 依然提供了持久化机制，其主要目的有两个：
+- **安全**：保证进程崩溃后数据不会丢失
+- **备份**：方便数据迁移与快速恢复
+
+Redis 同时提供两种持久化机制：
+- **RDB 快照**：数据库在某个时间点的完整状态，其存储内容为键值对
+- **AOF 日志**：包含所有改变数据库状态的操作，其存储内容为命令
+
+[comment]:summary
+
+## RDB 快照
+
+生成 RDB 快照的方式有两种：
+- 服务进程定期生成
+- 手动执行 **SAVE** 或 **BGSAVE** 命令
+
+### 定期生成
+用户可以通过设置保存点`save point`，控制 RDB 快照的自动生成：
+```text
+save 900 1    # 最近 15 分钟内，至少有 1 个 key 发生过变更
+save 300 10   # 最近 5 分钟内，至少有 10 个 key 发生过变更
+save 60 10000 # 最近 1 分钟内，至少有 10000 个 key 发生过变更
+```
+
+```c
+struct saveparam {
+    time_t seconds; // 秒数
+    int changes;    // 变更数
+};
+
+struct redisServer {
+    // ...
+    struct saveparam *saveparams;   /* RDB 保存点数组 */
+    int saveparamslen;              /* 保存点数量 */
+    long long dirty;                /* 上一次执行快照后的变更数 */
+    time_t lastsave;                /* 上一次执行快照的 UNIX 时间戳 */
+}
+```
+
+```text
++---------------+
+|  redisServer  |
++---------------+    +---------------+---------------+---------------+
+|  saveparams   | -> | saveparams[0] | saveparams[1] | saveparams[2] |
++---------------+    +---------------+---------------+---------------+
+| saveparamslen |    |    seconds    |    seconds    |    seconds    |
+|       3       |    |      900      |      300      |       60      |
++---------------+    +---------------+---------------+---------------+
+|     dirty     |    |    changes    |    changes    |    changes    |
+|      120      |    |       1       |       10      |     10000     |
++---------------+    +---------------+---------------+---------------+
+|   lastsave    |
+|  1378270800   |
++---------------+     
+```
+
+自动保存的过程：
+1. 每执行一个数据库修改命令，计数器 dirty 就会记录该记录导致的变更数量
+2. Redis 的定时任务 `serverCron` 会周期性地检查是否满足保存点条件：
+```c
+int serverCron(struct aeEventLoop *eventLoop, long long id, void *clientData) {
+    // ...
+    for (j = 0; j < server.saveparamslen; j++) {
+        struct saveparam *sp = server.saveparams+j;
+        if (server.dirty >= sp->changes && // 检查变更数是否足够
+            server.unixtime-server.lastsave > sp->seconds) // 检查最近一次快照时间
+        {
+            // 如果当前状态满足保存点设置，打印日志并开始执行 BGSAVE
+            serverLog(LL_NOTICE,"%d changes in %d seconds. Saving...", sp->changes, (int)sp->seconds);
+            // ...
+            // 执行 BGSAVE
+            rdbSaveBackground(server.rdb_filename,rsiptr);
+            break;
+        }
+    }
+}
+```
+
+### 手动备份
+为了避免在流量高峰期发生性能抖动，在生产环境中往往会关闭 Redis 的自动生成快照的功能。为了保证数据安全，此时运维会使用定时脚本的方式，在系统空闲时执行 **BGSAVE** 命令备份 Redis 数据。
+
+```c
+int rdbSaveBackground(char *filename, rdbSaveInfo *rsi) {
+    // ...
+    if ((childpid = redisFork(CHILD_TYPE_RDB)) == 0) { // 产生子进程
+        /* 子进程负责生成 RDB 快照 */
+        int retval = rdbSave(filename,rsi);
+        // ...
+    } else {
+        /* 主进程不阻塞直接返回 */
+        serverLog(LL_NOTICE,"Background saving started by pid %d",childpid);
+        updateDictResizePolicy(); // 如果子进程正生成快照，禁止 dict 进行 rehash 操作
+        // ...
+        return C_OK;
+    }
+}
+```
+
+RDB 文件由子进程生成的，操作系统写时复制 `copy-on-write` 的优化特性，决定了父子进程间的内存在逻辑上是独立的。
+因此主进程所产生的任何修改操作都不会被包含在 RDB 文件中，间接保证了 RDB 所记录状态的一致性。
+
+
+### RDB 文件
+RDB 快照是一个二进制文件，其格式大致如下：
+```text
+# 有 n 个数据库的 RDB 文件
++-------+------------+-------+-----+-------+-----+-----------+
+| REDIS | db_version | db[0] | ... | db[n] | EOF | check_sum |
++-------+------------+-------+-----+-------+-----+-----------+
+
+# 每个数据库包含任意长度的键值对
++-------+    +----------+---+------------+-----+------------+
+| db[0] | => | SELECTDB | 0 | kv_pair[0] | ... | kv_pair[n] | 
++-------+    +----------+---+------------+-----+------------+
+
+# 键值对，常量 TYPE 指示了 value 的编码类型
++---------+    +------+-----+-------+
+| kv_pair | => | TYPE | key | value |
++---------+    +------+-----+-------+
+
+# 带过期时间的键值对，常量 EXPIRETIME_MS 紧接着一个 8 字节的时间戳
++------------------+    +---------------+--------------+------+-----+-------+
+| kv_pair_with_ttl | => | EXPIRETIME_MS | ms_timestamp | TYPE | key | value |
++------------------+    +---------------+--------------+------+-----+-------+
+```
+
+
+RDB 快照存储了数据库在某个时间点的完整状态，且格式紧凑，十分适合作为数据备份：
+- 方便通过网络传输到异地机柜，实现多机房容灾
+- 通过使用 RESTORE 命令加载 RDB 快照，可以实现数据初始化或者紧急回滚
+
+
+## AOF 日志
+生成 RDB 快照的过程比较耗时，无法频繁执行 **BGSAVE**。但如果状态变更长时间不落盘，一旦进程崩溃，将会丢失大量未持久化的数据。
+
+为了避免全量备份的开销，Redis 支持以增量更新的方式，将状态变更持久化到 AOF 日志中，减少对磁盘 I/O 的压力。
+
+由于 AOF 日志落盘是由主线程完成的，因此落盘策略会明显影响到 Redis 的性能。下列配置项可用于控制这一行为：
+```text
+appendonly no         # 是否开启 AOF
+
+# 落盘策略
+# always：每次发生变更会立即落盘
+# everysec：每秒落盘一次
+# no：由操作系统决定落盘时机
+appendfsync everysec
+```
+
+```c
+struct redisServer {
+    // ...
+    int aof_enabled;                /* AOF 开关 */
+    int aof_state;                  /* AOF 状态（开启、关闭、等待重写）*/
+    int aof_fsync;                  /* fsync 策略 */
+    sds aof_buf;                    /* AOF 缓冲 */
+    time_t aof_flush_postponed_start; /* AOF 延迟刷新 UNIX 时间戳 */
+}
+```
+
+### 追加命令
+每当成功执行完一条命令，会通过 `processCommand -> call -> propagate -> feedAppendOnlyFile` 这条调用链，将命令写入 AOF 缓存：
+
+```c
+void feedAppendOnlyFile(struct redisCommand *cmd, int dictid, robj **argv, int argc) {
+    // 将命令追加到缓冲末尾，在向客户端返回结果前将其写入 AOF 文件中
+    if (server.aof_state == AOF_ON)
+        server.aof_buf = sdscatlen(server.aof_buf,buf,sdslen(buf));
+
+     // 如果有子线程正在执行 AOF 重写，期间会将新增的修改记录入一个新的 AOF 日志
+    if (server.aof_child_pid != -1)
+        aofRewriteBufferAppend((unsigned char*)buf,sdslen(buf));
+}
+```
+
+### 写入文件
+在 `serverCron` 事件循环结束前，会调用 `flushAppendOnlyFile` 将缓冲中的命令写入到 AOF 日志文件中：
+```c
+int serverCron(struct aeEventLoop *eventLoop, long long id, void *clientData) {
+    // ...
+    // AOF延迟刷新：每个 cron 循环都执行执行一次 fsync
+    if (server.aof_flush_postponed_start) flushAppendOnlyFile(0);
+}
+
+void flushAppendOnlyFile(int force) {
+    ssize_t nwritten;
+    int sync_in_progress = 0;
+
+    if (sdslen(server.aof_buf) == 0) { // 缓冲为空直接返回
+        // ...
+        return;
+    }
+
+    // 将命令写入 AOF 文件，此时尚未落盘
+    nwritten = aofWrite(server.aof_fd,server.aof_buf,sdslen(server.aof_buf));
+    
+    server.aof_flush_postponed_start = 0; // 写入完成，重置延迟刷新时间戳，避免再次触发
+
+    // ...
+
+    if (server.aof_fsync == AOF_FSYNC_ALWAYS) {
+        // 落盘策略为 always，则立即执行 fsync
+        redis_fsync(server.aof_fd);
+        server.aof_fsync_offset = server.aof_current_size;
+        server.aof_last_fsync = server.unixtime;
+    } else if ((server.aof_fsync == AOF_FSYNC_EVERYSEC &&
+                server.unixtime > server.aof_last_fsync)) { 
+        // 落盘策略为 everysec，则 fsync 交由后台进程异步完成
+        if (!sync_in_progress) {
+            aof_background_fsync(server.aof_fd);
+            server.aof_fsync_offset = server.aof_current_size;
+        }
+        server.aof_last_fsync = server.unixtime;
+    }
+}
+```
+
+值得注意的是，如果写入 AOF 文件过程中发生错误，且落盘策略为 **always**，此时 Redis 进程会直接退出。
+
+### 日志重写
+在不断接收写命令的过程中，AOF 文件会越来越大，这将导致以下问题：
+- 文件系统对文件大小有限制，无法保存过大的文件
+- 故障恢复时，需要逐个执行 AOF 日志的命令，如果日志文件太大，将导致整个过程会非常缓慢
+
+导致该问题的一个重要原因就是存在**冗余命令**：
+```text
+# 执行命令
+127.0.0.1:6379> INCR counter
+(integer) 1
+127.0.0.1:6379> INCR counter
+(integer) 2
+127.0.0.1:6379> INCR counter
+(integer) 3
+
+# 对应的 AOF 日志
+*2\r\n$6\r\nSELECT\r\n$1\r\n0\r\n
+*2\r\n$4\r\nINCR\r\n$7\r\ncounter\r\n
+*2\r\n$4\r\nINCR\r\n$7\r\ncounter\r\n
+*2\r\n$4\r\nINCR\r\n$7\r\ncounter\r\n
+```
+
+Redis 提供了**重写机制**`rewrite`，能够大幅缩减不必要的冗余命令：
+```text
+# 重写日志，并输出到一个新的文件中
+127.0.0.1:6379> BGREWRITEAOF
+
+# 重写后的 AOF 日志将 3 个 INCR 命令转化为 1 个 SET 命令
+*2\r\n$6\r\nSELECT\r\n$1\r\n0\r\n
+*3\r\n$3\r\nSET\r\n$7\r\ncounter\r\n$1\r\n3
+```
+
+除了手动执行 **BGREWRITEAOF** 命令之外，Redis 也支持自动触发 AOF 重写。下列配置项可用于控制这一行为：
+```text
+# 重写策略
+no-appendfsync-on-rewrite no    # 重写 AOF 日志时禁止落盘
+auto-aof-rewrite-percentage 100 # 当增长百分比超过该值时，触发 AOF 重写
+auto-aof-rewrite-min-size 64mb  # 当日志文件体积超过该值后，触发 AOF 重写
+```
+
+```c
+struct redisServer {
+    // ...
+    int aof_no_fsync_on_rewrite;    /* 重写 AOF 过程中禁止调用 fsync 落盘 */
+    int aof_rewrite_perc;           /* 触发 AOF 重写的文件增长百分比 */
+    off_t aof_rewrite_min_size;     /* 触发 AOF 重写的最小文件体积 */
+    int aof_rewrite_scheduled;      /* 是否有重写操作在等待 BGSAVE 完成 */
+    list *aof_rewrite_buf_blocks;   /* AOF 重写缓冲 */
+}
+```
+
+Redis 的定时任务 `serverCron` 会周期性地检查是否满足重写条件：
+```c
+int serverCron(struct aeEventLoop *eventLoop, long long id, void *clientData) {
+    
+    /*
+      延迟重写：在服务器执行 BGSAVE 命令期间，如果接收到 BGWRITEAOF 命令，会将其延迟到 BGSAVE 完成后再执行，避免相互争抢磁盘资源 I/O
+    */
+    if (!hasActiveChildProcess() &&   // 无执行后台操作的子进程，意味着 BGSAVE 已经完成
+        server.aof_rewrite_scheduled) // 存在等待执行的 BGWRITEAOF 命令
+    {
+        rewriteAppendOnlyFileBackground();
+    }
+    
+    // ...
+
+    if (server.aof_state == AOF_ON && 
+        server.aof_rewrite_perc && 
+        server.aof_current_size > server.aof_rewrite_min_size) // 检查日志体积是否达标
+    {
+        // 检查日志增量是否达标
+        long long base = server.aof_rewrite_base_size ?
+            server.aof_rewrite_base_size : 1;
+        long long growth = (server.aof_current_size*100/base) - 100;
+        if (growth >= server.aof_rewrite_perc) {
+            // 如果当前状态满足重写条件，打印日志并开始执行 BGREWRITEAOF
+            serverLog(LL_NOTICE,"Starting automatic rewriting of AOF on %lld%% growth",growth);
+            rewriteAppendOnlyFileBackground();
+        }
+    }
+}
+```
+```c
+int rewriteAppendOnlyFileBackground(void) {
+    // ...
+    if ((childpid = redisFork(CHILD_TYPE_AOF)) == 0) {
+        /* 子进程负责重写 AOF 日志 */
+        char tmpfile[256];
+        if (rewriteAppendOnlyFile(tmpfile) == C_OK) {
+            // ...
+        }
+    } else {
+        /* 主进程不阻塞直接返回 */
+        serverLog(LL_NOTICE,
+            "Background append only file rewriting started by pid %d",childpid);
+        updateDictResizePolicy();
+        return C_OK;
+    }
+}
+```
+
+重写过程中，主线程仍然正常对外服务，数据库状态仍然会进行变更，但子进程重写后的 AOF 不会包含这些变更。
+
+因此，这些新增的命令会被同时追加到 **AOF 缓冲** `server.aof_buf` 与 **重写缓冲** `server.aof_rewrite_buf_blocks` 中。当子进程重写完成后，将 **重写缓冲** 追加至重写完成的 AOF 日志中即可。
+
+此外，为了避免与子进程的重写过程争抢磁盘I/O，可以通过 `aof_no_fsync_on_rewrite` 禁止主进程在重写期间调用 fsync 落盘 AOF 日志。
+
+## 两者比较
+
+#### RDB 快照
+- **优点**：文件结构紧凑，节省空间，易于传输，能够快速恢复
+
+- **缺点**：生成快照的开销只与数据库大小相关，当数据库较大时，生成快照耗时，无法频繁进行该操作
+
+#### AOF 日志
+- **优点**：细粒度记录对磁盘I/O压力小，允许频繁落盘，数据丢失的概率极低
+
+- **缺点**：恢复速度慢；记录日志开销与更新频率有关，频繁更新会导致磁盘 I/O 压力上升

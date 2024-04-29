@@ -1,0 +1,35 @@
+{
+  "Default": {
+    "title": "奇异循环",
+    "description" : "生命不息，好奇不止。",
+    "channel-link": "频道连接",
+    "hot-tag": "热门标签",
+    "new-post": "最新发布",
+    "new-video": "最新视频",
+    "archive-title": "时间线",
+    "search-title": "文章搜索",
+    "search-hint": "请输入关键字...",
+    "tag-title": "{tag} 相关文章"
+  },
+  "Navbar": {
+    "title": "奇异循环",
+    "home": "主页",
+    "search": "搜索",
+    "archive": "归档",
+    "about": "关于",
+    "system-theme": "跟随系统",
+    "dark-theme": "深色模式",
+    "light-theme": "浅色模式"
+  },
+  "About": {
+    "title": "奇异循环",
+    "description" : "生命不息，好奇不止。"
+  },
+  "Pagination": {
+    "prev-page" : "上一页",
+    "next-page" : "下一页"
+  },
+  "Error": {
+
+  }
+}

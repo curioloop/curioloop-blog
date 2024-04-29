@@ -1,0 +1,262 @@
+---
+title: Raft Protocol
+cover: '/cover/Rube-Goldberg-Machine.jpeg'
+date: 2020-05-23
+tags: ['System Design', 'Distributed System']
+---
+
+The Raft protocol is a distributed consensus protocol used to maintain consistency of replicated logs. 
+It ensures consistency in cases of node failures or network partitions through leader election, log replication, and safety mechanisms.
+
+
+[comment]:summary
+
+## Paxos Issues
+
+The description of the Paxos algorithm is very academic and lacks many details, making it difficult to apply directly in engineering. 
+Most distributed algorithms used in practical engineering are variants of Paxos, and verifying the correctness of these algorithms is also a difficult problem.
+
+For example, the [last section](/zh/posts/system-design/consistency-with-raft)  of the previous article introduces an engineering model that applies the Paxos algorithm. 
+This model has obvious write performance bottlenecks:
+
+- Using a multi-master architecture, the probability of write conflicts is high
+- Each update operation requires at least two rounds of network communication, resulting in high communication overhead
+
+If you want to improve the performance of this model, you still need to make further adjustments in many details. 
+The final algorithm is very different from the original version of Paxos.
+
+
+In order to solve the above problems, [Raft](https://raft.github.io/), another high-performance and easy-to-understand consistency algorithm has emerged.
+
+To learn algorithms, a fully functional Raft protocol was implemented in Java: [rafting](https://github.com/curioloop/rafting).
+
+The code is faithful to the original paper, which may help you understand this protocol better.
+
+
+## Basic Concepts
+
+The Raft algorithm is based on the **RSM (Replicated State Machine)**, and is essentially an algorithm for managing **log replication**.
+
+The Raft cluster uses a single-leader architecture, and there is a unique Leader process in the cluster responsible for managing log replication. 
+Its responsibilities include:
+- Accept requests sent by the client
+- Synchronize log records to other processes
+- Inform other processes when they can commit logs
+
+### Replicated State Machine
+
+![RaftRSM?width=500px](/picture/consistency-with-raft/raft_rsm.png)
+
+The essence of the replicated state machine is: **Paxos + WAL**
+
+> Each process maintains a **state machine** and uses a log to store the instructions it needs to execute\
+- If two state machines execute the same instructions in the same order, then the two processes can eventually converge to the same state.
+- If the logs of all processes can be guaranteed to be consistent, then the state of each process must also be consistent
+
+
+### Term
+
+In order to reduce unnecessary network communication, the order of log addition is determined by the unique Leader in the cluster, without the need to negotiate with other nodes. 
+The communication overhead is reduced from the minimum of 2 times to a fixed 1 time, which greatly improves the performance of the algorithm.
+
+
+For availability reasons, after the current leader goes offline, the cluster needs to select a new leader from the surviving nodes. 
+This process is called **leader election**.
+
+
+![RaftRSM?width=500px](/picture/consistency-with-raft/raft_term.png)
+
+Each election will generate a new **term** number which increase monotonically increasing. 
+If a new leader is generated in the election, then this term number will accompany this leader until it goes offline.
+
+
+Each [participant](https://github.com/curioloop/rafting/blob/master/src/main/java/io/lubricant/consensus/raft/context/member/RaftMember.java) 
+process maintains a `current_term` to represent the latest known term. Processes exchange this value with each other to detect changes in leadership.
+
+```java
+/**
+ * Basic information
+ */
+public abstract class RaftMember implements RaftParticipant {
+
+    // These two properties need to be persisted before responding to RPC
+    protected final long currentTerm; // The latest known term (initialized as 0)
+    protected final ID lastCandidate; // The candidate who received the last vote
+
+    protected RaftMember(long term, ID candidate) {
+        this.currentTerm = term;
+        this.lastCandidate = candidate;
+        stableStorage().persist(currentTerm, lastCandidate);
+    }
+
+    /**
+     * @see RaftParticipant#currentTerm()
+     */
+    @Override
+    public long currentTerm() {
+        return currentTerm;
+    }
+
+    /**
+     * @see RaftParticipant#votedFor()
+     */
+    @Override
+    public ID votedFor() {
+        return lastCandidate;
+    }
+
+}
+```
+
+### Log
+The log is a core concept of Raft.\
+
+Raft guarantees that logs are continuous and consistent, and can eventually be submitted by all processes in the order of their log indexes.
+
+![RaftLog?width=500px](/picture/consistency-with-raft/raft_log.png)
+
+Each log entry contains:
+- **Term**: the term of the Leader that generated this record
+- **Index**: its sequence in the log
+- **Command**: executable state machine instructions
+
+Once a command in a log is executed by the state machine, we call this record **committed**. 
+Raft ensures that committed records are not lost.
+
+
+### Roles
+
+Each process in the Raft cluster can only assume one of the following roles:
+- **Leader**: sends heartbeats, manages log replication and submission
+- **Follower**: passively responds to requests sent by other nodes
+- **Candidate**: actively initiates and participates in elections
+
+
+![RaftRole?width=500px](/picture/consistency-with-raft/raft_role.png)
+
+Raft processes communicate with each other using RPC. 
+Implementing the most basic consensus algorithm only requires [two types of RPC](https://github.com/CuriosityStack/rafting/blob/master/src/main/java/io/lubricant/consensus/raft/RaftService.java):
+
+- **RequestVote**: used to elect a Leader
+- **AppendEntries**: replicate logs and send heartbeats
+
+
+```java
+/**
+ * RPC interface
+ * */
+public interface RaftService {
+
+    /**
+     * Replicate logs + send heartbeats (called by the leader)
+     * @param term leader term
+     * @param leaderId unique identifier of the leader in the cluster
+     * @param prevLogIndex index of the log entry immediately preceding the new one
+     * @param prevLogTerm term of prevLogIndex
+     * @param entries log entries (empty when sending heartbeats)
+     * @param leaderCommit index of the log entry already committed by the leader
+     * @return true if the follower's log contains a log entry matching prevLogIndex and prevLogTerm
+     * */
+    Async<RaftResponse> appendEntries(
+            long term, ID leaderId,
+            long prevLogIndex, long prevLogTerm,
+            Entry[] entries, long leaderCommit) throws Exception;
+
+    /**
+     * Leader election (called by the candidate)
+     * @param term candidate term
+     * @param candidateId unique identifier of the candidate in the cluster
+     * @param lastLogIndex index of the last log entry of the candidate
+     * @param lastLogTerm term of the last log entry of the candidate
+     * @return true when receiving a vote of approval
+     * */
+    Async<RaftResponse> requestVote(
+            long term, ID candidateId,
+            long lastLogIndex, long lastLogTerm) throws Exception;
+
+}
+```
+
+
+## Algorithm Process
+
+Based on the single-leader model, Raft decomposes the consistency problem into 3 independent subproblems:
+
+- **Leader Election:** Automatically elect a new leader after the Leader process fails
+- **Log Replication**: The Leader ensures that the logs of other nodes are consistent with its own
+- **Safety**: The Leader ensures that the order and content of executing commands by the state machine are consistent
+
+For easier understanding, the following explanation is accompanied by [animations](http://thesecretlivesofdata.com/raft/).
+
+### Election
+![RaftLegend?width=250px](/picture/consistency-with-raft/raft_legend.jpg)
+
+![RaftElection](/picture/consistency-with-raft/raft_election.gif)
+
+Using **heartbeat timeout** mechanism to trigger leader election:
+
+- Nodes start as **Follower** by default. If a Follower does not receive heartbeat information from the **Leader** within a timeout period, it transitions to **Candidate** and initiates `RequestVote` requests to other nodes.
+- Once a Candidate receives votes from a majority, it becomes the Leader and starts sending `AppendEntries` requests to other nodes to maintain its leadership.
+- After the Leader fails to send heartbeats, the heartbeat timeout mechanism of the Followers is triggered again, starting a new round of elections.
+
+
+### Replication
+
+![RaftReplication](/picture/consistency-with-raft/raft_replication.gif)
+
+Only the Leader provides services to the outside world in the cluster.
+
+When a client communicates with the Leader, each request contains a command that can be executed by the state machine.
+
+Upon receiving a command, the Leader converts it into a corresponding **log entry** and appends it to its local log. It then calls `AppendEntries` to replicate this log entry to the logs of other nodes.
+
+When the log is replicated to a majority of nodes, the Leader **commits** the command contained in this log entry to be executed by the state machine, and finally informs the client of the execution result.
+
+
+### Network Partition
+
+![RaftPartition](/picture/consistency-with-raft/raft_partition.gif)
+
+Using the **majority** mechanism to handle network partitions:
+
+After a network partition occurs, multiple Leaders may appear simultaneously in the cluster. The replication mechanism ensures that at most one Leader can provide services normally.
+
+If logs cannot be replicated to a majority of nodes, the Leader will reject the submission of these logs. When the network partition disappears, the cluster will automatically return to a consistent state.
+
+
+### Safety Guarantee
+
+##### **Leader Election**
+
+Ensure that the new Leader has all committed logs.
+
+- Each Follower checks the log index of the Candidate when voting and refuses to vote for a Candidate with incomplete logs.
+- If more than half of the Followers vote in favor, it means that the Candidate contains all potentially committed logs.
+
+
+##### **Logs Committing**
+
+Leader only actively commits logs generated during its own term.
+
+- If a record is created by the current Leader, then when this record is replicated to a majority of nodes, the Leader can submit this record and the preceding records for execution.
+- If a record was created by a previous Leader, only when the records created by the current Leader are committed, can these logs created by the previous Leader be committed.
+
+
+## Summary
+
+The essence of consistency algorithms is the **trade-off between consistency and availability**.
+
+**Raft's advantages**
+
+Simplified log management with Single Leader architecture.
+
+All logs are flowed from the Leader to other nodes without the need to negotiate with other nodes. 
+Other nodes only need to record and apply the log content sent by the Leader, optimizing the original two-phase request to a single RPC call.
+
+
+**Raft's disadvantages**
+
+High requirements for log continuity.
+
+To simplify log management, Raft does not allow gaps in logs, limiting concurrency. 
+In some scenarios, it is necessary to decouple unrelated business using the Multi-Raft mode to increase system concurrency.

@@ -1,0 +1,231 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --scroll-y: .5rem;
+  --scroll-x: .35rem;
+}
+
+mjx-container svg {
+  display: inline;
+}
+
+@layer base {
+  * {
+    transition: background-color .2s ease-in-out;
+  }
+}
+
+@layer components {
+
+  .bulb-glow:hover {
+    filter: drop-shadow(0px 0px 5px #9ef);
+  }
+
+  .dark {
+    .bulb-glow:hover {
+      filter: drop-shadow(0px 0px 5px #ccc);
+    }
+  }
+
+  .retro-screen {
+    overflow: hidden;
+    border: 2px solid #2b2e4a;
+    border-radius: 5px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.6);
+    background-color: #050505 !important;
+    background: repeating-linear-gradient(
+      to bottom,
+      rgba(0, 255, 0, 0.1) 0px,
+      rgba(0, 255, 0, 0.1) 2px,
+      rgba(0, 255, 0, 0) 2px,
+      rgba(0, 255, 0, 0) 4px
+    );
+  
+    .glow-text {
+      color: #0f0;
+      font-weight: bold;
+      font-family: 'Courier New', Courier, monospace;
+      text-shadow: 0 0 10px rgba(0, 255, 0, 0.35),
+                   0 0 20px rgba(0, 255, 0, 0.35),
+                   0 0 30px rgba(0, 255, 0, 0.35);
+      svg { filter: blur(0.3px); }
+    }
+  
+    .glow-card {
+      border: 1px solid rgba(0,200,0,0.7);
+      box-shadow: inset 0 0 10px rgba(0,200,0,0.35);
+  
+      &:nth-child(1) {
+        text-align: center;
+        color: rgba(0,0,0,0.85);
+        background-color: rgba(0,255,0,0.8);
+        span { filter: drop-shadow(1px 1px 0px #0f0); }
+      }
+    }
+
+    .glow-link:hover {
+      color: #000;
+      background-color: rgba(0,255,0,0.8);
+    }
+
+    .glow-tag {
+      color: #0e0;
+      border: 1px solid rgba(0,200,0,0.1);
+      background-color: rgba(0,200,0,0.1);
+
+    }
+
+    .glow-tag:hover {
+      color: #0f0;
+      background-color: rgba(0,200,0,0.35);
+    }
+  }
+
+  .gray-screen {
+    overflow: hidden;
+    border: 2px solid #111;
+    border-radius: 5px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5),
+          inset 0 0 20px rgba(0, 0, 0, 0.7);
+    background-color: #333 !important;
+    background: repeating-linear-gradient(
+      transparent, 
+      transparent 2px,
+      rgba(255, 255, 255, 0.05) 2px, 
+      rgba(255, 255, 255, 0.05) 3px);
+  
+    .glow-text {
+      color: #ccc;
+      font-weight: bold;
+      font-family: 'Courier New', Courier, monospace;
+      text-shadow: 2px 2px 5px rgba(0, 0, 0, 0.8)/* shadow */,
+                  0 0 5px rgba(255, 255, 255, 0.2)/* glow */;
+      svg { filter: drop-shadow(2px 2px 0px #222); }
+    }
+  
+    .glow-card {
+      border: 1px solid rgba(200,200,200,0.7);
+      box-shadow: inset 0 0 10px rgba(200,200,200,0.35);
+  
+      &:nth-child(1) {
+        text-align: center;
+        color: rgba(0,0,0,0.85);
+        background-color: rgba(200,200,200,0.8);
+        span { filter: drop-shadow(1px 0px 0px #ccc); }
+      }
+    }
+
+    .glow-link:hover {
+      color: #333;
+      background-color: rgba(200,200,200,0.85);
+      svg { filter: drop-shadow(1px 1px 0px #555); }
+    }
+
+    .glow-tag {
+      color: #eee;
+      border: 1px solid rgba(200,200,200,0.1);
+      background-color: rgba(200,200,200,0.1);
+    }
+
+    .glow-tag:hover {
+      color: #fff;
+      background-color: rgba(200,200,200,0.35);
+    }
+  }
+  
+  .typewriter {
+    display: block;
+    overflow: hidden;
+    white-space: nowrap;
+    pointer-events: none;
+    animation-iteration-count: 1;
+  
+    &:nth-child(1) {
+      animation: typing 1s steps(20, end);
+      visibility: hidden;
+      animation-delay: 1s;
+      animation-fill-mode: forwards;
+    }
+    &:nth-child(1)::after{
+      content: '|';
+      animation: typing-cursor 1s infinite, typing-cursor-end 1s infinite 1.5s;
+    }
+    &:nth-child(2) {
+      animation: typing 1s steps(15, end);
+      visibility: hidden;
+      animation-delay: 1.5s;
+      animation-fill-mode: forwards;
+    }
+    &:nth-child(2)::after{
+      content: '|';
+      animation: typing-cursor 1s infinite, typing-cursor-end 1s infinite 2.5s;
+    }
+    &:nth-child(3) {
+      animation: typing 1s steps(5, end);
+      visibility: hidden;
+      animation-delay: 2.2s;
+      animation-fill-mode: forwards;
+    }
+    &:nth-child(3)::after{
+      content: '|';
+      animation: typing-cursor 1s infinite;
+    }
+  }
+  
+  @keyframes typing {
+    from { width: 0; }
+    to { width: 100%; visibility: visible; }
+  }
+  @keyframes typing-cursor {
+    50% { opacity: 0; }
+  }
+  @keyframes typing-cursor-end {
+    from, to { opacity: 0; }
+  }
+
+  .glitch {
+    animation: glitch 0.15s infinite, flicker 0.65s infinite;
+    animation-play-state: paused;
+    user-select: none;
+  }
+
+  .glitch:hover {
+    animation-play-state: running;
+  }
+
+  @keyframes flicker {
+    0% { opacity: 1; }
+    4% { opacity: 0.7; }
+    8% { opacity: 1; }
+    12% {  opacity: 0.8; }
+    16% { opacity: 1; }
+    20% { opacity: 0.75; }
+    24% { opacity: 1; }
+    28% { opacity: 0.85; }
+    32%, 100% { opacity: 1; }
+  }
+
+  @keyframes glitch {
+    1%, 2%, 3%, 4%, 5%, 6%, 7%, 8%, 9%, 10%, 11%, 12%, 13%, 14%, 15%, 16%, 17%, 18%, 19% {
+      transform: translateX(2px);
+    }
+    20%, 100% {
+      transform: none;
+    }
+  }
+  
+}
+
+@layer utilities {
+
+  pre[data-theme='light'], code[data-theme='light'] { display: block; }
+  pre[data-theme='dark'], code[data-theme='dark'] { display: none; }
+  
+  .dark {
+    pre[data-theme='light'], code[data-theme='light'] { display: none; }
+    pre[data-theme='dark'], code[data-theme='dark'] { display: block; }
+  }
+
+}
