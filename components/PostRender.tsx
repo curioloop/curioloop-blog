@@ -16,7 +16,7 @@ import rehypeRaw from 'rehype-raw'
 import rehypeMathjax from 'rehype-mathjax'
 import rehypePrettyCode from "rehype-pretty-code"
 
-import { BlogPost } from '@/blogs/post'
+import { BlogPost, fixPostImage } from '@/blogs/post'
 import VideoPreview from "@/components/VideoPreview"
 import PostContent from './PostContent'
 import clsx from 'clsx'
@@ -70,7 +70,7 @@ DetailedHTMLProps<HtmlHTMLAttributes<HTMLImageElement>, HTMLImageElement>
   const align = attrs['align'] || 'center'
   return (
     <p {...{align}}>
-      <img src={src} alt={alt} {...attrs}>
+      <img src={fixPostImage(src)} alt={alt} {...attrs}>
         {children}
       </img>
     </p>

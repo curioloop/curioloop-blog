@@ -2,5 +2,6 @@
 import { redirect } from 'next/navigation';
 
 export default function Index() {
-  return redirect(`/zh`)
+  const lang = process.env.DEFAULT_LANG || 'en'
+  return redirect(`/${lang}`)
 }

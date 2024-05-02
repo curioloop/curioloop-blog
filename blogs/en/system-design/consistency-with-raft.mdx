@@ -2,7 +2,7 @@
 title: Raft Protocol
 cover: '/cover/Rube-Goldberg-Machine.jpeg'
 date: 2020-05-23
-tags: ['System Design', 'Distributed System']
+tags: ['SystemDesign', 'DistributedSystem']
 ---
 
 The Raft protocol is a distributed consensus protocol used to maintain consistency of replicated logs. 
@@ -135,7 +135,7 @@ Each process in the Raft cluster can only assume one of the following roles:
 ![RaftRole?width=500px](/picture/consistency-with-raft/raft_role.png)
 
 Raft processes communicate with each other using RPC. 
-Implementing the most basic consensus algorithm only requires [two types of RPC](https://github.com/CuriosityStack/rafting/blob/master/src/main/java/io/lubricant/consensus/raft/RaftService.java):
+Implementing the most basic consensus algorithm only requires [two types of RPC](https://github.com/curioloop/rafting/blob/master/src/main/java/io/lubricant/consensus/raft/RaftService.java):
 
 - **RequestVote**: used to elect a Leader
 - **AppendEntries**: replicate logs and send heartbeats

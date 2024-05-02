@@ -5,7 +5,7 @@ import matter from "gray-matter"
 import { locales } from "@/navigation"
 import { SearchDoc } from "./search"
 
-export const postPerPage = 3 as const
+export const postPerPage = 5 as const
 
 export type BlogMeta = {
   slug: string
@@ -38,6 +38,14 @@ export type BlogTag = {
   tag : string
   posts: BlogPost[]
 }
+
+export function fixPostImage(src:string) {
+  if (!src.startsWith('http')) {
+    const cdn = process.env.CDN_URL || ''
+    return cdn + src
+  }
+  return src
+} 
 
 export async function getPostPages(locale:string) : Promise<BlogPages> {
   const posts = await loadPosts(locale)
@@ -78,7 +86,8 @@ export async function getPostTags(locale:string) : Promise<BlogTag[]> {
 
 export async function getPostByTag(locale:string, tag:string) : Promise<BlogTag> {
   const tags = await getPostTags(locale)
-  const post = tags.find((post) => post.tag == tag)
+  const name = [tag, decodeURI(tag)]
+  const post = tags.find((post) => name.includes(post.tag))
   if (!post) 
     throw Error(`tag not found ${locale}/${tag}`)
   return post
@@ -114,15 +123,35 @@ export async function buildIndexJSON(locale:string) {
   return JSON.stringify(documents)
 }
 
+
+const postCacheTTL = parseInt(process.env.POST_CACHE_TTL || '3')
+const postCache = {} as { [key: string] : {
+  posts: BlogPost[]
+  ttl: number
+}}
+
 async function loadPosts(locale:string, slug?:string) : Promise<BlogPost[]> {
   
   if (!locales.includes(locale as any)) 
     throw Error(`unknown locale ${locale}`)
 
+  let version = postCache[locale]
+  if (!version || version.ttl < Date.now()) {
+    const posts = await fetchPosts(locale)
+    version = { posts, ttl: Date.now() + postCacheTTL * 1000 }
+    postCache[locale] = version
+  }
+
+  if (!slug) return version.posts
+  return version.posts.filter(post => post.meta.slug == slug)
+}
+
+async function fetchPosts(locale:string) : Promise<BlogPost[]>{
+
   const ext = '.mdx'
   const dir = `blogs/${locale}`
   const files = await fs.readdir(dir)
-  const toSlug = (file:string) => file.endsWith(ext) && (!slug || file.startsWith(slug)) ? file.replace(ext, '') : ''
+  const toSlug = (file:string) => file.endsWith(ext) ? file.replace(ext, '') : ''
 
   const markdowns = await Promise.all(files.map(async (category) => {
     const path = `${dir}/${category}`
@@ -142,8 +171,10 @@ async function loadPosts(locale:string, slug?:string) : Promise<BlogPost[]> {
     })
 
     if (!data.tags) data.tags = []
+    if (data.cover) data.cover = fixPostImage(data.cover)
     return { meta: {...data, slug, summary, category} as BlogMeta, content } satisfies BlogPost
   })
   
-  return Promise.all(promises)
+  return await Promise.all(promises)
+
 }

@@ -1,2 +1,2 @@
 # curioloop-blog
-Personal blog site built on Nextjs and Tailwindcss
+Static blog site built on Nextjs SSG and Tailwindcss

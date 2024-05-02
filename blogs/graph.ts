@@ -80,22 +80,38 @@ export default function mermaidGraph(options: MermaidConfig) {
       '#mermaid-graph .edgeLabel { background: none; color: #888; -webkit-text-stroke-width: 0.3px; -webkit-text-stroke-color: #333; }'
     ].join(' ')
 
+    const browser = await puppeteer.launch({
+      headless: 'shell', timeout: 0,
+      args: [
+        '--disable-translate',
+        '--disable-extensions',
+        '--disable-background-networking',
+        '--disable-sync',
+        '--disable-default-apps',
+        '--mute-audio',
+        '--no-default-browser-check',
+        '--no-first-run',
+        '--no-pings',
+        '--no-sandbox',
+        '--no-zygote',
+      ]
+    });
+
     await Promise.all(
       data.map(async ({ value, index, parent }) => {
-        const browser = await puppeteer.launch({headless: 'shell'});
         const page = await browser.newPage();
         try {
-          page.on('console', (msg) => console.log(msg.text()));
+          // page.on('console', (msg) => console.log(msg.text()));
           await page.evaluate(mermaidJs);
           const svg = await renderSvg(value, page, {theme: 'neutral'}, styleText);
           parent.children.splice(index, 1, { type: 'html', value: svg });
         } finally {
           await page.close()
-          await browser.close()
         }
       })
     );
-  
+
+    await browser.close();
     return ast;
   };
 }
