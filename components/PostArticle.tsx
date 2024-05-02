@@ -13,6 +13,7 @@ type Props = {
 const PostArticle = async ({ post }:Props) => {
   const locale = useLocale()
   const {meta : {title, cover, tags, date } } = post
+  const tagList = Object.entries(tags)
   return (
       <article className="mt-6 overflow-auto rounded-md shadow-md text-light-txt dark:text-dark-txt bg-light-bg dark:bg-dark-bg">
         {
@@ -27,12 +28,12 @@ const PostArticle = async ({ post }:Props) => {
         </header>
         <PostRender post={post}/>
         {
-          tags.length > 0 &&
+          tagList.length > 0 &&
           <footer className="flex flex-wrap justify-start gap-2 p-6 mt-4 pt-4 border-t dark:border-dark-bg-lite">
           {
-            tags.map(tag => (
+            tagList.map(([id, tag]) => (
               <a className="px-3 rounded-md border border-light-lite text-light-lite hover:text-light-lite-hov hover:bg-light-lite dark:hover:bg-dark-bg-lite " 
-                 key={tag} href={`/${locale}/tag/${tag}`}>{tag}</a>
+                 key={id} href={`/${locale}/tags/${id}`}>{tag}</a>
             ))
           }
           </footer>

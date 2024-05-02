@@ -4,8 +4,8 @@ import React from 'react'
 
 const TopTags = async ({ className }:{className:string}) => {
   const locale = useLocale()
-  const tags = (await getPostTags(locale)).map(({tag}) => tag)
-  return tags.slice(0, 10).map(tag => <a key={tag} className={className} href={`/${locale}/tags/${tag}`}>{tag}</a>)
+  const tags = (await getPostTags(locale))
+  return tags.slice(0, 10).map(tag => <a key={tag.id} className={className} href={`/${locale}/tags/${tag.id}`}>{tag.tag}</a>)
 }
 
 const DefaultLeft = () => {

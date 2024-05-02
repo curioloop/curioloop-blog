@@ -29,7 +29,12 @@
     "prev-page" : "上一页",
     "next-page" : "下一页"
   },
-  "Error": {
-
+  "Tag": {
+    "pbac": "PBAC",
+    "redis": "Redis",
+    "system-design": "系统设计",
+    "distributed-system": "分布式系统",
+    "backend-dev": "后端开发",
+    "frontend-dev": "前端开发"
   }
 }

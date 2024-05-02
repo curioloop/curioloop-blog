@@ -4,6 +4,7 @@ import striptags from "striptags"
 import matter from "gray-matter"
 import { locales } from "@/navigation"
 import { SearchDoc } from "./search"
+import { createTranslator } from 'next-intl'
 
 export const postPerPage = 5 as const
 
@@ -14,7 +15,7 @@ export type BlogMeta = {
   title: string
   summary: string
   category: string
-  tags: string[]
+  tags: {[key:string]:string}
   date: string
 }
 
@@ -35,6 +36,7 @@ export type BlogPage = {
 }
 
 export type BlogTag = {
+  id: string
   tag : string
   posts: BlogPost[]
 }
@@ -75,21 +77,20 @@ export async function getPostBySlug(locale:string, slug:string) : Promise<BlogPo
 export async function getPostTags(locale:string) : Promise<BlogTag[]> {
   const posts = await loadPosts(locale)
   const tags = posts.reduce((tags, post) => { 
-    post.meta.tags.forEach(tag => {
-      if (!tags[tag]) tags = Object.assign(tags, {[tag]: {tag, posts:[]}})
-      tags[tag].posts.push(post)
+    Object.entries(post.meta.tags).forEach(([id, tag]) => {
+      if (!tags[tag]) tags = Object.assign(tags, {[tag]: {id, tag, posts:[]}})
+        tags[tag].posts.push(post)
     })
     return tags;
   }, {} as {[key: string]: BlogTag} )
   return Object.values(tags).sort(({posts:{length:a}},{posts:{length:b}})=> a - b).toReversed()
 }
 
-export async function getPostByTag(locale:string, tag:string) : Promise<BlogTag> {
+export async function getPostByTag(locale:string, tagId:string) : Promise<BlogTag> {
   const tags = await getPostTags(locale)
-  const name = [tag, decodeURI(tag)]
-  const post = tags.find((post) => name.includes(post.tag))
+  const post = tags.find((post) => post.id == tagId)
   if (!post) 
-    throw Error(`tag not found ${locale}/${tag}`)
+    throw Error(`tag id not found ${locale}/${tagId}`)
   return post
 }
 
@@ -117,7 +118,7 @@ export async function buildIndexJSON(locale:string) {
   const documents = posts.map(({meta:{slug, title, tags}, content:mdx}) => {
     const html = marked.parse(mdx)
     const text = striptags(html)
-    return {slug, title, tags, content:text.replace(/\s+/g, ' ')} satisfies SearchDoc
+    return {slug, title, tags: Object.values(tags), content:text.replace(/\s+/g, ' ')} satisfies SearchDoc
   })
   
   return JSON.stringify(documents)
@@ -163,6 +164,7 @@ async function fetchPosts(locale:string) : Promise<BlogPost[]>{
     }
   }))
 
+  const t = await tagTranslator(locale, true)
   const promises = markdowns.flat().map(async ({category, path, slug}) => {
     const source = await fs.readFile(path, 'utf8')
     const { content, excerpt: summary, data } = matter(source, {
@@ -170,11 +172,21 @@ async function fetchPosts(locale:string) : Promise<BlogPost[]>{
         excerpt_separator: '[comment]:summary',
     })
 
-    if (!data.tags) data.tags = []
+    data.tags = (data.tags || []).reduce((tags: {[key: string]: string}, v:string) => { 
+      tags[t(v)] = v
+      return tags;
+    }, {} as {[key: string]: string} )
+
     if (data.cover) data.cover = fixPostImage(data.cover)
     return { meta: {...data, slug, summary, category} as BlogMeta, content } satisfies BlogPost
   })
   
   return await Promise.all(promises)
 
+}
+
+export async function tagTranslator(locale:string, flip:boolean) {
+  const {Tag:messages} = (await import(`@/messages/${locale}.json`)).default;
+  const flipKV = (data:{[key:string]:string}) => Object.fromEntries(Object.entries(data).map(([key, value]) => [value, key]))
+  return createTranslator({ locale, messages: flip ? flipKV(messages): messages })
 }

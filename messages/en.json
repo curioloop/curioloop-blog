@@ -29,7 +29,12 @@
     "prev-page" : "Prev",
     "next-page" : "Next"
   },
-  "Error": {
-
+  "Tag": {
+    "pbac": "PBAC",
+    "redis": "Redis",
+    "system-design": "SystemDesign",
+    "distributed-system": "DistributedSystem",
+    "backend-dev": "BackendDev",
+    "frontend-dev": "FrontendDev"
   }
 }

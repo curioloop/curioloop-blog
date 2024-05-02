@@ -6,6 +6,7 @@ import { useLocale } from 'next-intl'
 
 
 type Tag = {
+  id: string,
   value: string
   count: number
 }
@@ -15,7 +16,7 @@ const TagCloud = async () => {
   const locale = useLocale()
 
   const tags = (await getPostTags(locale)).map(
-    ({tag:value, posts:{length:count}}) => ({value, count} satisfies Tag)
+    ({id, tag:value, posts:{length:count}}) => ({id, value, count} satisfies Tag)
   )
 
   const maxSize = 2.2, minSize = 1
@@ -29,11 +30,11 @@ const TagCloud = async () => {
     const counts = tags.map(tag => tag.count),
         min = Math.min(...counts),
         max = Math.max(...counts)
-    return tags.map(({value, count}) => {
+    return tags.map(({id, value, count}) => {
       const fontSize = fontSizeConverter(count, min, max)
       return <li key={value} className="flex items-center my-2 mx-5">
                <a className="decoration-clone transform transition duration-300 hover:scale-110 hover:drop-shadow-2xl" 
-                  href={`/${locale}/tags/${value}`} style={{fontSize}}>{value}</a>
+                  href={`/${locale}/tags/${id}`} style={{fontSize}}>{value}</a>
              </li>
     })
   }
