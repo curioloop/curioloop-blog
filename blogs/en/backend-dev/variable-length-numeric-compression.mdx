@@ -1,0 +1,266 @@
+---
+title: Variable-Length Numerical Compression Encoding
+cover: '/cover/Squeeze-Orange.png'
+date: 2024-05-05
+tags: ['BackendDev', 'NumericalEncoding']
+---
+
+In the vast world of compression encoding, a specific category exists for numerical compression. These encodings do not require constructing a data dictionary based on sample data; instead, they can efficiently compress real-time time-series data without loss.
+
+These compression encodings have shone brightly in the field of time-series data processing, saving users a significant amount of storage space and transmission bandwidth while enhancing the processing capabilities for large amounts of data.
+
+This article will introduce some of the most commonly used encoding methods among them.
+
+[comment]:summary
+
+## Basic Concepts
+
+In the modern internet era, we constantly benefit from the convenience brought by compression encodings. 
+According to whether there's a loss of precision after decompression, compression algorithms can be divided into two categories:
+
+- **Lossy Compression**: Reduces the volume of image and audio files by eliminating details through signal processing technical such as filtering and transformations.
+- **Lossless Compression**: Eliminates redundancy in data by scanning and constructing data a dictionary then replace the orignal data with the indices of dictionary.
+
+
+However, these two methods are not optimal solutions for time-series data. Time-series data possesses the following characteristics:
+- High redundancy
+- Small sample sizes
+- High real-time requirements
+
+Such data is ubiquitous in our surroundings, such as the stock order book data shown in the image below:
+![ArcaBook](/picture/variable-length-numeric-compression/arca-book.jpeg)
+
+If conventional lossless compression algorithms are applied to this data, not only will compression efficiency not be achieved, 
+but the introduction of compression dictionaries may also lead to data inflation.
+
+For special data, special compression method is required — **Variable Length Numeric Encoding**.
+
+Variable Length Numeric Encoding is a type of encoding format specifically designed to handle small-range numerical values. 
+Due to its high compression efficiency and simple implementation, it has been widely used in search engines and columnar storage fields:
+
+- **Protobuf** achieves efficient binary serialization through variable-length integer encoding.
+- The time-series database **InfluxDB** utilizes variable-length floating-point encoding to achieve efficient data storage.
+
+
+Next, we will review two commonly used encoding formats:
+
+- Integer Encoding
+  - Varint: Unsigned small integers
+  - ZigZag: Signed small integers
+  - Simple8b: Repeated small integers
+
+- Floating-Point Encoding
+  - Gorilla: Floating-point numbers close in value
+  - Chimp: Floating-point numbers with periodic regularity
+
+
+## Integer Encoding
+
+### Space Waste
+
+Commonly used integer data types can be divided into:
+
+- int8 / byte
+- int16 / short
+- int32 / int
+- int64 / long
+
+The larger the space occupied, the wider the range that can be expressed, but it also implies higher storage overhead.
+
+Taking the volume in the order book data as an example:
+
+- In popular stocks, there are many active retail investors, so the volume is usually small, requiring only int16 for storage.
+- In less popular stocks, there are fewer active investors, and the volume may be in the thousands, requiring int32 for storage.
+
+However, in practical applications, it is not feasible to model data for specific stocks. 
+To avoid overflow, int32 must be selected to represent volume, which undoubtedly consumes more storage space and network bandwidth.
+
+### Varint
+
+To find a more versatile representation, [VarInt](https://github.com/curioloop/number-codec/blob/main/src/main/java/com/curioloop/number/codec/varint/VarInt.java) encoding emerged.
+
+For int32 data, its encoding rules are as follows:
+- Divide the 32-bit data into n groups of 7 bits.
+- Each group of data is stored using one byte.
+  - The first bit is a flag bit indicating whether the encoding is complete.
+  - The remaining 7 bits are data bits, storing the data after grouping.
+
+![Varint](/picture/variable-length-numeric-compression/varint.png)
+
+```text
+12    →  1100                 →  00001100                   (1 byte)
+
+289   →  1|00100001           →  00000010|10100001          (2 byte)
+
+65990 →  1|00000001|11000110  →  00001000|0000011|11000110  (3 byte)
+```
+
+Through this encoding rule, VarInt can convert int32 into byte arrays of lengths ranging from 1 to 5. 
+Depending on the number of occupied bytes, the data range that the encoding can express is:
+
+- 1 byte → 0 ~ 127
+- 2 byte → 0 ~ 16383
+- 3 byte → 0 ~ 2097151
+- 4 byte → 0 ~ 268435455
+- 5 byte → 0 ~ 4294967295
+
+Obviously when unsigned small integers occur frequently in the application scenario, using VarInt can achieve decent compression effects. 
+Even occasional large values will not cause overflow. By ensuring storage and transmission efficiency while improving the generality of data models.
+
+
+### ZigZag
+
+However, VarInt also has a significant drawback: it is not friendly to negative numbers.
+
+For big-endian data, VarInt achieves compression by reducing leading zeroes.
+However, the first bit of negative numbers is always nonzero, making it impossible to compress the data and introducing unnecessary space overhead.
+
+Taking -1 as an example, its two's complement corresponding unsigned integer for int32 is 4294967295, which means it needs 5 bytes to encode.
+
+For negative integers, a better sloution is [ZigZag](https://github.com/curioloop/number-codec/blob/main/src/main/java/com/curioloop/number/codec/varint/ZigZag.java).
+
+The ZigZag encoding solves this problem by adjusting the two's complement before VarInt encoding to maximize its leading zeroes.
+
+The implementation is not complicated; it only requires two mapping operations before and after VarInt encoding:
+
+- Mapping before VarInt encoding: `(n << 1) ^ (n >> 31)`
+- Mapping after VarInt decoding: `(n >>> 1) ^ -(n & 1)`
+
+Let's intuitively feel the actual effect of these two operations using -1 as an example:
+
+
+- When n = -1, mapping before VarInt encoding:
+```
+n = -1      -> 11111111111111111111111111111111
+a = n << 1  -> 11111111111111111111111111111110
+b = n >> 31 -> 11111111111111111111111111111111
+a ^ b       -> 00000000000000000000000000000001
+```
+
+- When n = -1, mapping after VarInt decoding:
+```
+m = a ^ b    -> 00000000000000000000000000000001
+a = m >>> 1  -> 00000000000000000000000000000000
+b = -(m & 1) -> 11111111111111111111111111111111
+a ^ b        -> 11111111111111111111111111111111
+```
+
+ZigZag mapping effectively increases the number of leading zeroes for small negative numbers, thereby improving compression efficiency. 
+However, after adding ZigZag mapping, the data range that the encoding can express becomes:
+
+- 1 byte → -64 ~ 63
+- 2 byte → -8192 ~ 8191
+- 3 byte → -1048576 ~ 1048575
+- 4 byte → -134217728 ~ 134217727
+- 5 byte → -2147483648 ~ 2147483647
+
+We can see that ZigZag encoding makes a trade-off: by occupying part of the encoding space for non-negative numbers, 
+it greatly improves the compression effect for small negative values.
+
+### Simple8
+
+The two encoding methods mentioned above still have a limitation: only one numerical value can be stored in one byte.
+
+To overcome this limitation, the **work packing** encodings called emerged: by packing multiple integer data according to certain rules into a more compact form to save storage space. 
+One of these encodings is Simple8b.
+
+[Simple8](https://github.com/curioloop/number-codec/blob/main/src/main/java/com/curioloop/number/codec/simple8/Simple8Codec.java) divides 64 bits into two parts:
+
+- **`selector(4bit)`**  Specifies the number of integers and the length of effective bits in the remaining 60 bits.
+- **`payload(60bit)`**  Used to store multiple fixed-length integers.
+
+The following encoding table shows the storage conditions of Simple8b with different selector values:
+
+|selector value|0|1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|
+|:-:|:-:|:-:|:-:|:-:|-:|:-:|:-:|:-:|:-:|-:|:-:|:-:|:-:|:-:|:-:|:-:|
+|integers coded|240|120|60|30|20|15|12|10|9|8|7|6|5|4|3|2|1|
+|bits per integer|0|0|1|2|3|4|5|6|7|8|10|12|15|20|30|60|
+
+Simple8's decoding method is simple and efficient, requiring only bitwise operations according to the table. 
+However, its encoding process is relatively complex, traditionally implemented using backtracking, resulting in high time complexity.
+
+There is a more efficient [implementation approach](https://github.com/curioloop/number-codec/blob/main/src/main/java/com/curioloop/number/codec/simple8/FastLookup.java):
+> Enumerate all possible combinations in a 60 x 240 matrix and then prune impossible states, finally obtaining a one-dimensional lookup table with a length of 261.
+
+The table lookup method reduces the encoding complexity from $O(N^2)$ to $O(N)$, achieving about 5 times the throughput improvement in our applicaion.
+
+## Floating-Point Encoding
+
+### Gorilla
+
+Now, let's talk about encoding methods for floating-point numbers. 
+Taking IEEE 754 floating-point numbers as an example, their storage structure is mainly divided into 3 parts:
+
+![Float32](/picture/variable-length-numeric-compression/float32.svg)
+
+- $S$: Sign bit
+- $E$: Exponent biased with base 2
+- $F$: Significant digits of the number
+
+The corresponding floating-point number can be represented as: $(-1)^S \times 2^{(E-127)} \times 1.F$
+
+Previously introduced encodings like VarInt perform well only when the number has enough leading zeroes.
+
+To ensure compression ratio, both the sign and the exponent must be 0.
+However, this range can only represent float numbers between [0, 1), which is applicable to only a few scenarios.
+
+Since individual data points aren't easy to compress, what about a batch of data points? 
+
+Engineers at Facebook delved into the their time-series dataset and found a large number of completely identical binary bits in the floating-point data sequence.
+
+![Gorilla](/picture/variable-length-numeric-compression/gorilla.png)
+
+
+Inspired by the Delta2 encoding, they invented the [Gorilla](https://github.com/curioloop/number-codec/blob/main/src/main/java/com/curioloop/number/codec/gorilla/GorillaCodec.java) algorithm, which extracts the differences between adjacent data points through XOR operations, eliminating a large amount of redundant bits. 
+
+The effect of this algorithm is significant, compressing 2 hours of time-series data to only 1.37 bytes per data point.
+
+The entire encoding process is quite simple:
+
+- Calculate the XOR value of two adjacent data points xor and obtain
+  - The number of leading zeroes leading-zero
+  - The length of the continuous block block-size
+- If the leading zeroes and block-size of the two consecutive xor values are different, record these two values.
+- If the leading zeroes and block-size of the two consecutive xor values are the same, do not record them.
+- Finally, record the blocks of data with differences.
+
+![Gorilla](/picture/variable-length-numeric-compression/gorilla.svg)
+
+In our application, this algorithm can compress data to 33% of the original size, with compression rates exceeding 60%.
+
+
+### Chimp
+
+Gorilla encoding is good, but it still has some shortcomings:
+
+Gorilla 编码的速度很快，但仍然存在一些不足：
+
+- Using a fixed 5-bit field to record leading zeroes may lead to space wastage.
+- Only considering adjacent data points, it cannot recognize the periodicity in time-series data, resulting in suboptimal compression effects in specific scenarios.
+
+
+To address these issues, an algorithm named [Chimp](https://github.com/curioloop/number-codec/blob/main/src/main/java/com/curioloop/number/codec/chimp/Chimp.java) emerged. Its main improvements are twofold:
+
+- By using a mapping function and adding a 1-bit flag, it reduces the leading zeroes encoding to 3 bits.
+- It only records leading zeroes changes when there are differences between adjacent leading zero counts.
+
+
+![Chimp](/picture/variable-length-numeric-compression/chimp.svg)
+
+To enhance the algorithm's adaptability, the Chimp research team also provided a variant called ChimpN. 
+
+This variant adds a sliding window of length N on top of the original algorithm. When calculating XOR values, it can select the reference value with the highest similarity in trailing zeroes from the window, further improving encoding compression efficiency.
+
+![ChimpN](/picture/variable-length-numeric-compression/chimp-n.svg)
+
+
+## More...
+
+With the widespread adoption of SIMD instructions, a batch of encoding algorithms accelerated by SIMD have emerged, 
+such as integer encoding [SIMD-FastPFOR](https://arxiv.org/pdf/1209.2137.pdf) and floating-point encoding [ALP](https://dl.acm.org/doi/pdf/10.1145/3626717).
+
+Although these algorithms have achieved good results in their respective fields, their performance advantages are not very significant in scenarios with small sample sizes.
+Moreover, SIMD's requirement for contiguous memory blocks makes these implementations difficult to match with Java's Streaming API.
+
+Therefore, we have implemented several commonly used algorithms in Java based on our own application requirements and open-sourced them [here]((https://github.com/curioloop/number-codec)). 
+It will be our pleasure if guys could give it a try and provide us your valuable feedback.

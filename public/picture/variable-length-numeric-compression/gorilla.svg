@@ -1,0 +1,383 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="35 80 265 220" height="350" >
+	<clipPath id="a">
+		<path transform="matrix(.7307 0 0 -.7307 54.999 270.562)" d="M0 0h325.5v255.75H0z"/>
+	</clipPath>
+	<g clip-path="url(#a)">
+		<path d="M153.918 100.4c0 9.08-7.362 16.441-16.441 16.441-9.08 0-16.441-7.361-16.441-16.44 0-9.08 7.361-16.441 16.44-16.441 9.08 0 16.442 7.36 16.442 16.44zm0 0" fill="#fc9"/>
+		<path stroke-width=".548025" fill="none" stroke="#36393d" d="M153.918 100.4c0 9.08-7.362 16.441-16.441 16.441-9.08 0-16.441-7.361-16.441-16.44 0-9.08 7.361-16.441 16.44-16.441 9.08 0 16.442 7.36 16.442 16.44zm0 0"/>
+		<symbol id="b">
+			<path d="m.275 0 .201.524H.382L.234.099l-.14.425H0L.184 0h.091z"/>
+		</symbol>
+		<use xlink:href="#b" transform="matrix(6.5763 0 0 -6.5763 127.56 102.318)"/>
+		<symbol id="c">
+			<path d="M.24.547H.154v.144H.071V.547H0V.479h.071V.083C.071.029.107 0 .172 0c.022 0 .04.002.068.007v.07A.154.154 0 0 0 .2.073C.164.073.154.083.154.12v.359H.24v.068z"/>
+		</symbol>
+		<use xlink:href="#c" transform="matrix(4.3842 0 0 -4.3842 130.843 102.42)"/>
+		<symbol id="d">
+			<path d="M.364.719A.359.359 0 1 1 .361 0a.36.36 0 0 1 .003.719M.389.662A.3.3 0 0 0 .66.39H.389v.272M.661.333A.303.303 0 0 0 .389.057v.276h.272M.333.057a.302.302 0 0 0-.274.276h.274V.057M.059.39a.304.304 0 0 0 .274.272V.39H.059z"/>
+		</symbol>
+		<use xlink:href="#d" transform="matrix(6.5763 0 0 -6.5763 132.922 102.338)"/>
+		<use xlink:href="#b" transform="matrix(6.5763 0 0 -6.5763 138.643 102.318)"/>
+		<symbol id="e">
+			<path d="M.238.072H0V0h.238v.072z"/>
+		</symbol>
+		<symbol id="f">
+			<path d="M.157.515V0h.088v.723H.187C.156.612.136.597 0 .579V.515h.157z"/>
+		</symbol>
+		<use xlink:href="#c" transform="matrix(4.3842 0 0 -4.3842 141.927 102.42)"/>
+		<use xlink:href="#e" transform="matrix(4.3842 0 0 -4.3842 143.216 101.266)"/>
+		<use xlink:href="#f" transform="matrix(4.3842 0 0 -4.3842 144.921 102.318)"/>
+		<clipPath id="g">
+			<path transform="translate(54.999 83.685) scale(.7307)" d="M120.375 171.375v-22.5h51.75v22.5"/>
+		</clipPath>
+		<g clip-path="url(#g)">
+			<image x="142" y="192" width="39" height="17" xlink:href="data:image/png;base64, iVBORw0KGgoAAAANSUhEUgAAACcAAAARCAYAAABegLWFAAAACXBIWXMAAA7EAAAO xAGVKw4bAAAAZklEQVR4nGP8/+nMf4ZBChj/fzwxiB33/tAgdty7PYPYcW+2DWLH vd4wiB33ctUgdtyLxYPYcc/mDmLHPZ0+iB33eOIgdtyjrkHsuActg9hx9+oGsePu Vgxix90uGsSOu5UzaB0HADIxO6SqC9GUAAAAAElFTkSuQmCC"/>
+		</g>
+		<path stroke-width=".548025" stroke-miterlimit="10" fill="none" stroke="#d6b656" d="M142.957 208.91v-16.442h37.814v16.441M142.957 208.91v32.88h37.814v-32.88M142.957 208.91h37.814"/>
+		<symbol id="h">
+			<path d="m.548 0 .154.524H.608L.504.116.401.524H.299l-.1-.408-.107.408H0L.152 0h.094l.101.411L.453 0h.095z"/>
+		</symbol>
+		<symbol id="i">
+			<path d="M0 .524V0h.084v.272c.001.126.053.182.168.179v.085A.211.211 0 0 1 .22.539C.166.539.125.507.077.429v.095H0z"/>
+		</symbol>
+		<symbol id="j">
+			<path d="M.084.524H.001V0h.083v.524m0 .205H0V.624h.084v.105z"/>
+		</symbol>
+		<symbol id="k">
+			<path d="M.473.257c0 .08-.006.128-.021.167A.22.22 0 0 1 .24.562C.094.562 0 .451 0 .278S.09 0 .238 0c.12 0 .203.068.224.182H.378C.355.113.308.077.241.077a.145.145 0 0 0-.126.068c-.02.03-.027.06-.028.112h.386M.089.325c.007.097.066.16.15.16.085 0 .144-.066.144-.16H.089z"/>
+		</symbol>
+		<symbol id="l">
+			<path d="M.104.104H0V0h.104v.104m0 .42H0V.42h.104v.104z"/>
+		</symbol>
+		<use xlink:href="#h" transform="matrix(7.67235 0 0 -7.67235 152.556 203.703)"/>
+		<use xlink:href="#i" transform="matrix(7.67235 0 0 -7.67235 158.578 203.703)"/>
+		<use xlink:href="#j" transform="matrix(7.67235 0 0 -7.67235 161.11 203.703)"/>
+		<use xlink:href="#c" transform="matrix(7.67235 0 0 -7.67235 162.415 203.88)"/>
+		<use xlink:href="#k" transform="matrix(7.67235 0 0 -7.67235 164.64 203.88)"/>
+		<use xlink:href="#l" transform="matrix(7.67235 0 0 -7.67235 169.381 203.703)"/>
+		<path d="M142.957 208.91h37.814v16.44h-37.814z" fill="#f9f7ed"/>
+		<path stroke-width=".548025" fill="none" stroke="#36393d" d="M142.957 208.91h37.814v16.44h-37.814z"/>
+		<clipPath id="m">
+			<path transform="translate(54.999 83.685) scale(.7307)" d="M123.375 171.375h45.75v22.5h-45.75z"/>
+		</clipPath>
+		<g clip-path="url(#m)">
+			<clipPath id="n">
+				<path transform="translate(54.999 83.685) scale(.7307)" d="M0 0h326v256H0z"/>
+			</clipPath>
+			<g clip-path="url(#n)">
+				<symbol id="o">
+					<path d="M0 .245V.134L.027 0h.04l.027.134v.111H0z"/>
+				</symbol>
+				<symbol id="p">
+					<path d="M.232.746A.203.203 0 0 1 .069.667C.023.603 0 .507 0 .373 0 .129.08 0 .232 0c.15 0 .232.129.232.367 0 .14-.022.234-.069.3a.2.2 0 0 1-.163.079m0-.078C.327.668.374.571.374.375.374.169.328.073.23.073c-.093 0-.14.1-.14.299 0 .199.047.296.142.296z"/>
+				</symbol>
+				<symbol id="q">
+					<path d="M.163.941A.82.82 0 0 1 0 .471.82.82 0 0 1 .163 0h.055a.915.915 0 0 0-.137.471c0 .159.049.328.137.47H.163z"/>
+				</symbol>
+				<symbol id="r">
+					<path d="M0 .752V.023h.075V.09A.184.184 0 0 1 .241 0c.138 0 .228.113.228.287 0 .17-.085.275-.224.275A.179.179 0 0 1 .083.476v.276H0M.229.484C.322.484.382.403.382.278c0-.119-.062-.2-.153-.2-.089 0-.146.08-.146.203 0 .123.057.203.146.203z"/>
+				</symbol>
+				<symbol id="s">
+					<path d="M.055 0a.82.82 0 0 1 .163.47.82.82 0 0 1-.163.471H0A.915.915 0 0 0 .137.47.912.912 0 0 0 0 0h.055z"/>
+				</symbol>
+				<use xlink:href="#o" transform="matrix(6.5763 0 0 -6.5763 149.503 216.544)"/>
+				<use xlink:href="#p" transform="matrix(6.5763 0 0 -6.5763 150.726 219.747)"/>
+				<use xlink:href="#o" transform="matrix(6.5763 0 0 -6.5763 154.415 216.544)"/>
+				<use xlink:href="#q" transform="matrix(6.5763 0 0 -6.5763 157.664 220.99)"/>
+				<use xlink:href="#f" transform="matrix(6.5763 0 0 -6.5763 160.044 219.596)"/>
+				<use xlink:href="#r" transform="matrix(6.5763 0 0 -6.5763 165.213 219.747)"/>
+				<use xlink:href="#j" transform="matrix(6.5763 0 0 -6.5763 168.949 219.596)"/>
+				<use xlink:href="#c" transform="matrix(6.5763 0 0 -6.5763 170.067 219.747)"/>
+				<use xlink:href="#s" transform="matrix(6.5763 0 0 -6.5763 172.053 220.99)"/>
+			</g>
+		</g>
+		<path d="M142.957 225.35h37.814v16.44h-37.814z" fill="#f9f7ed"/>
+		<path stroke-width=".548025" fill="none" stroke="#36393d" d="M142.957 225.35h37.814v16.44h-37.814z"/>
+		<clipPath id="t">
+			<path transform="translate(54.999 83.685) scale(.7307)" d="M123.375 193.875h45.75v22.5h-45.75z"/>
+		</clipPath>
+		<g clip-path="url(#t)">
+			<clipPath id="u">
+				<path transform="translate(54.999 83.685) scale(.7307)" d="M0 0h326v256H0z"/>
+			</clipPath>
+			<g clip-path="url(#u)">
+				<symbol id="v">
+					<path d="M.44.371a.216.216 0 0 1-.035.113.21.21 0 0 1-.172.078C.091.562 0 .45 0 .276 0 .107.09 0 .232 0c.125 0 .204.075.214.203H.362C.348.119.305.077.234.077.142.077.087.152.087.276c0 .131.054.209.145.209.07 0 .114-.041.124-.114H.44z"/>
+				</symbol>
+				<symbol id="w">
+					<path d="M0 .524V0h.084v.289c0 .107.056.177.142.177.066 0 .108-.04.108-.103V0h.083v.396c0 .087-.065.143-.166.143C.173.539.123.509.077.436v.088H0z"/>
+				</symbol>
+				<symbol id="x">
+					<path d="M0 0z"/>
+				</symbol>
+				<symbol id="y">
+					<path d="M.404.401C.403.504.335.562.214.562.092.562.013.499.013.402.013.32.055.281.179.251L.257.232C.315.218.338.197.338.16.338.11.289.077.216.077.171.077.133.09.112.112.099.127.093.142.088.179H0C.004.058.072 0 .209 0c.132 0 .216.065.216.166 0 .078-.044.121-.148.146l-.08.019C.129.347.1.369.1.406c0 .049.043.079.111.079.067 0 .103-.029.105-.084h.088z"/>
+				</symbol>
+				<use xlink:href="#v" transform="matrix(6.5763 0 0 -6.5763 146.652 236.188)"/>
+				<use xlink:href="#k" transform="matrix(6.5763 0 0 -6.5763 150.039 236.188)"/>
+				<use xlink:href="#w" transform="matrix(6.5763 0 0 -6.5763 153.892 236.036)"/>
+				<use xlink:href="#c" transform="matrix(6.5763 0 0 -6.5763 157.18 236.188)"/>
+				<use xlink:href="#k" transform="matrix(6.5763 0 0 -6.5763 159.088 236.188)"/>
+				<use xlink:href="#i" transform="matrix(6.5763 0 0 -6.5763 162.935 236.036)"/>
+				<use xlink:href="#x" transform="matrix(6.5763 0 0 -6.5763 164.67 236.036)"/>
+				<use xlink:href="#r" transform="matrix(6.5763 0 0 -6.5763 166.854 236.188)"/>
+				<use xlink:href="#j" transform="matrix(6.5763 0 0 -6.5763 170.59 236.036)"/>
+				<use xlink:href="#c" transform="matrix(6.5763 0 0 -6.5763 171.708 236.188)"/>
+				<use xlink:href="#y" transform="matrix(6.5763 0 0 -6.5763 173.667 236.188)"/>
+			</g>
+		</g>
+		<clipPath id="z">
+			<path transform="translate(54.999 83.685) scale(.7307)" d="M.375 73.875h60v22.5h-60z"/>
+		</clipPath>
+		<g clip-path="url(#z)">
+			<image x="55" y="137" width="45" height="18" xlink:href="data:image/png;base64, iVBORw0KGgoAAAANSUhEUgAAAC0AAAASCAYAAADPNlfiAAAACXBIWXMAAA7EAAAO xAGVKw4bAAAAa0lEQVR4nGP8/+nMf4YhBhj/fzw1BB394cgQdPS7vUPQ0W+3D0FH v944BB39cvUQdPSLJUPQ0c/mDUFHP50xBB39eNIQdPSj7iHo6AetQ9DR9+uHoKPv Vg5BR98pHoKOvpU7BB19M23IORoAuyk++GinQJIAAAAASUVORK5CYII="/>
+		</g>
+		<path stroke-width=".548025" fill="none" stroke="#d6b656" d="M55.273 137.666h43.842v16.44H55.273z"/>
+		<use xlink:href="#h" transform="matrix(7.67235 0 0 -7.67235 64.257 147.804)"/>
+		<use xlink:href="#i" transform="matrix(7.67235 0 0 -7.67235 70.28 147.804)"/>
+		<use xlink:href="#j" transform="matrix(7.67235 0 0 -7.67235 72.811 147.804)"/>
+		<use xlink:href="#c" transform="matrix(7.67235 0 0 -7.67235 74.116 147.98)"/>
+		<use xlink:href="#k" transform="matrix(7.67235 0 0 -7.67235 76.34 147.98)"/>
+		<use xlink:href="#x" transform="matrix(7.67235 0 0 -7.67235 80.3 147.804)"/>
+		<use xlink:href="#o" transform="matrix(7.67235 0 0 -7.67235 82.8 144.244)"/>
+		<use xlink:href="#p" transform="matrix(7.67235 0 0 -7.67235 84.228 147.98)"/>
+		<use xlink:href="#o" transform="matrix(7.67235 0 0 -7.67235 88.532 144.244)"/>
+		<clipPath id="A">
+			<path transform="translate(54.999 83.685) scale(.7307)" d="M157.875 73.875h60v22.5h-60z"/>
+		</clipPath>
+		<g clip-path="url(#A)">
+			<image x="170" y="137" width="45" height="18" xlink:href="data:image/png;base64, iVBORw0KGgoAAAANSUhEUgAAAC0AAAASCAYAAADPNlfiAAAACXBIWXMAAA7EAAAO xAGVKw4bAAAAa0lEQVR4nGP8/+nMf4YhBhj/fzw1BB394cgQdPS7vUPQ0W+3D0FH v944BB39cvUQdPSLJUPQ0c/mDUFHP50xBB39eNIQdPSj7iHo6AetQ9DR9+uHoKPv Vg5BR98pHoKOvpU7BB19M23IORoAuyk++GinQJIAAAAASUVORK5CYII="/>
+		</g>
+		<path stroke-width=".548025" fill="none" stroke="#d6b656" d="M170.358 137.666H214.2v16.44h-43.842z"/>
+		<use xlink:href="#h" transform="matrix(7.67235 0 0 -7.67235 179.342 147.804)"/>
+		<use xlink:href="#i" transform="matrix(7.67235 0 0 -7.67235 185.365 147.804)"/>
+		<use xlink:href="#j" transform="matrix(7.67235 0 0 -7.67235 187.897 147.804)"/>
+		<use xlink:href="#c" transform="matrix(7.67235 0 0 -7.67235 189.201 147.98)"/>
+		<use xlink:href="#k" transform="matrix(7.67235 0 0 -7.67235 191.426 147.98)"/>
+		<use xlink:href="#x" transform="matrix(7.67235 0 0 -7.67235 195.385 147.804)"/>
+		<use xlink:href="#o" transform="matrix(7.67235 0 0 -7.67235 197.886 144.244)"/>
+		<use xlink:href="#f" transform="matrix(7.67235 0 0 -7.67235 199.766 147.804)"/>
+		<use xlink:href="#o" transform="matrix(7.67235 0 0 -7.67235 203.617 144.244)"/>
+		<clipPath id="B">
+			<path transform="translate(54.999 83.685) scale(.7307)" d="M195.375 171.375v-22.5h91.5v22.5"/>
+		</clipPath>
+		<g clip-path="url(#B)">
+			<image x="197" y="192" width="68" height="17" xlink:href="data:image/png;base64, iVBORw0KGgoAAAANSUhEUgAAAEQAAAARCAYAAABkUAr2AAAACXBIWXMAAA7EAAAO xAGVKw4bAAAAfElEQVR4nO3QoQ3CAABEUW5fFAqFQtWhqlA4FApVVVXRCdqUEBoI hAYCC3wcuSHujfDEt2UWf+LTJMSId50QI15VQoyYjgkx4nlIiBGPfUKMuO8SYsRt mxAjrmVCjBg3CTHiUiTEiPM6IUacVgkxYlgmxIh+kRAjunlCzA8EyDuksW7OCwAA AABJRU5ErkJggg=="/>
+		</g>
+		<path stroke-width=".548025" stroke-miterlimit="10" fill="none" stroke="#d6b656" d="M197.76 208.91v-16.442h66.859v16.441M197.76 208.91v61.378h66.859v-61.379M197.76 208.91h66.859"/>
+		<use xlink:href="#h" transform="matrix(7.67235 0 0 -7.67235 221.88 203.703)"/>
+		<use xlink:href="#i" transform="matrix(7.67235 0 0 -7.67235 227.904 203.703)"/>
+		<use xlink:href="#j" transform="matrix(7.67235 0 0 -7.67235 230.436 203.703)"/>
+		<use xlink:href="#c" transform="matrix(7.67235 0 0 -7.67235 231.74 203.88)"/>
+		<use xlink:href="#k" transform="matrix(7.67235 0 0 -7.67235 233.965 203.88)"/>
+		<use xlink:href="#l" transform="matrix(7.67235 0 0 -7.67235 238.706 203.703)"/>
+		<path d="M197.76 208.91h66.859v15.344h-66.86z" fill="#f9f7ed"/>
+		<path stroke-width=".548025" fill="none" stroke="#36393d" d="M197.76 208.91h66.859v15.344h-66.86z"/>
+		<clipPath id="C">
+			<path transform="translate(54.999 83.685) scale(.7307)" d="M198.375 171.375h85.5v21h-85.5z"/>
+		</clipPath>
+		<g clip-path="url(#C)">
+			<clipPath id="D">
+				<path transform="translate(54.999 83.685) scale(.7307)" d="M0 0h326v256H0z"/>
+			</clipPath>
+			<g clip-path="url(#D)">
+				<use xlink:href="#o" transform="matrix(6.5763 0 0 -6.5763 218.828 215.996)"/>
+				<use xlink:href="#f" transform="matrix(6.5763 0 0 -6.5763 220.439 219.048)"/>
+				<use xlink:href="#o" transform="matrix(6.5763 0 0 -6.5763 223.74 215.996)"/>
+				<use xlink:href="#x" transform="matrix(6.5763 0 0 -6.5763 224.68 219.048)"/>
+				<use xlink:href="#q" transform="matrix(6.5763 0 0 -6.5763 226.989 220.442)"/>
+				<use xlink:href="#f" transform="matrix(6.5763 0 0 -6.5763 229.37 219.048)"/>
+				<use xlink:href="#x" transform="matrix(6.5763 0 0 -6.5763 232.355 219.048)"/>
+				<use xlink:href="#r" transform="matrix(6.5763 0 0 -6.5763 234.539 219.199)"/>
+				<use xlink:href="#j" transform="matrix(6.5763 0 0 -6.5763 238.274 219.048)"/>
+				<use xlink:href="#c" transform="matrix(6.5763 0 0 -6.5763 239.392 219.199)"/>
+				<use xlink:href="#s" transform="matrix(6.5763 0 0 -6.5763 241.378 220.442)"/>
+			</g>
+		</g>
+		<path d="M197.76 224.254h66.859v15.345h-66.86z" fill="#f9f7ed"/>
+		<path stroke-width=".548025" fill="none" stroke="#36393d" d="M197.76 224.254h66.859v15.345h-66.86z"/>
+		<clipPath id="E">
+			<path transform="translate(54.999 83.685) scale(.7307)" d="M198.375 192.375h85.5v21h-85.5z"/>
+		</clipPath>
+		<g clip-path="url(#E)">
+			<clipPath id="F">
+				<path transform="translate(54.999 83.685) scale(.7307)" d="M0 0h326v256H0z"/>
+			</clipPath>
+			<g clip-path="url(#F)">
+				<symbol id="G">
+					<path d="M.084.729H0V0h.084v.729z"/>
+				</symbol>
+				<symbol id="H">
+					<path d="M.493.072.475.07C.446.07.43.085.43.111v.308C.43.512.362.562.233.562.156.562.095.54.059.501.035.474.025.444.023.392h.084C.114.456.152.485.23.485.306.485.347.457.347.407V.385C.346.349.328.336.26.327A.598.598 0 0 1 .092.295.14.14 0 0 1 0 .155C0 .06.066 0 .172 0 .238 0 .291.023.35.077.356.023.382 0 .436 0c.018 0 .029.002.057.009v.063M.347.188C.347.16.339.143.314.12A.177.177 0 0 0 .19.073C.125.073.087.104.087.157c0 .055.036.083.126.096a.407.407 0 0 1 .134.029V.188z"/>
+				</symbol>
+				<symbol id="I">
+					<path d="M.469.752H.386V.481a.183.183 0 0 1-.161.081C.089.562 0 .453 0 .286 0 .109.086 0 .228 0 .3 0 .35.027.395.092V.023h.074v.729M.239.484c.09 0 .147-.079.147-.205C.386.158.328.078.24.078.148.078.087.159.087.281c0 .122.061.203.152.203z"/>
+				</symbol>
+				<symbol id="J">
+					<path d="M.369.742V.666C.327.729.281.757.215.757.088.757 0 .639 0 .471 0 .383.021.319.066.266A.186.186 0 0 1 .209.195c.063 0 .108.028.152.094V.262C.361.122.322.07.218.07.147.07.11.098.102.158H.017C.025.061.102 0 .216 0c.077 0 .141.025.175.067.04.049.055.114.055.237v.438H.369M.223.68C.311.68.361.606.361.473.361.346.31.272.223.272.137.272.087.347.087.476c0 .128.05.204.136.204z"/>
+				</symbol>
+				<symbol id="K">
+					<path d="M.236.562C.088.562 0 .457 0 .281 0 .104.088 0 .237 0c.148 0 .237.105.237.277 0 .182-.086.285-.238.285M.237.485c.094 0 .15-.077.15-.207C.387.154.329.077.237.077c-.093 0-.15.077-.15.204s.057.204.15.204z"/>
+				</symbol>
+				<symbol id="L">
+					<path d="M.417.023v.524H.334V.25C.334.143.278.073.191.073c-.066 0-.108.04-.108.103v.371H0V.143C0 .056.065 0 .167 0c.077 0 .126.027.175.096V.023h.075z"/>
+				</symbol>
+				<symbol id="M">
+					<path d="M.441.732H.075L.022.346h.081c.041.049.075.066.131.066.095 0 .154-.065.154-.17C.388.14.329.078.233.078.156.078.109.117.088.197H0C.012.139.022.111.043.085A.236.236 0 0 1 .235 0c.143 0 .243.104.243.254C.478.394.385.49.249.49A.208.208 0 0 1 .118.447l.028.198h.295v.087z"/>
+				</symbol>
+				<use xlink:href="#G" transform="matrix(6.5763 0 0 -6.5763 200.838 234.392)"/>
+				<use xlink:href="#k" transform="matrix(6.5763 0 0 -6.5763 202.114 234.544)"/>
+				<use xlink:href="#H" transform="matrix(6.5763 0 0 -6.5763 205.738 234.544)"/>
+				<use xlink:href="#I" transform="matrix(6.5763 0 0 -6.5763 209.289 234.544)"/>
+				<use xlink:href="#j" transform="matrix(6.5763 0 0 -6.5763 213.208 234.392)"/>
+				<use xlink:href="#w" transform="matrix(6.5763 0 0 -6.5763 214.695 234.392)"/>
+				<use xlink:href="#J" transform="matrix(6.5763 0 0 -6.5763 218.12 235.826)"/>
+				<use xlink:href="#x" transform="matrix(6.5763 0 0 -6.5763 221.547 234.392)"/>
+				<use xlink:href="#v" transform="matrix(6.5763 0 0 -6.5763 223.58 234.544)"/>
+				<use xlink:href="#K" transform="matrix(6.5763 0 0 -6.5763 226.953 234.544)"/>
+				<use xlink:href="#L" transform="matrix(6.5763 0 0 -6.5763 230.8 234.544)"/>
+				<use xlink:href="#w" transform="matrix(6.5763 0 0 -6.5763 234.49 234.392)"/>
+				<use xlink:href="#c" transform="matrix(6.5763 0 0 -6.5763 237.777 234.544)"/>
+				<use xlink:href="#x" transform="matrix(6.5763 0 0 -6.5763 239.514 234.392)"/>
+				<use xlink:href="#q" transform="matrix(6.5763 0 0 -6.5763 241.822 235.787)"/>
+				<use xlink:href="#M" transform="matrix(6.5763 0 0 -6.5763 243.762 234.544)"/>
+				<use xlink:href="#x" transform="matrix(6.5763 0 0 -6.5763 247.188 234.392)"/>
+				<use xlink:href="#r" transform="matrix(6.5763 0 0 -6.5763 249.371 234.544)"/>
+				<use xlink:href="#j" transform="matrix(6.5763 0 0 -6.5763 253.107 234.392)"/>
+				<use xlink:href="#c" transform="matrix(6.5763 0 0 -6.5763 254.225 234.544)"/>
+				<use xlink:href="#y" transform="matrix(6.5763 0 0 -6.5763 256.185 234.544)"/>
+				<use xlink:href="#s" transform="matrix(6.5763 0 0 -6.5763 259.499 235.787)"/>
+			</g>
+		</g>
+		<path d="M197.76 239.599h66.859v15.344h-66.86z" fill="#f9f7ed"/>
+		<path stroke-width=".548025" fill="none" stroke="#36393d" d="M197.76 239.599h66.859v15.344h-66.86z"/>
+		<clipPath id="N">
+			<path transform="translate(54.999 83.685) scale(.7307)" d="M198.375 213.375h85.5v21h-85.5z"/>
+		</clipPath>
+		<g clip-path="url(#N)">
+			<clipPath id="O">
+				<path transform="translate(54.999 83.685) scale(.7307)" d="M0 0h326v256H0z"/>
+			</clipPath>
+			<g clip-path="url(#O)">
+				<symbol id="P">
+					<path d="M.455.558C.438.676.362.746.254.746a.223.223 0 0 1-.19-.103A.52.52 0 0 1 0 .353C0 .231.017.154.06.09A.2.2 0 0 1 .238 0C.373 0 .47.101.47.242.47.375.38.469.253.469A.189.189 0 0 1 .09.39c.001.179.057.278.158.278.062 0 .105-.04.119-.11h.088M.242.391C.327.391.38.331.38.235.38.144.32.078.239.078.157.078.095.147.095.239c0 .09.06.152.147.152z"/>
+				</symbol>
+				<use xlink:href="#v" transform="matrix(6.5763 0 0 -6.5763 202.062 249.888)"/>
+				<use xlink:href="#k" transform="matrix(6.5763 0 0 -6.5763 205.448 249.888)"/>
+				<use xlink:href="#w" transform="matrix(6.5763 0 0 -6.5763 209.302 249.737)"/>
+				<use xlink:href="#c" transform="matrix(6.5763 0 0 -6.5763 212.59 249.888)"/>
+				<use xlink:href="#k" transform="matrix(6.5763 0 0 -6.5763 214.497 249.888)"/>
+				<use xlink:href="#i" transform="matrix(6.5763 0 0 -6.5763 218.344 249.737)"/>
+				<use xlink:href="#x" transform="matrix(6.5763 0 0 -6.5763 220.08 249.737)"/>
+				<use xlink:href="#v" transform="matrix(6.5763 0 0 -6.5763 222.113 249.888)"/>
+				<use xlink:href="#K" transform="matrix(6.5763 0 0 -6.5763 225.486 249.888)"/>
+				<use xlink:href="#L" transform="matrix(6.5763 0 0 -6.5763 229.333 249.888)"/>
+				<use xlink:href="#w" transform="matrix(6.5763 0 0 -6.5763 233.023 249.737)"/>
+				<use xlink:href="#c" transform="matrix(6.5763 0 0 -6.5763 236.31 249.888)"/>
+				<use xlink:href="#x" transform="matrix(6.5763 0 0 -6.5763 238.047 249.737)"/>
+				<use xlink:href="#q" transform="matrix(6.5763 0 0 -6.5763 240.355 251.131)"/>
+				<use xlink:href="#P" transform="matrix(6.5763 0 0 -6.5763 242.348 249.888)"/>
+				<use xlink:href="#x" transform="matrix(6.5763 0 0 -6.5763 245.722 249.737)"/>
+				<use xlink:href="#r" transform="matrix(6.5763 0 0 -6.5763 247.905 249.888)"/>
+				<use xlink:href="#j" transform="matrix(6.5763 0 0 -6.5763 251.64 249.737)"/>
+				<use xlink:href="#c" transform="matrix(6.5763 0 0 -6.5763 252.758 249.888)"/>
+				<use xlink:href="#y" transform="matrix(6.5763 0 0 -6.5763 254.718 249.888)"/>
+				<use xlink:href="#s" transform="matrix(6.5763 0 0 -6.5763 258.032 251.131)"/>
+			</g>
+		</g>
+		<path d="M197.76 254.943h66.859v15.345h-66.86z" fill="#f9f7ed"/>
+		<path stroke-width=".548025" fill="none" stroke="#36393d" d="M197.76 254.943h66.859v15.345h-66.86z"/>
+		<clipPath id="Q">
+			<path transform="translate(54.999 83.685) scale(.7307)" d="M198.375 234.375h85.5v21h-85.5z"/>
+		</clipPath>
+		<g clip-path="url(#Q)">
+			<clipPath id="R">
+				<path transform="translate(54.999 83.685) scale(.7307)" d="M0 0h326v256H0z"/>
+			</clipPath>
+			<g clip-path="url(#R)">
+				<use xlink:href="#v" transform="matrix(6.5763 0 0 -6.5763 215.977 265.233)"/>
+				<use xlink:href="#k" transform="matrix(6.5763 0 0 -6.5763 219.364 265.233)"/>
+				<use xlink:href="#w" transform="matrix(6.5763 0 0 -6.5763 223.218 265.082)"/>
+				<use xlink:href="#c" transform="matrix(6.5763 0 0 -6.5763 226.506 265.233)"/>
+				<use xlink:href="#k" transform="matrix(6.5763 0 0 -6.5763 228.413 265.233)"/>
+				<use xlink:href="#i" transform="matrix(6.5763 0 0 -6.5763 232.26 265.082)"/>
+				<use xlink:href="#x" transform="matrix(6.5763 0 0 -6.5763 233.996 265.082)"/>
+				<use xlink:href="#r" transform="matrix(6.5763 0 0 -6.5763 236.18 265.233)"/>
+				<use xlink:href="#j" transform="matrix(6.5763 0 0 -6.5763 239.915 265.082)"/>
+				<use xlink:href="#c" transform="matrix(6.5763 0 0 -6.5763 241.033 265.233)"/>
+				<use xlink:href="#y" transform="matrix(6.5763 0 0 -6.5763 242.992 265.233)"/>
+			</g>
+		</g>
+		<path stroke-width=".548025" stroke-miterlimit="10" fill="none" stroke="#000" d="m77.194 137.666 43.842-33.978M192.28 137.666 153.917 100.4M161.864 192.468l19.455-38.361M231.189 192.468l-27.95-38.361"/>
+		<symbol id="S">
+			<path d="M.484.242H0v-.07h.484v.07m0-.172H0V0h.484v.07z"/>
+		</symbol>
+		<use xlink:href="#i" transform="matrix(7.12433 0 0 -7.12433 64.691 123.143)"/>
+		<use xlink:href="#k" transform="matrix(7.12433 0 0 -7.12433 66.786 123.307)"/>
+		<use xlink:href="#y" transform="matrix(7.12433 0 0 -7.12433 70.676 123.307)"/>
+		<use xlink:href="#L" transform="matrix(7.12433 0 0 -7.12433 74.459 123.307)"/>
+		<use xlink:href="#G" transform="matrix(7.12433 0 0 -7.12433 78.441 123.143)"/>
+		<use xlink:href="#c" transform="matrix(7.12433 0 0 -7.12433 79.638 123.307)"/>
+		<use xlink:href="#S" transform="matrix(7.12433 0 0 -7.12433 81.875 122.352)"/>
+		<use xlink:href="#p" transform="matrix(7.12433 0 0 -7.12433 85.986 123.307)"/>
+		<use xlink:href="#i" transform="matrix(7.12433 0 0 -7.12433 184.833 123.143)"/>
+		<use xlink:href="#k" transform="matrix(7.12433 0 0 -7.12433 186.928 123.307)"/>
+		<use xlink:href="#y" transform="matrix(7.12433 0 0 -7.12433 190.818 123.307)"/>
+		<use xlink:href="#L" transform="matrix(7.12433 0 0 -7.12433 194.6 123.307)"/>
+		<use xlink:href="#G" transform="matrix(7.12433 0 0 -7.12433 198.583 123.143)"/>
+		<use xlink:href="#c" transform="matrix(7.12433 0 0 -7.12433 199.78 123.307)"/>
+		<symbol id="T">
+			<path d="M.125.136.065.029.116 0l.076.136h.292v.07H.231l.057.102h.196v.07H.327l.059.105-.05.028L.26.378H0v-.07h.221L.164.206H0v-.07h.125z"/>
+		</symbol>
+		<use xlink:href="#T" transform="matrix(7.12433 0 0 -7.12433 201.889 123.321)"/>
+		<use xlink:href="#p" transform="matrix(7.12433 0 0 -7.12433 205.879 123.307)"/>
+		<use xlink:href="#G" transform="matrix(7.67235 0 0 -7.67235 100.217 175.206)"/>
+		<use xlink:href="#k" transform="matrix(7.67235 0 0 -7.67235 101.705 175.382)"/>
+		<use xlink:href="#H" transform="matrix(7.67235 0 0 -7.67235 105.933 175.382)"/>
+		<use xlink:href="#I" transform="matrix(7.67235 0 0 -7.67235 110.076 175.382)"/>
+		<use xlink:href="#j" transform="matrix(7.67235 0 0 -7.67235 114.648 175.206)"/>
+		<use xlink:href="#w" transform="matrix(7.67235 0 0 -7.67235 116.382 175.206)"/>
+		<use xlink:href="#J" transform="matrix(7.67235 0 0 -7.67235 120.38 176.878)"/>
+		<use xlink:href="#c" transform="matrix(5.1149 0 0 -5.1149 124.449 175.323)"/>
+		<use xlink:href="#x" transform="matrix(7.67235 0 0 -7.67235 125.799 175.206)"/>
+		<symbol id="U">
+			<path d="M.489.067H0V0h.489v.067m0 .376L0 .65V.571L.394.407 0 .246V.167l.489.207v.069z"/>
+		</symbol>
+		<use xlink:href="#U" transform="matrix(7.67235 0 0 -7.67235 128.147 175.29)"/>
+		<use xlink:href="#x" transform="matrix(7.67235 0 0 -7.67235 132.144 175.206)"/>
+		<use xlink:href="#G" transform="matrix(7.67235 0 0 -7.67235 134.799 175.206)"/>
+		<use xlink:href="#k" transform="matrix(7.67235 0 0 -7.67235 136.287 175.382)"/>
+		<use xlink:href="#H" transform="matrix(7.67235 0 0 -7.67235 140.514 175.382)"/>
+		<use xlink:href="#I" transform="matrix(7.67235 0 0 -7.67235 144.658 175.382)"/>
+		<use xlink:href="#j" transform="matrix(7.67235 0 0 -7.67235 149.23 175.206)"/>
+		<use xlink:href="#w" transform="matrix(7.67235 0 0 -7.67235 150.964 175.206)"/>
+		<use xlink:href="#J" transform="matrix(7.67235 0 0 -7.67235 154.962 176.878)"/>
+		<use xlink:href="#c" transform="matrix(5.1149 0 0 -5.1149 159.03 175.323)"/>
+		<use xlink:href="#e" transform="matrix(5.1149 0 0 -5.1149 160.534 173.978)"/>
+		<use xlink:href="#f" transform="matrix(5.1149 0 0 -5.1149 162.524 175.206)"/>
+		<use xlink:href="#G" transform="matrix(7.67235 0 0 -7.67235 221.744 175.206)"/>
+		<use xlink:href="#k" transform="matrix(7.67235 0 0 -7.67235 223.233 175.382)"/>
+		<use xlink:href="#H" transform="matrix(7.67235 0 0 -7.67235 227.46 175.382)"/>
+		<use xlink:href="#I" transform="matrix(7.67235 0 0 -7.67235 231.603 175.382)"/>
+		<use xlink:href="#j" transform="matrix(7.67235 0 0 -7.67235 236.176 175.206)"/>
+		<use xlink:href="#w" transform="matrix(7.67235 0 0 -7.67235 237.91 175.206)"/>
+		<use xlink:href="#J" transform="matrix(7.67235 0 0 -7.67235 241.907 176.878)"/>
+		<use xlink:href="#c" transform="matrix(5.1149 0 0 -5.1149 245.976 175.323)"/>
+		<symbol id="V">
+			<path d="M0 .207.489 0v.079L.095.243l.394.161v.079L0 .276V.207z"/>
+		</symbol>
+		<use xlink:href="#x" transform="matrix(7.67235 0 0 -7.67235 247.326 175.206)"/>
+		<use xlink:href="#V" transform="matrix(7.67235 0 0 -7.67235 249.804 175.275)"/>
+		<use xlink:href="#x" transform="matrix(7.67235 0 0 -7.67235 253.94 175.206)"/>
+		<use xlink:href="#G" transform="matrix(7.67235 0 0 -7.67235 256.594 175.206)"/>
+		<use xlink:href="#k" transform="matrix(7.67235 0 0 -7.67235 258.083 175.382)"/>
+		<use xlink:href="#H" transform="matrix(7.67235 0 0 -7.67235 262.31 175.382)"/>
+		<use xlink:href="#I" transform="matrix(7.67235 0 0 -7.67235 266.453 175.382)"/>
+		<use xlink:href="#j" transform="matrix(7.67235 0 0 -7.67235 271.026 175.206)"/>
+		<use xlink:href="#w" transform="matrix(7.67235 0 0 -7.67235 272.76 175.206)"/>
+		<use xlink:href="#J" transform="matrix(7.67235 0 0 -7.67235 276.757 176.878)"/>
+		<use xlink:href="#c" transform="matrix(5.1149 0 0 -5.1149 280.826 175.323)"/>
+		<use xlink:href="#e" transform="matrix(5.1149 0 0 -5.1149 282.33 173.978)"/>
+		<use xlink:href="#f" transform="matrix(5.1149 0 0 -5.1149 284.32 175.206)"/>
+	</g>
+</svg>

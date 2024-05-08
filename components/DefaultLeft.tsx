@@ -53,7 +53,7 @@ const DefaultLeft = () => {
         <div className="glow-card rounded-t-sm font-medium"><span>{t('hot-tag')}</span></div>
         <div className="glow-card rounded-b-sm p-3">
           <div className="glow-text flex flex-wrap gap-x-3 gap-y-4">
-            <TopTags className="glow-tag p-1 text-lg cursor-pointer break-keep" />
+            <TopTags className="glow-tag p-1 text-md cursor-pointer break-keep" />
           </div>
         </div>
       </div>

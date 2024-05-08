@@ -35,6 +35,7 @@
     "system-design": "SystemDesign",
     "distributed-system": "DistributedSystem",
     "backend-dev": "BackendDev",
-    "frontend-dev": "FrontendDev"
+    "frontend-dev": "FrontendDev",
+    "numerical-encoding": "NumericalEncoding"
   }
 }

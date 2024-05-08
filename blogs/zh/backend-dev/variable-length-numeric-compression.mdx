@@ -1,0 +1,262 @@
+---
+title: 变长数值压缩算法
+cover: '/cover/Squeeze-Orange.png'
+date: 2024-05-05
+tags: ['后端开发','数值编码']
+---
+
+在众多压缩编码中，有一类专门为数值压缩而生。这类编码无需依赖样本数据构建数据字典，即可对实时时序数据进行高效无损压缩。
+这些压缩编码在时序数据处理领域大放异彩，为用户节省了大量的存储空间与传输带宽，提升了海量数据的处理能力。
+本片文章将对其中较为常用的一些编码进行介绍。
+
+[comment]:summary
+
+## 基本概念
+
+在现代互联网中，我们无时无刻不在享受着压缩编码带来的便利。
+根据解压后的数据是否发生精度丢失，压缩算法可以分为两类：
+
+- 有损压缩：通过滤波、变换消除图像、声音信号中的细节，减少音视频文件的体积。
+- 无损压缩：通过扫描、构建数据字典，来消除数据中的冗余信息，并生成压缩文件。
+
+
+而在时序数据领域，上面两种方法并不是最优解。时序数据具有以下特点：
+- 冗余度高
+- 样本量少
+- 实时性高
+
+这类数据在我们身边比比皆是，比如下面图中展示的股票委托数据：
+
+![ArcaBook](/picture/variable-length-numeric-compression/arca-book.jpeg)
+
+
+
+如果使用常规的无损压缩算法处理这些数据，不仅无法实现压缩效果。
+并且由于引入了压缩字典，可能反而会使得数据更为膨胀。
+
+
+针对这类特殊的数据，就需要用到一类特殊的压缩方式 —— **变长数值编码**。
+
+变长数值编码是一类专门用于处理小范围数值的编码格式。
+由于其压缩效率高，且实现简单的特点，被广泛应用于搜索引擎、列式存储领域：
+
+- Protobuf 通过了变长整数编码，实现了高效的二进制序列化
+- 时序数据库 InfluxDB 利用变长浮点数编码，实现了高效的数据存储
+
+
+接下来我们会介绍两类常用编码格式：
+
+- 整数编码
+    - Varint: 无符号小整数
+    - ZigZag: 有符号小整数
+    - Simple8b: 重复小整数
+
+- 浮点数编码
+    - Gorilla: 数值相近的浮点数
+    - Chimp: 周期规律的浮点数
+
+
+
+## 整数编码
+
+### 空间浪费
+
+按照存储空间进行划分，常用的整型数据有 4 种：
+
+- int8 / byte
+- int16 / short
+- int32 / int
+- int64 / long
+
+占用空间越大，能表达的范围越广，但也意味着更高的存储开销。
+
+以刚才的委托数据中的 volume 为例子：
+
+- 热门股票中存在大量活跃散户，因此 volume 通常较小，只需要 int16 就足够存储了
+- 冷门股票中则是少量大户比较活跃，volume 可能成千上万，需要使用 int32 进行存储
+
+但在实际应用中，我们不可能针对具体的股票进行数据建模。
+为了避免溢出，因此只能选择 int32 来表示 volume，这无疑会消耗更多的存储空间与网络带宽。
+
+### Varint
+
+为了找到一种泛用性更广的表示方式，[VarInt](https://github.com/curioloop/number-codec/blob/main/src/main/java/com/curioloop/number/codec/varint/VarInt.java) 编码应运而生。
+
+对于 int32 数据，其编码规则如下：
+
+- 将 32bit 数据划分为 n 组 7bit
+- 每组数据使用一个 byte 进行存储
+    - 第 1 位为标记位，表示编码是否已经结束
+    - 后 7 位为数据位，存储分组后的数据
+
+![Varint](/picture/variable-length-numeric-compression/varint.png)
+
+以 big-endian 的 int32 无符号整数为例：
+
+```text
+12    →  1100                 →  00001100                   (1 byte)
+
+289   →  1|00100001           →  00000010|10100001          (2 byte)
+
+65990 →  1|00000001|11000110  →  00001000|0000011|11000110  (3 byte)
+```
+
+通过这套编码规则，VarInt 能够将 int32 转换为长度为，1 - 5 不等的字节数组。根据占用字节数的同，编码能表达的数据范围为：
+
+- 1 byte → 0 ~ 127
+- 2 byte → 0 ~ 16383
+- 3 byte → 0 ~ 2097151
+- 4 byte → 0 ~ 268435455
+- 5 byte → 0 ~ 4294967295
+
+不难看出，当应用场景中无符号小整数出现概率较高时，使用 VarInt 能够实现不错的压缩效果。
+并且即使偶尔出现值较大的数据，也不会出现溢出的情况。在保证了存储、传输效率同时，提升了数据模型的泛用性。
+
+
+### ZigZag
+
+不过 VarInt 也存在一个明显的缺点：其编码方式对负数不是很友好。
+
+对于 big-endian 数据来说，VarInt 是通过削减 leading-zero 来实现的压缩。
+而负数的首个 bit 永远非零，因此不但无法压缩数据，反而会引入不必要的空间开销。
+
+以 -1 为例，其 int32 的补码对应的无符号整数为 4294967295，这意味着需要使用 5 个字节对其进行编码。
+
+
+为了提升负数的编码效率，[ZigZag](https://github.com/curioloop/number-codec/blob/main/src/main/java/com/curioloop/number/codec/varint/ZigZag.java) 编码应运而生。
+
+ZigZag 编码解决这一问题的思路很简单：在进行 VarInt 编码前，对补码进行调整，最大限度地增加其 leading-zero。
+
+其实现也不复杂，只需在 VarInt 编码前后，增加两个映射操作即可：
+- 编码前增加映射 `(n << 1) ^ (n >> 31)`
+- 解码后增加映射 `(n >>> 1) ^ -(n & 1)`
+
+
+仍然以 -1 为实例，我们直观感受一下这两个操作的实际效果：
+
+- 当 n = -1 时，VarInt 编码前映射：
+```
+n = -1      -> 11111111111111111111111111111111
+a = n << 1  -> 11111111111111111111111111111110
+b = n >> 31 -> 11111111111111111111111111111111
+a ^ b       -> 00000000000000000000000000000001
+```
+
+- 当 n = -1 时，VarInt 解码后映射：
+```
+m = a ^ b    -> 00000000000000000000000000000001
+a = m >>> 1  -> 00000000000000000000000000000000
+b = -(m & 1) -> 11111111111111111111111111111111
+a ^ b        -> 11111111111111111111111111111111
+```
+
+ZigZag 映射能够有效增加小负数的 leading-zero 数量，进而提高编码效率。
+但是天下没有免费的午餐，增加 ZigZag 映射之后，编码能表达的数据范围为：
+
+- 1 byte → -64 ~ 63
+- 2 byte → -8192 ~ 8191
+- 3 byte → -1048576 ~ 1048575
+- 4 byte → -134217728 ~ 134217727
+- 5 byte → -2147483648 ~ 2147483647
+
+从中我们也能看到 ZigZag 编码所做的权衡：通过占用了部分非负数的编码空间，极大提升了小值负数的压缩效果。
+
+
+### Simple8
+
+前面提到的两种编码方式仍然存在一个局限：1 个 byte 最多只能存储一个数值。
+
+为了突破这一限制，出现了一类被称为 work packing 的编码：通过将多个整数据按照一定的规则打包成更紧凑的形式，从而节省存储空间。
+
+该类编码不仅实现小数据的压缩，还能实现类似 RLE 的功能，接下来要讲的 Simple8 就是其中一员。
+
+[Simple8](https://github.com/curioloop/number-codec/blob/main/src/main/java/com/curioloop/number/codec/simple8/Simple8Codec.java) 将 64bit 分为两部分：
+
+- **`selector(4bit)`** 用于指定剩余 60bit 中存储的整数的个数与有效位长度
+- **`payload(60bit)`** 则是用于存储多个定长的整数
+
+下面这张编码表给出了 selector 值不同的情况下，simple8b 的存储情况：
+|selector value|0|1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|
+|:-:|:-:|:-:|:-:|:-:|-:|:-:|:-:|:-:|:-:|-:|:-:|:-:|:-:|:-:|:-:|:-:|
+|integers coded|240|120|60|30|20|15|12|10|9|8|7|6|5|4|3|2|1|
+|bits per integer|0|0|1|2|3|4|5|6|7|8|10|12|15|20|30|60|
+
+Simple8 的解码方式十分简单高效，仅需对照上面的表格进行相应的位运算即可。
+但其编码过程相对复杂，传统的编码方式使用回溯法实现，时间复杂度较高。
+
+一种更[高效的实现方式](https://github.com/curioloop/number-codec/blob/main/src/main/java/com/curioloop/number/codec/simple8/FastLookup.java)：
+> 在一个 60 x 240 的矩阵枚举所有可能的组合，然后并对不可能的状态进行剪枝，最终得到一个长度为 261 的一维查找表
+
+查表法能够将编码复杂度由 $O(N^2)$ 降至 $O(N)$，实现约 5 倍的吞吐量提升。
+
+## 浮点数编码
+
+### Gorilla
+
+下面我们来谈谈关于浮点数的编码方式，以 IEEE 754 位浮点数为例，其存储结构主要分为 3 部分：
+
+![Float32](/picture/variable-length-numeric-compression/float32.svg)
+
+- $S$ 符号位
+- $E$ 以 2 为底数偏置指数
+- $F$ 数字有效数的小数
+
+其对应的浮点数可以表示为：$(-1)^S \times 2^{(E-127)} \times 1.F$
+
+此前介绍的 VarInt 等编码，仅在数值的 leading-zero 数量较多时表现良好。
+
+如果要保证压缩效果，意味着此时 sign 与 exponent 必须均为 0。
+而该区间仅能表示 [0, 1) 之间的小数，仅有少数的应用场景的能够满足这一严苛要求。
+
+既然单个数据不好压缩，那么如果是一批数据呢？
+怀着这一想法，Facebook 的工程师们深入研究了公司内部的时序数据。
+并在浮点数序列中发现了大量完全相同的二进制位。
+
+![Gorilla](/picture/variable-length-numeric-compression/gorilla.png)
+
+于是借鉴 Delta2 编码的思想发明了 [Gorilla](https://github.com/curioloop/number-codec/blob/main/src/main/java/com/curioloop/number/codec/gorilla/GorillaCodec.java) 算法，通过异或算法提取相邻两个数据间的差异，消除了大量的冗余比特。
+该算法的效果十分显著，使用该算法压缩 2 小时的时序数据，每个数据点仅仅需 1.37 byte。
+
+整个编码流程十分简单：
+- 计算两个相邻数据的异或值 `xor`，并得到
+    - 前置 0 数量 leading-zero
+    - 连续区块长度 block-size
+- 如果前后两个 `xor` 的 leading-zero 与 block-size 不同，记录下这两个值
+- 如果前后两个 `xor` 的 leading-zero 与 block-size 相同，则不记录
+- 最后记录下有差异的区块数据即可
+
+![Gorilla](/picture/variable-length-numeric-compression/gorilla.svg)
+
+在我们应用场景中，该算法能够将数据压缩为原来的 33%，压缩率可达 60% 以上。
+
+
+### Chimp
+
+Gorilla 编码的速度很快，但仍然存在一些不足：
+
+- 使用固定 5bit 记录 leading-zero 可能造成空间浪费
+- 仅考虑邻近数据样本，无法识别时序数据中的周期性，导致其在特定场景下的压缩效果不尽理想
+
+为了解决以上问题，一个名为 [Chimp](https://github.com/curioloop/number-codec/blob/main/src/main/java/com/curioloop/number/codec/chimp/Chimp.java) 的算法应运而生，其主要改进有两点：
+
+- 通过映射函数与增加 1bit 的标记位，将 leading-zero 编码降至 3bit
+- 当相邻两个数的 leading-zero 数量有差异时才记录 leading-zero 变化
+
+![Chimp](/picture/variable-length-numeric-compression/chimp.svg)
+
+
+为了提升算法的自适应能力，Chimp 的研究团队还提供了名为 [ChimpN](https://github.com/curioloop/number-codec/blob/main/src/main/java/com/curioloop/number/codec/chimp/ChimpN.java) 的变种算法。
+该变种在原有算法的基础上，增加一个长度为 N 的滑动窗口，计算异或值时可以从中选择 tailing-zero 相似度最高的参考值，从而进一步提升编码压缩效率。
+
+![ChimpN](/picture/variable-length-numeric-compression/chimp-n.svg)
+
+
+## 扩展资料
+
+随着 SIMD 指令的普及，已经出现了一批使用使用 SIMD 加速的编码算法，比如整数编码 [SIMD-FastPFOR](https://arxiv.org/pdf/1209.2137.pdf) 与浮点数编码 [ALP](https://dl.acm.org/doi/pdf/10.1145/3626717)。
+
+虽然这些算法在各自的领域中均取得了不错的效果，但是对于在单次数据样本量较小的场景下，其性能优势不甚明显。
+并且 SIMD 对连续内存块的需求，使得这些实现与 Java 的 Streaming API 难以匹配。
+
+因此我们针对自身的应用需求，使用 Java 实现几类常用算法，并开源在[这里](https://github.com/curioloop/number-codec)。
+欢迎有需要的朋友使用，并给我们提供宝贵的反馈意见。

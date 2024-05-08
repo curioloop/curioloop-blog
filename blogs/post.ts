@@ -139,6 +139,7 @@ async function loadPosts(locale:string, slug?:string) : Promise<BlogPost[]> {
   let version = postCache[locale]
   if (!version || version.ttl < Date.now()) {
     const posts = await fetchPosts(locale)
+    posts.sort(({meta:{date:a}}, {meta:{date:b}}) => new Date(b).getTime() - new Date(a).getTime())
     version = { posts, ttl: Date.now() + postCacheTTL * 1000 }
     postCache[locale] = version
   }

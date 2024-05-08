@@ -19,11 +19,11 @@ const Pagination = ({ total, current, pathPrefix }:PaginationProps) => {
   const pageEllipsis = <div className="my-0 mx-1 px-2 py-2 min-w-[1em] ">...</div>
 
   const pageBtn = (pageNo:number) => pageNo == current ? (
-    <div className="my-0 mx-1 px-3 py-2 min-w-[1.5em] rounded-md shadow-md bg-light-bg-hov dark:bg-dark-bg-hov">
+    <div key={pageNo} className="my-0 mx-1 px-3 py-2 min-w-[1.5em] rounded-md shadow-md bg-light-bg-hov dark:bg-dark-bg-hov">
       <a className="cursor-default">{pageNo}</a>
     </div>
   ) : (
-    <div className="my-0 mx-1 px-3 py-2 min-w-[1.5em] rounded-md shadow-md bg-light-bg dark:bg-dark-bg hover:bg-light-bg-hov dark:hover:bg-dark-bg-hov">
+    <div key={pageNo} className="my-0 mx-1 px-3 py-2 min-w-[1.5em] rounded-md shadow-md bg-light-bg dark:bg-dark-bg hover:bg-light-bg-hov dark:hover:bg-dark-bg-hov">
       <a className="hover:text-light-hov dark:hover:text-dark-hov" href={`${pathPrefix}${pageNo}`}>{pageNo}</a>
     </div>
   )
