@@ -233,8 +233,6 @@ In our application, this algorithm can compress data to 33% of the original size
 
 Gorilla encoding is good, but it still has some shortcomings:
 
-Gorilla 编码的速度很快，但仍然存在一些不足：
-
 - Using a fixed 5-bit field to record leading zeroes may lead to space wastage.
 - Only considering adjacent data points, it cannot recognize the periodicity in time-series data, resulting in suboptimal compression effects in specific scenarios.
 

@@ -1,6 +1,7 @@
 import clsx from 'clsx'
 import { Inter } from 'next/font/google'
 import { Providers } from '@/components/Providers'
+import { GoogleAnalytics } from '@next/third-parties/google'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -16,6 +17,7 @@ export default function AppLayout({children, locale}: Props) {
         <Providers>
           {children}
         </Providers>
+        <GoogleAnalytics gaId="G-YP2BSVEB2C" />
       </body>
     </html>
   )
