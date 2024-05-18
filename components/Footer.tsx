@@ -10,6 +10,7 @@ const Footer = () => (
         <a target="_blank" rel="noopener nofollow noreferrer" href="https://tailwindcss.com/">Tailwind CSS</a>
       </div>
     </div>
+    <a target="_blank" href="https://link.zhihu.com/?target=https%3A//curioloop.com"/>
   </footer>)
 
 export default Footer
