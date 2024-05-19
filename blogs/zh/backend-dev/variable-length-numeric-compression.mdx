@@ -212,7 +212,7 @@ Simple8 的解码方式十分简单高效，仅需对照上面的表格进行相
 怀着这一想法，Facebook 的工程师们深入研究了公司内部的时序数据。
 并在浮点数序列中发现了大量完全相同的二进制位。
 
-![Gorilla](/picture/variable-length-numeric-compression/gorilla.png)
+![Gorilla?width=500](/picture/variable-length-numeric-compression/gorilla.png)
 
 于是借鉴 Delta2 编码的思想发明了 [Gorilla](https://github.com/curioloop/number-codec/blob/main/src/main/java/com/curioloop/number/codec/gorilla/GorillaCodec.java) 算法，通过异或算法提取相邻两个数据间的差异，消除了大量的冗余比特。
 该算法的效果十分显著，使用该算法压缩 2 小时的时序数据，每个数据点仅仅需 1.37 byte。
@@ -225,7 +225,7 @@ Simple8 的解码方式十分简单高效，仅需对照上面的表格进行相
 - 如果前后两个 `xor` 的 leading-zero 与 block-size 相同，则不记录
 - 最后记录下有差异的区块数据即可
 
-![Gorilla](/picture/variable-length-numeric-compression/gorilla.svg)
+![Gorilla?width=500](/picture/variable-length-numeric-compression/gorilla.svg)
 
 在我们应用场景中，该算法能够将数据压缩为原来的 33%，压缩率可达 60% 以上。
 
@@ -242,13 +242,13 @@ Gorilla 编码的速度很快，但仍然存在一些不足：
 - 通过映射函数与增加 1bit 的标记位，将 leading-zero 编码降至 3bit
 - 当相邻两个数的 leading-zero 数量有差异时才记录 leading-zero 变化
 
-![Chimp](/picture/variable-length-numeric-compression/chimp.svg)
+![Chimp?width=550](/picture/variable-length-numeric-compression/chimp.svg)
 
 
 为了提升算法的自适应能力，Chimp 的研究团队还提供了名为 [ChimpN](https://github.com/curioloop/number-codec/blob/main/src/main/java/com/curioloop/number/codec/chimp/ChimpN.java) 的变种算法。
 该变种在原有算法的基础上，增加一个长度为 N 的滑动窗口，计算异或值时可以从中选择 tailing-zero 相似度最高的参考值，从而进一步提升编码压缩效率。
 
-![ChimpN](/picture/variable-length-numeric-compression/chimp-n.svg)
+![ChimpN?width=550](/picture/variable-length-numeric-compression/chimp-n.svg)
 
 
 ## 扩展资料

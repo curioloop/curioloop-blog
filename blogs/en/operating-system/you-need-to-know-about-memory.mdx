@@ -138,7 +138,7 @@ One popular cache coherence protocol is **MESI**, which sets one of the followin
 
 State transitions are as follows:
 
-![MESI?width=350](/picture/memory/mesi-proto.svg)
+![MESI?width=350](/picture/you-need-to-know-about-memory/mesi-proto.svg)
 
 - Initially, all cache line states are **I**.
 - After loading data, their states become **S** or **E**.
@@ -335,7 +335,7 @@ And if the branch prediction is wrong, a large number of useless instructions wi
 For this type of branch code with a low trigger probability, it can be extracted into a non-inlined function.
 Place it in a separate code block and simplify the low-probability branch into a function call instruction.
 
-![UnlikelyBranch?width=500](/picture/memory/instruct-cache-miss.svg)
+![UnlikelyBranch?width=500](/picture/you-need-to-know-about-memory/instruct-cache-miss.svg)
 
 Programmers can use two GCC macros to hint to the compiler which code branch has a higher execution probability, 
 and then turn on the **-freorder-blocks** optimization option during compilation to automatically adjust the code layout.
@@ -432,7 +432,7 @@ The size of the virtual space is directly related to the length of virtual addre
 - With a 32-bit virtual address length, the addressable virtual memory space is 4GB.
 - With a 64-bit virtual address length, the theoretically addressable virtual memory space is 16EB.
 
-![VirtualMemoryLayout?width=600](/picture/memory/virtual-memory.svg)
+![VirtualMemoryLayout?width=600](/picture/you-need-to-know-about-memory/virtual-memory.svg)
 
 The entire virtual address is divided into **kernel space** and **user space**, with user space mainly comprising two parts:
 
@@ -477,7 +477,7 @@ The entire virtual address is divided into **kernel space** and **user space**, 
     - Inter-process communication by mapping virtual addresses of different processes to the same physical memory.
     - By default, the virtual address of child processes shares the physical memory associated with the parent process, creating a new copy only when the child process modifies data.
 
-  ![VirtualMemUseCase?width=750](/picture/memory/virtual-mem-use-case.svg)
+  ![VirtualMemUseCase?width=750](/picture/you-need-to-know-about-memory/virtual-mem-use-case.svg)
 
 At this point, have you ever considered the question: Where should JIT compiler-generated code reside?:
 
@@ -496,7 +496,7 @@ The smallest unit of memory allocated by the operating system is a page.
 The CPU maps virtual addresses to physical addresses through the **Memory Management Unit (MMU)**.\
 This mapping process involves a structure called a page table:
 
-![PageTable?width=450](/picture/memory/page-table-lv1.svg)
+![PageTable?width=450](/picture/you-need-to-know-about-memory/page-table-lv1.svg)
 
 A Level-1 page table divides the virtual memory address into two parts:
 - **index**: The page associated with this virtual address
@@ -512,7 +512,7 @@ If a continuous pointer array is used as the page table, the page table occupies
 Due to the isolation of virtual memory, the OS maintains separate page tables for each process, which undoubtedly wastes a lot of memory space.\
 To save space, multi-level page tables are usually used to maintain mapping relationships and achieve on-demand space allocation.
 
-![PageTable](/picture/memory/page-table-lv4.svg)
+![PageTable](/picture/you-need-to-know-about-memory/page-table-lv4.svg)
 
 Continuous virtual addresses can share high-level page table space, reducing unnecessary memory allocation.\
 To reduce the memory space occupied by page tables, memory should be allocated on continuous virtual addresses as much as possible.
@@ -524,7 +524,7 @@ which caches the mapping relationship between index and page, avoiding the perfo
 - When lookup hits, the physical address is calculated based on the page and offset.
 - When lookup misses, the result is queried in the main memory's multi-level page table and cached in the TLB.
 
-![PageTable?width=500](/picture/memory/tlb.svg)
+![PageTable?width=500](/picture/you-need-to-know-about-memory/tlb.svg)
 
 The hit rate of the TLB directly affects memory access performance, and optimization methods can be divided into two categories:
 
@@ -588,12 +588,12 @@ In a traditional **Uniform Memory Access (UMA)** system, all CPUs access memory 
 The FSB connects the CPU to the Northbridge chipset, which then connects to the memory controller, and all memory accesses are made through this bus. 
 The consistency of this architecture ensures that CPU access times to all memory locations are consistent.
 
-![FSB?width=500](/picture/memory/fsb.svg)
+![FSB?width=500](/picture/you-need-to-know-about-memory/fsb.svg)
 
 In contrast, in **Non-Uniform Memory Access (NUMA)** system, the memory control functionality of the Northbridge chipset is integrated into the CPU. 
 To address the memory access latency caused by FBS, NUMA divides memory into multiple nodes, each typically containing a group of CPU cores and closely associated memory.
 
-![NUMA?width=600](/picture/memory/numa.svg)
+![NUMA?width=600](/picture/you-need-to-know-about-memory/numa.svg)
 
 NUMA is an excellent example of applying divide-and-conquer techniques to solve complex problems. 
 In this architecture, CPUs can directly communicate with local memory within the same node without going through a unified memory bus. 
@@ -601,7 +601,7 @@ Because the bus bandwidth is no longer a system bottleneck, this architecture ha
 
 To accurately describe the communication topology between CPUs and memory, a structure called a **hypercube** is introduced:
 
-![NUMA-Hypercube](/picture/memory/numa-hypercubes.svg)
+![NUMA-Hypercube](/picture/you-need-to-know-about-memory/numa-hypercubes.svg)
 
 Each node contains a group of processor cores and their corresponding local memory. 
 These nodes are interconnected through a communication network, forming a highly parallel system. 
@@ -624,7 +624,7 @@ Each core accesses its local node memory faster, while remote node access is slo
 
 To manage this complexity, OS require NUMA awareness to optimize memory allocation and data layout, minimizing cross-node access latency.
 
-![NUMA-Cache?width=500](/picture/memory/numa-cache.svg)
+![NUMA-Cache?width=500](/picture/you-need-to-know-about-memory/numa-cache.svg)
 
 #### Shared Memory Management
 
@@ -634,7 +634,7 @@ A NUMA-friendly OS maintains independent `libc.so` copies per node, avoiding fre
 
 #### Thread Scheduling
 
-![NUMA-Access?width=800](/picture/memory/cache-access.svg)
+![NUMA-Access?width=800](/picture/you-need-to-know-about-memory/cache-access.svg)
 
 During thread scheduling, ensure threads and their frequently accessed memory reside on the same NUMA node. 
 Avoid frequent cross-node thread migrations.

@@ -208,7 +208,7 @@ Since individual data points aren't easy to compress, what about a batch of data
 
 Engineers at Facebook delved into the their time-series dataset and found a large number of completely identical binary bits in the floating-point data sequence.
 
-![Gorilla](/picture/variable-length-numeric-compression/gorilla.png)
+![Gorilla?width=500](/picture/variable-length-numeric-compression/gorilla.png)
 
 
 Inspired by the Delta2 encoding, they invented the [Gorilla](https://github.com/curioloop/number-codec/blob/main/src/main/java/com/curioloop/number/codec/gorilla/GorillaCodec.java) algorithm, which extracts the differences between adjacent data points through XOR operations, eliminating a large amount of redundant bits. 
@@ -224,7 +224,7 @@ The entire encoding process is quite simple:
 - If the leading zeroes and block-size of the two consecutive xor values are the same, do not record them.
 - Finally, record the blocks of data with differences.
 
-![Gorilla](/picture/variable-length-numeric-compression/gorilla.svg)
+![Gorilla?width=500](/picture/variable-length-numeric-compression/gorilla.svg)
 
 In our application, this algorithm can compress data to 33% of the original size, with compression rates exceeding 60%.
 
@@ -243,13 +243,13 @@ To address these issues, an algorithm named [Chimp](https://github.com/curioloop
 - It only records leading zeroes changes when there are differences between adjacent leading zero counts.
 
 
-![Chimp](/picture/variable-length-numeric-compression/chimp.svg)
+![Chimp?width=550](/picture/variable-length-numeric-compression/chimp.svg)
 
 To enhance the algorithm's adaptability, the Chimp research team also provided a variant called ChimpN. 
 
 This variant adds a sliding window of length N on top of the original algorithm. When calculating XOR values, it can select the reference value with the highest similarity in trailing zeroes from the window, further improving encoding compression efficiency.
 
-![ChimpN](/picture/variable-length-numeric-compression/chimp-n.svg)
+![ChimpN?width=550](/picture/variable-length-numeric-compression/chimp-n.svg)
 
 
 ## More...

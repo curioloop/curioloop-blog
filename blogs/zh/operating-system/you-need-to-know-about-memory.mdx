@@ -131,7 +131,7 @@ block-beta
 - **Invalid**：该缓存行已失效
 
 状态转换如图所示：
-![MESI?width=350](/picture/memory/mesi-proto.svg)
+![MESI?width=350](/picture/you-need-to-know-about-memory/mesi-proto.svg)
 
 - 初始状态下所有缓存行的状态均为 **I**
 - 加载数据后其状态变为 **S** 或 **E**
@@ -314,7 +314,7 @@ int branch_layout() {
 对于这类触发概率较低的分支代码，可以将其抽离为为一个独立函数并禁止内联。
 使其位于一个独立的代码块中，并将低概率分支简化为一个函数调用指令。
 
-![UnlikelyBranch?width=500](/picture/memory/instruct-cache-miss.svg)
+![UnlikelyBranch?width=500](/picture/you-need-to-know-about-memory/instruct-cache-miss.svg)
 
 
 程序员可以通过 gcc 提供的两个宏来提示编译器的哪个代码分支的执行概率更高，接着在编译时开启 **-freorder-blocks** 优化选项即可实现自动调整代码布局。
@@ -406,7 +406,7 @@ struct strtype {
 - 当虚拟地址长度为 32 位时，可寻址的虚拟内存空间为 4GB
 - 当虚拟地址长度为 64 位时，理论可寻址的虚拟内存空间为 16EB
 
-![VirtualMemoryLayout?width=600](/picture/memory/virtual-memory.svg)
+![VirtualMemoryLayout?width=600](/picture/you-need-to-know-about-memory/virtual-memory.svg)
 
 整个虚拟地址被划分为 **内核空间 (kernel space)** 与 **用户空间 (user space)** ，用户空间主要有两部分组成：
 - **加载可执行文件**
@@ -447,7 +447,7 @@ struct strtype {
     - 可以通过将不同进程的虚拟地址映射至同一块物理内存，实现进程间通信
     - 子进程的虚拟地址默认共享父进程关联的物理内存，仅当子进程修改数据时才会创建新的副本进行编辑
 
-  ![VirtualMemUseCase?width=750](/picture/memory/virtual-mem-use-case.svg)
+  ![VirtualMemUseCase?width=750](/picture/you-need-to-know-about-memory/virtual-mem-use-case.svg)
 
 看到这里，不知道你考虑过一个问题：**JIT 编译器生成的代码应该放哪里？**：
 - 尝试将其写入 **.text** 所在的区域会导致进程崩溃
@@ -464,7 +464,7 @@ struct strtype {
 CPU 通过 **MMU (Memory Management Unit)** 将虚拟地址映射为物理地址。\
 该映射过程需要一个被称为页表的结构参与：
 
-![PageTable?width=450](/picture/memory/page-table-lv1.svg)
+![PageTable?width=450](/picture/you-need-to-know-about-memory/page-table-lv1.svg)
 
 一级页表将虚拟内存地址分为两部分：
 - **index** 与该虚拟地址关联的 page
@@ -480,7 +480,7 @@ CPU 通过 **MMU (Memory Management Unit)** 将虚拟地址映射为物理地址
 由于虚拟内存的独立性，操作系统会为每个进程维护独立的页表，这种分配方式无疑会浪费大量的内存空间。\
 为了节省空间，通常使用多级页表来维护映射关系，实现按需分配空间。
 
-![PageTable](/picture/memory/page-table-lv4.svg)
+![PageTable](/picture/you-need-to-know-about-memory/page-table-lv4.svg)
 
 连续的虚拟地址能够共享高级页表空间，减少不必要的内存分配。\
 为了减少页表占用的内存空间，应该尽可能在连续的虚拟地址上分配内存。
@@ -491,7 +491,7 @@ CPU 通过 **MMU (Memory Management Unit)** 将虚拟地址映射为物理地址
 - 当查找 index 命中时，会根据 page 与 offset 计算得到物理地址
 - 当查找未命中时，则会查询主存中的多级页表，并将结果缓存在 TLB 中
 
-![PageTable?width=500](/picture/memory/tlb.svg)
+![PageTable?width=500](/picture/you-need-to-know-about-memory/tlb.svg)
 
 TLB 的命中率高低直接影响到内存访问性能，优化手段可以分为两类：
 
@@ -551,19 +551,19 @@ TLB 的命中率高低直接影响到内存访问性能，优化手段可以分�
 FSB 是 CPU 与北桥芯片之间的连接，北桥芯片再连接到内存控制器，所有的内存访问都通过这条总线进行。
 该架构的一致性保证了 CPU 对所有内存的访问时间是一致的。
 
-![FSB?width=500](/picture/memory/fsb.svg)
+![FSB?width=500](/picture/you-need-to-know-about-memory/fsb.svg)
 
 而在 **非一致性内存访问 (Non-Uniform Memory Access)** 架构中，北桥芯片被的内存控制功能被整合进 CPU。
 为了解决多处理器系统中内存访问延迟的问题，NUMA 将内存被划分为多个节点，每个节点通常包含一组 CPU 核心和与之紧密相连的内存。
 
-![NUMA?width=600](/picture/memory/numa.svg)
+![NUMA?width=600](/picture/you-need-to-know-about-memory/numa.svg)
 
 NUMA 是应用分治法解决复杂问题的一个极佳案例。
 该架构下 CPU 可以直接与同节点内存通信，无需再通过统一的内存总线来访问内存。
 由于总线带宽不再成为系统扩展瓶颈，使得该架构具备更强的水平扩展性，因此 NUMA 还特别用于大型商用硬件。
 为了准确的描述 CPU 与内存间的通信拓扑，需要引入一个被称为 **超立方体 (hypercube)** 的结构：
 
-![NUMA-Hypercube](/picture/memory/numa-hypercubes.svg)
+![NUMA-Hypercube](/picture/you-need-to-know-about-memory/numa-hypercubes.svg)
 
 每个节点包含一组处理器核心以及对应的本地内存，这些节点通过通信网络相互连接，形成了一个高度并行的系统。
 假设每个 NUMA 节点具备 $C$ 个互连接口，则超立方体中最多能包含 $2^C$ 个互联节点，此时两两节点间的最长访问距离也恰好是 $C$。
@@ -579,7 +579,7 @@ NUMA 是应用分治法解决复杂问题的一个极佳案例。
 每个 CPU 核心可以更快地访问与其在同一节点内的内存，而访问其他节点的内存则会相对较慢。
 为了管理这种复杂的内存访问模式，操作系统需要具备 NUMA 感知能力，以便能够优化内存分配和数据布局，从而减少跨节点访问的延迟。
 
-![NUMA-Cache?width=500](/picture/memory/numa-cache.svg)
+![NUMA-Cache?width=500](/picture/you-need-to-know-about-memory/numa-cache.svg)
 
 #### 共享内存
 对于 `libc.so` 这类常用的共享库，通常只会常驻一组特定的在物理内存页中。
@@ -588,7 +588,7 @@ NUMA 是应用分治法解决复杂问题的一个极佳案例。
 
 #### 线程调度
 
-![NUMA-Access?width=800](/picture/memory/cache-access.svg)
+![NUMA-Access?width=800](/picture/you-need-to-know-about-memory/cache-access.svg)
 
 当发生线程调度时，需要保证线程与其经常访问的物理内存都常驻于同个 NUMA 节点上。
 操作系统不应经常性地将线程从一个节点迁移到另一个节点。

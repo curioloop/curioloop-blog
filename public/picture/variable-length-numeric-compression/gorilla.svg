@@ -1,5 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="35 80 265 220" height="350" >
-	<clipPath id="a">
+	<style> use { fill: #555 } </style>
+  <clipPath id="a">
 		<path transform="matrix(.7307 0 0 -.7307 54.999 270.562)" d="M0 0h325.5v255.75H0z"/>
 	</clipPath>
 	<g clip-path="url(#a)">
@@ -308,7 +309,7 @@
 				<use xlink:href="#y" transform="matrix(6.5763 0 0 -6.5763 242.992 265.233)"/>
 			</g>
 		</g>
-		<path stroke-width=".548025" stroke-miterlimit="10" fill="none" stroke="#000" d="m77.194 137.666 43.842-33.978M192.28 137.666 153.917 100.4M161.864 192.468l19.455-38.361M231.189 192.468l-27.95-38.361"/>
+		<path stroke-width=".548025" stroke-miterlimit="10" fill="none" stroke="#555" d="m77.194 137.666 43.842-33.978M192.28 137.666 153.917 100.4M161.864 192.468l19.455-38.361M231.189 192.468l-27.95-38.361"/>
 		<symbol id="S">
 			<path d="M.484.242H0v-.07h.484v.07m0-.172H0V0h.484v.07z"/>
 		</symbol>

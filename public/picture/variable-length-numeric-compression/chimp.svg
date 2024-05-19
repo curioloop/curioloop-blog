@@ -1,5 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="35 80 265 200" height="350">
-	<clipPath id="a">
+	<style> use { fill: #555 } </style>
+  <clipPath id="a">
 		<path transform="matrix(.6472 0 0 -.6472 54.999 249.208)" d="M0 0h367.5v255.75H0z"/>
 	</clipPath>
 	<g clip-path="url(#a)">
@@ -276,7 +277,7 @@
 				<use xlink:href="#B" transform="matrix(5.8248 0 0 -5.8248 263.098 230.897)"/>
 			</g>
 		</g>
-		<path stroke-width=".4854" stroke-miterlimit="10" fill="none" stroke="#000" d="m119.315 131.499 38.832-30.095M221.249 131.499 187.27 98.49M197.221 180.039l14.32-33.978M249.402 180.039l-18.445-33.978"/>
+		<path stroke-width=".4854" stroke-miterlimit="10" fill="none" stroke="#555" d="m119.315 131.499 38.832-30.095M221.249 131.499 187.27 98.49M197.221 180.039l14.32-33.978M249.402 180.039l-18.445-33.978"/>
 		<symbol id="P">
 			<path d="M.6.05H0V0h.6v.05z"/>
 		</symbol>
@@ -519,7 +520,7 @@
 				<use xlink:href="#B" transform="matrix(5.8248 0 0 -5.8248 150.399 244.488)"/>
 			</g>
 		</g>
-		<path stroke-width=".4854" stroke-miterlimit="10" fill="none" stroke="#000" d="m87.763 180.039 21.844-33.978M134.445 180.039l-5.422-33.978"/>
+		<path stroke-width=".4854" stroke-miterlimit="10" fill="none" stroke="#555" d="m87.763 180.039 21.844-33.978M134.445 180.039l-5.422-33.978"/>
 		<use xlink:href="#i" transform="matrix(6.3102 0 0 -6.3102 58.73 170.088)"/>
 		<use xlink:href="#k" transform="matrix(6.3102 0 0 -6.3102 60.585 170.233)"/>
 		<use xlink:href="#B" transform="matrix(6.3102 0 0 -6.3102 64.03 170.233)"/>
