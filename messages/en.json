@@ -36,6 +36,7 @@
     "distributed-system": "DistributedSystem",
     "backend-dev": "BackendDev",
     "frontend-dev": "FrontendDev",
-    "numerical-encoding": "NumericalEncoding"
+    "numerical-encoding": "NumericalEncoding",
+    "operating-system": "OS"
   }
 }
