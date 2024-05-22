@@ -37,6 +37,14 @@
     "backend-dev": "后端开发",
     "frontend-dev": "前端开发",
     "numerical-encoding": "数值编码",
-    "operating-system": "操作系统"
+    "operating-system": "操作系统",
+    "network": "网络",
+    "load-balance": "负载均衡",
+    "firewall": "防火墙",
+    "linux": "Linux",
+    "netfilter": "Netfilter",
+    "iptables": "Iptables",
+    "nat": "NAT",
+    "ipvs": "IPVS"
   }
 }

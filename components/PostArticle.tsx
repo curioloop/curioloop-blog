@@ -4,6 +4,7 @@ import LocaleDate from './LocaleDate'
 import PostRender from './PostRender'
 import { useLocale } from 'next-intl'
 import Image from 'next/image'
+import PostDiscussion from '@/components/PostDiscussion'
 
 
 type Props = {
@@ -27,17 +28,15 @@ const PostArticle = async ({ post }:Props) => {
           <LocaleDate className="font-light" date={date}/>
         </header>
         <PostRender post={post}/>
-        {
-          tagList.length > 0 &&
-          <footer className="flex flex-wrap justify-start gap-2 p-6 mt-4 pt-4 border-t dark:border-dark-bg-lite">
+        <footer className="flex flex-wrap justify-start gap-2 p-6 mt-4 pt-4 border-t dark:border-dark-bg-lite">
+          <PostDiscussion locale={locale} />
           {
             tagList.map(([id, tag]) => (
               <a className="px-3 rounded-md border border-light-lite text-light-lite hover:text-light-lite-hov hover:bg-light-lite dark:hover:bg-dark-bg-lite " 
                  key={id} href={`/${locale}/tags/${id}`}>{tag}</a>
             ))
           }
-          </footer>
-        }
+        </footer>
       </article>
   )
 }

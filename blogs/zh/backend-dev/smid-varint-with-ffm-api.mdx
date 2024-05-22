@@ -173,7 +173,7 @@ FFM 提供了两个重要的 API：
 
 **Foreign-Memory Access API** 的出现主要是为了取代 Unsafe，在未来成为标准的堆外内存管理器。
 
-处于安全考虑，其中包含了大量的边界与生命周期检查，因此性能相对直接使用 Unsafe 会有所下降。\
+出于安全考虑，其中包含了大量的边界与生命周期检查，因此性能相对直接使用 Unsafe 会有所下降。\
 令人遗憾的是，为了强制推行新 API，目前官方已经提出了废弃 Unsafe 的[草案](https://openjdk.org/jeps/471)。
 
 
@@ -353,7 +353,7 @@ public class VarIntPerf {
 }
 ```
 
-最后在在 pom.xml 中引用 aven-shade-plugin< 插件用于生成 benchmarks.jar。
+最后在在 pom.xml 中引用 **maven-shade-plugin** 插件用于生成 benchmarks.jar。
 
 ```xml
 <plugin>
@@ -382,7 +382,7 @@ public class VarIntPerf {
 最后执行以下命令即可进行测试：
 ```bash
 mvn clean package
-java -jar target/benchmarks.jar VarIntFFMPerf
+java -jar target/benchmarks.jar VarIntFFM
 ```
 
 测试结果如下：

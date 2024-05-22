@@ -30,7 +30,6 @@ const PostContent = ({ children } : { children?: ReactNode }) => {
         }
       })
       if (interesed.length) {
-        console.log(interesed)
         document.dispatchEvent(new CustomEvent('TOC-HIGHLIGHT', {detail: interesed[0]}))
       }
     }

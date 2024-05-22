@@ -353,7 +353,7 @@ public class VarIntPerf {
 }
 ```
 
-Here we use maven-shade-plugin to generate benchmarks.jar :
+Here we use **maven-shade-plugin** to generate benchmarks.jar :
 
 ```xml
 <plugin>
@@ -382,7 +382,7 @@ Here we use maven-shade-plugin to generate benchmarks.jar :
 Finally, execute the following command to start bencmarking:
 ```bash
 mvn clean package
-java -jar target/benchmarks.jar VarIntFFMPerf
+java -jar target/benchmarks.jar VarIntFFM
 ```
 
 Here is the results:

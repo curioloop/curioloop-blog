@@ -37,6 +37,14 @@
     "backend-dev": "BackendDev",
     "frontend-dev": "FrontendDev",
     "numerical-encoding": "NumericalEncoding",
-    "operating-system": "OS"
+    "operating-system": "OS",
+    "network": "Network",
+    "load-balance": "LoadBalance",
+    "firewall": "Firewall",
+    "linux": "Linux",
+    "netfilter": "Netfilter",
+    "iptables": "Iptables",
+    "nat": "NAT",
+    "ipvs": "IPVS"
   }
 }
