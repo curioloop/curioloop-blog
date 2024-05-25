@@ -9,7 +9,7 @@ const Navbar = () => {
   const locale = useLocale()
   const t = useTranslations('Navbar')
   return (
-    <nav className="relative block min-h-[3rem] py-0 px-5 shadow-md border-gray-200 bg-light-bg dark:bg-dark-bg">
+    <nav className="relative block min-h-[3rem] py-0 px-5 shadow-md border-gray-200 bg-light-bg dark:bg-dark-bg z-10">
     <div className="xl:flex xl:max-w-6xl 2xl:max-w-7xl my-0 mx-auto ">
       <h1 className="flex shrink-0 items-stretch justify-center xl:-ml-3 xl:mr-3">
         <a href={`https://curioloop.com/${locale}`} className="flex items-stretch justify-center tracking-[.5px] cursor-pointer m-0 md:px-3 md:py-4 py-3 hover:text-light-hov dark:hover:text-dark-hov">
