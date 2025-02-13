@@ -1,7 +1,7 @@
 {
   "Default": {
     "title": "CurioLoop",
-    "description" : "Stay Curious.",
+    "description" : "CurioLoop",
     "channel-link": "Channels",
     "hot-tag": "Tags",
     "new-post": "New Posts",
@@ -23,7 +23,7 @@
   },
   "About": {
     "title": "CurioLoop",
-    "description" : "Stay Curious."
+    "description" : "Abount Me ..."
   },
   "Pagination": {
     "prev-page" : "Prev",

@@ -1,7 +1,7 @@
 {
   "Default": {
     "title": "奇异循环",
-    "description" : "生命不息，好奇不止。",
+    "description" : "奇异循环",
     "channel-link": "频道连接",
     "hot-tag": "热门标签",
     "new-post": "最新发布",
@@ -23,7 +23,7 @@
   },
   "About": {
     "title": "奇异循环",
-    "description" : "生命不息，好奇不止。"
+    "description" : "关于我 ..."
   },
   "Pagination": {
     "prev-page" : "上一页",
