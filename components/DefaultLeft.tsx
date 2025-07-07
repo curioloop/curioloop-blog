@@ -1,9 +1,11 @@
 import { getPostTags } from '@/blogs/post'
-import { useLocale, useTranslations } from 'next-intl'
+import { useTranslations } from 'next-intl'
+import { getLocale } from 'next-intl/server'
+
 import React from 'react'
 
 const TopTags = async ({ className }:{className:string}) => {
-  const locale = useLocale()
+  const locale = await getLocale()
   const tags = (await getPostTags(locale))
   return tags.slice(0, 10).map(tag => <a key={tag.id} className={className} href={`/${locale}/tags/${tag.id}`}>{tag.tag}</a>)
 }

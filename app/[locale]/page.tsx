@@ -15,7 +15,7 @@ export default async function Home(props: {params: Promise<{locale: string}>}) {
   } = params;
 
   // 使用 redirect(`/${locale}/page/0`) 效果相同，但会改变 URL
-  return (<DefaultLayout params={{locale}} > 
-            <IndexPage params={{index:'0', locale}}/>
+  return (<DefaultLayout params={Promise.resolve(params)} > 
+            <IndexPage params={Promise.resolve({index:'0', locale})}/>
           </DefaultLayout>)
 }

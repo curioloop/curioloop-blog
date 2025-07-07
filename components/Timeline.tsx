@@ -1,11 +1,11 @@
 import React from 'react'
-import { useLocale } from 'next-intl'
+import { getLocale } from 'next-intl/server'
 import LocaleDate from './LocaleDate'
 import { getPostTimeline } from '@/blogs/post'
 
 const Timeline = async () => {
 
-  const locale = useLocale()
+  const locale = await getLocale()
   const timeline = await getPostTimeline(locale)
   const months = Object.keys(timeline).sort().toReversed()
 

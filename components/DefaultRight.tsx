@@ -1,13 +1,14 @@
 import React from 'react'
 import { useTranslations, useLocale } from 'next-intl';
+import { getTranslations, getLocale } from 'next-intl/server'
 import { BlogMeta, getPostPages } from '@/blogs/post';
 import VideoPreview from './VideoPreview';
 import LocaleDate from './LocaleDate';
 
 
 const LatestPosts = async () => {
-  const t = useTranslations('Default')
-  const locale = useLocale()
+  const t = await getTranslations('Default')
+  const locale = await getLocale()
   const {posts} = (await getPostPages(locale))
   const latest = posts.map(({meta})=> meta).sort(({date:a}, {date:b}) => new Date(b).getTime() - new Date(a).getTime())
 
@@ -29,8 +30,8 @@ const LatestPosts = async () => {
 }
 
 const LatestVideos = async () => {
-  const t = useTranslations('Default')
-  const locale = useLocale()
+  const t = await getTranslations('Default')
+  const locale = await getLocale()
   const {posts} = (await getPostPages(locale))
   const latest = posts.map(({meta})=> meta).filter(({video})=>!!video).sort(({date:a}, {date:b}) => new Date(b).getTime() - new Date(a).getTime())
 

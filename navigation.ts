@@ -1,4 +1,5 @@
-import {Pathnames, createNavigation} from 'next-intl/navigation';
+import {createNavigation} from 'next-intl/navigation';
+import {Pathnames} from 'next-intl/routing';
 
 export const locales = ['en', 'zh'] as const
 export const localeLangs = {

@@ -2,7 +2,7 @@ import { BlogPost } from '@/blogs/post'
 import React from 'react'
 import LocaleDate from './LocaleDate'
 import PostRender from './PostRender'
-import { useLocale } from 'next-intl'
+import { getLocale } from 'next-intl/server'
 import Image from 'next/image'
 import PostDiscussion from '@/components/PostDiscussion'
 
@@ -12,7 +12,7 @@ type Props = {
 }
 
 const PostArticle = async ({ post }:Props) => {
-  const locale = useLocale()
+  const locale = await getLocale()
   const {meta : {title, cover, tags, date } } = post
   const tagList = Object.entries(tags)
   return (

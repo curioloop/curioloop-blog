@@ -2,7 +2,7 @@
 import React from 'react'
 
 import { getPostTags } from '@/blogs/post'
-import { useLocale } from 'next-intl'
+import { getLocale } from 'next-intl/server'
 
 
 type Tag = {
@@ -13,7 +13,7 @@ type Tag = {
 
 const TagCloud = async () => {
 
-  const locale = useLocale()
+  const locale = await getLocale()
 
   const tags = (await getPostTags(locale)).map(
     ({id, tag:value, posts:{length:count}}) => ({id, value, count} satisfies Tag)
