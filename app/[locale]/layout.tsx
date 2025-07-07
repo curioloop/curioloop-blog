@@ -1,7 +1,7 @@
 import '../globals.css'
 
 import { NextIntlClientProvider } from 'next-intl'
-import { unstable_setRequestLocale } from 'next-intl/server';
+import { setRequestLocale } from 'next-intl/server';
 
 import {locales} from '@/navigation'
 import Footer from '@/components/Footer'
@@ -27,7 +27,7 @@ export default async function RootLayout(props: Props) {
 
   // reject unsupported locales
   if (!locales.includes(locale as any)) notFound()
-  unstable_setRequestLocale(locale)
+  setRequestLocale(locale)
   const messages = (await import(`../../messages/${locale}.json`)).default
   return (
     <AppLayout locale={locale}>

@@ -1,4 +1,4 @@
-import { unstable_setRequestLocale } from 'next-intl/server';
+import { setRequestLocale } from 'next-intl/server';
 import { notFound } from "next/navigation";
 
 import { buildIndexJSON } from "@/blogs/post"
@@ -17,7 +17,7 @@ export async function GET(req: Request, props:{params: Promise<{locale:string}>}
 
   if (!locales.includes(locale as any)) notFound()
 
-  unstable_setRequestLocale(locale)
+  setRequestLocale(locale)
   const json = await buildIndexJSON(locale)
   const buffer = Buffer.from(json, 'utf8')
   const headers = new Headers()

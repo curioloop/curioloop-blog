@@ -1,4 +1,4 @@
-import { getTranslations, unstable_setRequestLocale } from 'next-intl/server'
+import { getTranslations, setRequestLocale } from 'next-intl/server'
 
 import { getPostTags, getPostByTag, tagTranslator } from '@/blogs/post'
 import { locales } from '@/navigation'
@@ -47,7 +47,7 @@ export default async function TagPage(props: Props) {
     tag:id
   } = params;
 
-  unstable_setRequestLocale(locale)
+  setRequestLocale(locale)
   const tags = await getPostByTag(locale, id)
   return (
     <>

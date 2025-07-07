@@ -11,8 +11,8 @@ const LatestPosts = async () => {
   const {posts} = (await getPostPages(locale))
   const latest = posts.map(({meta})=> meta).sort(({date:a}, {date:b}) => new Date(b).getTime() - new Date(a).getTime())
 
-  const renderMeta = (first:boolean, {slug, date, title}:BlogMeta) => (
-    <div className={first ? "" : "mt-4 pt-4 border-t dark:border-dark-bg-lite"}>
+  const renderMeta = (index:number, {slug, date, title}:BlogMeta) => (
+    <div key={"post-meta-"+index} className={index == 0 ? "" : "mt-4 pt-4 border-t dark:border-dark-bg-lite"}>
       <LocaleDate className="text-sm font-extralight" date={date}/>
       <br/>
       <a className="text-sm leading-6 cursor-pointer hover:text-light-hov dark:hover:text-dark-hov" href={`${locale}/posts/${slug}`}>{title}</a>
@@ -23,7 +23,7 @@ const LatestPosts = async () => {
     <div className="mt-6 p-6 overflow-auto rounded-md shadow-md bg-light-bg dark:bg-dark-bg">
     <div className="mb-4 text-sm text-light-txt dark:text-dark-txt">{t('new-post')}</div>
     {
-      latest.slice(0, 5).map((meta, index) => renderMeta(index==0, meta))
+      latest.slice(0, 5).map((meta, index) => renderMeta(index, meta))
     }
   </div>)
 }

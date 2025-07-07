@@ -1,4 +1,4 @@
-import { getTranslations, unstable_setRequestLocale } from 'next-intl/server'
+import { getTranslations, setRequestLocale } from 'next-intl/server'
 
 import { getPostPage, getPostPages } from '@/blogs/post'
 import { locales } from '@/navigation'
@@ -48,7 +48,7 @@ export default async function IndexPage(props: Props) {
     index
   } = params;
 
-  unstable_setRequestLocale(locale)
+  setRequestLocale(locale)
   // hack for home redirection, maybe use client component instead ?
   const pathPrefix = Number(index) == 0 ? `${locale}/page/` : ''
   const {posts, current, total} = await getPostPage(locale, Math.max(1, Number(index)))

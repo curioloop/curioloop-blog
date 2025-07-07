@@ -1,6 +1,6 @@
 
 import type { Metadata } from 'next'
-import { unstable_setRequestLocale } from 'next-intl/server'
+import { setRequestLocale } from 'next-intl/server'
 
 import { locales } from '@/navigation'
 import { getPostBySlug, getPostPages } from '@/blogs/post'
@@ -49,7 +49,7 @@ export default async function PostPage(props: Props) {
     slug
   } = params;
 
-  unstable_setRequestLocale(locale)
+  setRequestLocale(locale)
 
   const post = await getPostBySlug(locale, slug)
 

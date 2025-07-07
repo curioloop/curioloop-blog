@@ -1,4 +1,4 @@
-import { getTranslations, unstable_setRequestLocale } from 'next-intl/server'
+import { getTranslations, setRequestLocale } from 'next-intl/server'
 
 import { locales } from '@/navigation'
 import AboutMe from '@/components/AboutMe'
@@ -34,7 +34,7 @@ export default async function AboutPage(props: Props) {
     locale
   } = params;
 
-  unstable_setRequestLocale(locale)
+  setRequestLocale(locale)
   return (
     <div key={locale} className="items-center xl:max-w-6xl 2xl:max-w-[88rem] my-0 mx-auto p-x2 xl:px-60 pb-11">
       <AboutMe/>

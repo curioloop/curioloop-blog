@@ -1,4 +1,4 @@
-import { getTranslations, unstable_setRequestLocale } from 'next-intl/server'
+import { getTranslations, setRequestLocale } from 'next-intl/server'
 
 import { locales } from '@/navigation'
 import Timeline from '@/components/Timeline'
@@ -35,7 +35,7 @@ export default async function ArchivePage(props: Props) {
     locale
   } = params;
 
-  unstable_setRequestLocale(locale)
+  setRequestLocale(locale)
   return (
     <div className="items-center xl:max-w-6xl 2xl:max-w-[88rem] my-0 mx-auto p-x2 xl:px-60 pb-11">
       <Timeline/>

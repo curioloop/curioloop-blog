@@ -69,11 +69,11 @@ DetailedHTMLProps<HtmlHTMLAttributes<HTMLImageElement>, HTMLImageElement>
   const attrs = Object.fromEntries(new URLSearchParams(params))
   const align = attrs['align'] || 'center'
   return (
-    <p {...{align}}>
+    <span {...{align}}>
       <img src={fixPostImage(src)} alt={alt} {...attrs}>
         {children}
       </img>
-    </p>
+    </span>
   )
 }
 

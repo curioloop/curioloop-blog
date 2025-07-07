@@ -1,4 +1,4 @@
-import { unstable_setRequestLocale } from 'next-intl/server'
+import { setRequestLocale } from 'next-intl/server'
 
 import DefaultLeft from '@/components/DefaultLeft'
 import DefaultRight from '@/components/DefaultRight'
@@ -20,7 +20,7 @@ export default async function DefaultLayout(props: Props) {
     children
   } = props;
 
-  unstable_setRequestLocale(locale)
+  setRequestLocale(locale)
 
   return (
   <div key={locale} className="grid xl:grid-cols-[23fr_54fr_23fr] md:grid-cols-[12fr_25fr] md:gap-6 

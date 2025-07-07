@@ -1,4 +1,4 @@
-import { getTranslations, unstable_setRequestLocale } from 'next-intl/server'
+import { getTranslations, setRequestLocale } from 'next-intl/server'
 
 import { locales } from '@/navigation'
 import SearchEngine from '@/components/SearchEngine'
@@ -36,6 +36,6 @@ export default async function SearchPage(props: Props) {
     locale
   } = params;
 
-  unstable_setRequestLocale(locale)
+  setRequestLocale(locale)
   return <SearchEngine><TagCloud/></SearchEngine>
 }
