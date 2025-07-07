@@ -37,7 +37,7 @@ export default async function ArchivePage(props: Props) {
 
   setRequestLocale(locale)
   return (
-    <div className="items-center xl:max-w-6xl 2xl:max-w-[88rem] my-0 mx-auto p-x2 xl:px-60 pb-11">
+    <div className="items-center xl:max-w-6xl 2xl:max-w-352 my-0 mx-auto p-x2 xl:px-60 pb-11">
       <Timeline/>
       <Top/>
     </div>

@@ -12,9 +12,9 @@ const AboutMe = () => {
     </svg>
 
   return (
-    <div className="mt-16 p-6 mx-10 xl:p-16 xl:-mx-20 2xl:-mx-10 overflow-auto min-h-[30rem] h-full rounded-md shadow-md text-light-txt dark:text-dark-txt bg-light-bg dark:bg-dark-bg">
+    <div className="mt-16 p-6 mx-10 xl:p-16 xl:-mx-20 2xl:-mx-10 overflow-auto min-h-120 h-full rounded-md shadow-md text-light-txt dark:text-dark-txt bg-light-bg dark:bg-dark-bg">
       <div className="grid grid-cols-3">
-        <div className="flex flex-col min-w-[19rem] bulb-glow text-sky-600 dark:text-dark-txt">
+        <div className="flex flex-col min-w-76 bulb-glow text-sky-600 dark:text-dark-txt">
           <Logo className=''/>
           <div className="flex flex-col items-center mt-10">
             <blockquote className="mx-5 text-xl italic font-semibold text-center">

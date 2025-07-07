@@ -57,7 +57,7 @@ export default async function PostPage(props: Props) {
 
   return (
   <div className="grid md:grid-cols-[1fr_3fr] md:gap-6 
-                  xl:max-w-6xl 2xl:max-w-[88rem] my-0 mx-auto p-4 md:p-6 pb-11">
+                  xl:max-w-6xl 2xl:max-w-352 my-0 mx-auto p-4 md:p-6 pb-11">
       <aside className="order-first min-w-0 md:block hidden">
         <PostSidebar post={post}/>
       </aside>

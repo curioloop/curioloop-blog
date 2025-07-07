@@ -48,12 +48,7 @@ DetailedHTMLProps<AnchorHTMLAttributes<HTMLAnchorElement>, HTMLAnchorElement>
 const PostPre: FunctionComponent<
 DetailedHTMLProps<HtmlHTMLAttributes<HTMLPreElement>, HTMLPreElement>
 > = ({ children, ...props }) => {
-  const attrs = props as {[key:string]:string}
-  const dark = 'dark' === attrs['data-theme']
   props.className = clsx(props.className, 'shadow-inner')
-  props.style = Object.assign(props.style || {}, {
-    backgroundColor: dark ? '#0f172a' : '#f1f5f9'
-  } satisfies CSSProperties)
   return (
     <pre {...props}>
       {children}

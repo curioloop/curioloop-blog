@@ -50,7 +50,7 @@ const PostSidebar = async ({ post : {content} }:Props) => {
     const paddingLeft = (tocLevels[h] + 1) + 'rem'
     const fontSize = Math.max(0.95 - tocLevels[h] * 0.05, 0.85) + 'rem'
     const style = { paddingLeft, fontSize } as CSSProperties
-    return <li key={id} className={`py-2 rounded-sm text-light-txt dark:text-dark-txt hover:bg-light-bg-hov dark:hover:bg-dark-bg-hov`}>
+    return <li key={id} className={`py-2 rounded-xs text-light-txt dark:text-dark-txt hover:bg-light-bg-hov dark:hover:bg-dark-bg-hov`}>
         <a className="w-full" href={'#'+id}><span style={style} className={`block pr-2 break-all`}>{unescape(title)}</span></a>
       </li>
   }

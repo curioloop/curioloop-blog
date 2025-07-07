@@ -33,14 +33,14 @@ const TagCloud = async () => {
     return tags.map(({id, value, count}) => {
       const fontSize = fontSizeConverter(count, min, max)
       return <li key={value} className="flex items-center my-2 mx-5">
-               <a className="decoration-clone transform transition duration-300 hover:scale-110 hover:drop-shadow-2xl" 
+               <a className="box-decoration-clone transform transition duration-300 hover:scale-110 hover:drop-shadow-2xl" 
                   href={`/${locale}/tags/${id}`} style={{fontSize}}>{value}</a>
              </li>
     })
   }
 
   return (
-      <div className="mt-6 p-6 overflow-auto min-h-[35rem] rounded-md shadow-md text-light-txt dark:text-dark-txt bg-light-bg dark:bg-dark-bg">
+      <div className="mt-6 p-6 overflow-auto min-h-140 rounded-md shadow-md text-light-txt dark:text-dark-txt bg-light-bg dark:bg-dark-bg">
         <ul className="flex flex-wrap justify-center w-full align-center gap-2 leading-8">
           {renderTags()}
         </ul>

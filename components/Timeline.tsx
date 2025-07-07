@@ -19,7 +19,7 @@ const Timeline = async () => {
           </div>
         }
         <h3 className="pl-3 pt-4 text-lg font-semibold text-light-txt dark:text-dark-txt">
-            <a className="inline-block decoration-clone transform transition duration-300 hover:scale-105 hover:drop-shadow-xl" 
+            <a className="inline-block box-decoration-clone transform transition duration-300 hover:scale-105 hover:drop-shadow-xl" 
               href={`/${locale}/posts/${slug}`}>{title}</a>
         </h3>
         {
@@ -31,7 +31,7 @@ const Timeline = async () => {
   }
 
   return (
-    <div className="mt-6 p-6 mx-10 xl:p-16 xl:-mx-20 2xl:-mx-10 overflow-auto min-h-[35rem] rounded-md shadow-md text-light-txt dark:text-dark-txt bg-light-bg dark:bg-dark-bg">
+    <div className="mt-6 p-6 mx-10 xl:p-16 xl:-mx-20 2xl:-mx-10 overflow-auto min-h-140 rounded-md shadow-md text-light-txt dark:text-dark-txt bg-light-bg dark:bg-dark-bg">
       <ol className="relative border-s border-light-lite shadow-[inset_12px_0px_10px_-10px_rgba(156,163,175,0.2)] dark:shadow-none">                  
         {months.map(renderMonth)}
       </ol>

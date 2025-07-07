@@ -9,8 +9,8 @@ const ErrorCode = ({ errCode, locale }: {errCode : number, locale?: string}) => 
   </svg>
 
   return (
-    <div className="flex justify-center mt-16 mx-10 xl:p-20 overflow-auto min-h-[22rem]">
-      <div className="flex retro-screen dark:gray-screen p-8 min-w-[15rem]">
+    <div className="flex justify-center mt-16 mx-10 xl:p-20 overflow-auto min-h-88">
+      <div className="flex retro-screen dark:gray-screen p-8 min-w-60">
         <div className="glitch">
           <div className="flex flex-col min-w-[18rem] glow-text p-6 mb-2">
             {errorIcon}
