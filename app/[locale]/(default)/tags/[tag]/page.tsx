@@ -5,10 +5,10 @@ import { locales } from '@/navigation'
 import PostPreview from '@/components/PostPreview'
 
 type Props = {
-  params: {
+  params: Promise<{
     locale: string
     tag: string
-  }
+  }>
 }
 
 export async function generateStaticParams() {
@@ -23,7 +23,14 @@ export async function generateStaticParams() {
   return params.flat()
 }
 
-export async function generateMetadata({params: {locale, tag:id}}: Props) {
+export async function generateMetadata(props: Props) {
+  const params = await props.params;
+
+  const {
+    locale,
+    tag:id
+  } = params;
+
   const t = await getTranslations({locale, namespace: 'Default'})
   const tag = (await tagTranslator(locale, false))(id)
   return {
@@ -32,7 +39,14 @@ export async function generateMetadata({params: {locale, tag:id}}: Props) {
   }
 }
 
-export default async function TagPage({params: {locale, tag:id}} : Props) {
+export default async function TagPage(props: Props) {
+  const params = await props.params;
+
+  const {
+    locale,
+    tag:id
+  } = params;
+
   unstable_setRequestLocale(locale)
   const tags = await getPostByTag(locale, id)
   return (

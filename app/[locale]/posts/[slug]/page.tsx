@@ -10,10 +10,10 @@ import PostSidebar from '@/components/PostSidebar'
 import Top from '@/components/Top'
 
 type Props = {
-  params: {
+  params: Promise<{
     locale: string
     slug: string
-  }
+  }>
 }
 
 export async function generateStaticParams() {
@@ -29,13 +29,26 @@ export async function generateStaticParams() {
   return params.flat()
 }
 
-export async function generateMetadata({params: {locale, slug}}: Props) : Promise<Metadata> {
-    const {meta} = await getPostBySlug(locale, slug)
-    return meta
+export async function generateMetadata(props: Props): Promise<Metadata> {
+  const params = await props.params;
+
+  const {
+    locale,
+    slug
+  } = params;
+
+  const {meta} = await getPostBySlug(locale, slug)
+  return meta
 }
 
-export default async function PostPage({params: {locale, slug}} : Props) {
-  
+export default async function PostPage(props: Props) {
+  const params = await props.params;
+
+  const {
+    locale,
+    slug
+  } = params;
+
   unstable_setRequestLocale(locale)
 
   const post = await getPostBySlug(locale, slug)

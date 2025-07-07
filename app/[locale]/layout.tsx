@@ -11,10 +11,20 @@ import AppLayout from '@/components/AppLayout';
 
 type Props = {
   children: React.ReactNode;
-  params: {locale: string};
+  params: Promise<{locale: string}>;
 }
 
-export default async function RootLayout({children, params: { locale }}: Props) {
+export default async function RootLayout(props: Props) {
+  const params = await props.params;
+
+  const {
+    locale
+  } = params;
+
+  const {
+    children
+  } = props;
+
   // reject unsupported locales
   if (!locales.includes(locale as any)) notFound()
   unstable_setRequestLocale(locale)

@@ -6,10 +6,10 @@ import PostPreview from '@/components/PostPreview'
 import Pagination from '@/components/Pagination'
 
 type Props = {
-  params: {
+  params: Promise<{
     locale: string
     index: string
-  }
+  }>
 }
 
 export async function generateStaticParams() {
@@ -25,7 +25,14 @@ export async function generateStaticParams() {
   return params.flat()
 }
 
-export async function generateMetadata({params: {locale, index}}: Props) {
+export async function generateMetadata(props: Props) {
+  const params = await props.params;
+
+  const {
+    locale,
+    index
+  } = params;
+
   const t = await getTranslations({locale, namespace: 'Default'})
   return {
     title: t('title'),
@@ -33,10 +40,17 @@ export async function generateMetadata({params: {locale, index}}: Props) {
   }
 }
 
-export default async function IndexPage({params: {locale, index}} : Props) {
+export default async function IndexPage(props: Props) {
+  const params = await props.params;
+
+  const {
+    locale,
+    index
+  } = params;
+
   unstable_setRequestLocale(locale)
   // hack for home redirection, maybe use client component instead ?
-  const pathPrefix = Number(index) == 0 ? `${locale}/page/` : '' 
+  const pathPrefix = Number(index) == 0 ? `${locale}/page/` : ''
   const {posts, current, total} = await getPostPage(locale, Math.max(1, Number(index)))
   return (
     <>

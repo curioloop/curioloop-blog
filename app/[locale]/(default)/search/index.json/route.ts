@@ -8,7 +8,13 @@ export async function generateStaticParams() {
   return locales.map((locale) => ({locale}))
 }
 
-export async function GET(req: Request, {params: {locale}}:{params: {locale:string}}) {
+export async function GET(req: Request, props:{params: Promise<{locale:string}>}) {
+  const params = await props.params;
+
+  const {
+    locale
+  } = params;
+
   if (!locales.includes(locale as any)) notFound()
 
   unstable_setRequestLocale(locale)

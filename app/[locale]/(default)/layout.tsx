@@ -6,10 +6,20 @@ import Top from '@/components/Top'
 
 type Props = {
   children: React.ReactNode;
-  params: {locale: string};
+  params: Promise<{locale: string}>;
 }
 
-export default async function DefaultLayout({children, params: { locale }}: Props) {
+export default async function DefaultLayout(props: Props) {
+  const params = await props.params;
+
+  const {
+    locale
+  } = params;
+
+  const {
+    children
+  } = props;
+
   unstable_setRequestLocale(locale)
 
   return (

@@ -6,7 +6,7 @@ const PostContent = ({ children } : { children?: ReactNode }) => {
 
   const root = useRef(null)
   const scroll = useRef(0)
-  const observer = useRef<IntersectionObserver>()
+  const observer = useRef<IntersectionObserver>(undefined)
 
   useEffect(() => {
     if (!root.current) return

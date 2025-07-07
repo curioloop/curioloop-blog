@@ -6,16 +6,22 @@ import TagCloud from '@/components/TagCloud'
 
 
 type Props = {
-  params: {
+  params: Promise<{
     locale: string
-  }
+  }>
 }
 
 export async function generateStaticParams() {
   return locales.map((locale) => ({locale}))
 }
 
-export async function generateMetadata({params: {locale}}: Props) {
+export async function generateMetadata(props: Props) {
+  const params = await props.params;
+
+  const {
+    locale
+  } = params;
+
   const t = await getTranslations({locale, namespace: 'Default'})
   return {
     title: t('search-title'),
@@ -23,7 +29,13 @@ export async function generateMetadata({params: {locale}}: Props) {
   }
 }
 
-export default async function SearchPage({params: {locale}} : Props) {
+export default async function SearchPage(props: Props) {
+  const params = await props.params;
+
+  const {
+    locale
+  } = params;
+
   unstable_setRequestLocale(locale)
   return <SearchEngine><TagCloud/></SearchEngine>
 }

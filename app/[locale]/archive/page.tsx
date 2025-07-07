@@ -5,16 +5,22 @@ import Timeline from '@/components/Timeline'
 import Top from '@/components/Top'
 
 type Props = {
-  params: {
+  params: Promise<{
     locale: string
-  }
+  }>
 }
 
 export async function generateStaticParams() {
   return locales.map((locale) => ({locale}))
 }
 
-export async function generateMetadata({params: {locale}}: Props) {
+export async function generateMetadata(props: Props) {
+  const params = await props.params;
+
+  const {
+    locale
+  } = params;
+
   const t = await getTranslations({locale, namespace: 'Default'})
   return {
     title: t('archive-title'),
@@ -22,7 +28,13 @@ export async function generateMetadata({params: {locale}}: Props) {
   }
 }
 
-export default async function ArchivePage({params: {locale}} : Props) {
+export default async function ArchivePage(props: Props) {
+  const params = await props.params;
+
+  const {
+    locale
+  } = params;
+
   unstable_setRequestLocale(locale)
   return (
     <div className="items-center xl:max-w-6xl 2xl:max-w-[88rem] my-0 mx-auto p-x2 xl:px-60 pb-11">
