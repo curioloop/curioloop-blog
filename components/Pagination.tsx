@@ -1,4 +1,4 @@
-import { useLocale, useTranslations } from 'next-intl'
+import { useTranslations } from 'next-intl'
 import React from 'react'
 
 interface PaginationProps {
@@ -13,7 +13,6 @@ const Pagination = ({ total, current, pathPrefix }:PaginationProps) => {
   if (typeof(total) == 'string') total = parseInt(total)
 
   const t = useTranslations('Pagination')
-  const locale = useLocale()
 
   const flexPlaceholder = <div className="my-0 mx-1 px-3 py-2 w-18"/>
   const pageEllipsis = <div className="my-0 mx-1 px-2 py-2 min-w-[1em] ">...</div>
