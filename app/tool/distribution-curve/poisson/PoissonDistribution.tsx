@@ -130,7 +130,8 @@ export default function PoissonDistribution() {
                 <input
                   type="number"
                   value={curve.lambda}
-                  min={0.01}
+                  max={1000}
+                  min={0.0001}
                   step="0.1"
                   onChange={e => {
                     const v = Math.max(0.01, Number(e.target.value));

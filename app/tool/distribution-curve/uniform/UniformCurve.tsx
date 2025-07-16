@@ -320,7 +320,6 @@ export const CDFCurve: React.FC<{
         );
         // 主体阶梯（含第一个概率横线）
         let prevPx = pxFirst;
-        let prevPy = py0;
         for (let i = 0; i <= maxK - minK; i++) {
           const k = minK + i;
           const cdfCurr = uniformDiscreteCDF(k, curve.a, curve.b);
@@ -357,7 +356,6 @@ export const CDFCurve: React.FC<{
             );
           }
           prevPx = pxNext;
-          prevPy = pyNext;
         }
         return steps;
       })}

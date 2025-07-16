@@ -130,7 +130,8 @@ export default function ExponentialDistribution() {
                 <input
                   type="number"
                   value={curve.lambda}
-                  min={0.01}
+                  max={10000}
+                  min={0.0001}
                   step="0.01"
                   onChange={e => {
                     const v = Math.max(0.01, Number(e.target.value));

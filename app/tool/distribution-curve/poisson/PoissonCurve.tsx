@@ -305,7 +305,6 @@ export const CDFCurve: React.FC<{
         );
         // 主体阶梯
         let prevPx = pxFirst;
-        let prevPy = py0;
         for (let i = 0; i <= maxK - minK; i++) {
           const k = minK + i;
           const cdfCurr = poissonCDF(k, curve.lambda);
@@ -342,7 +341,6 @@ export const CDFCurve: React.FC<{
             );
           }
           prevPx = pxNext;
-          prevPy = pyNext;
         }
         return steps;
       })}
