@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from "react";
 import { WIDTH, HEIGHT, PADDING, OFFSET } from "@/tools/distCurve";
+import { normalPdf, normalCdf } from "@/tools/normDist";
 const N = 200;
 
 export interface CurveConfig {
@@ -14,35 +15,6 @@ interface NormalCurveProps {
   setSvgString: (svg: string) => void;
   showLegend?: boolean;
 }
-
-function normalPDF(x: number, mu: number, sigma: number) {
-  return (
-    (1 / (sigma * Math.sqrt(2 * Math.PI))) *
-    Math.exp(-0.5 * Math.pow((x - mu) / sigma, 2))
-  );
-}
-
-function normalCDF(x: number, mu: number, sigma: number) {
-  // Using the error function approximation
-  return 0.5 * (1 + erf((x - mu) / (sigma * Math.SQRT2)));
-}
-
-// Approximate the error function
-function erf(x: number): number {
-  // Abramowitz and Stegun formula 7.1.26
-  const sign = x < 0 ? -1 : 1;
-  x = Math.abs(x);
-  const a1 =  0.254829592;
-  const a2 = -0.284496736;
-  const a3 =  1.421413741;
-  const a4 = -1.453152027;
-  const a5 =  1.061405429;
-  const p  =  0.3275911;
-  const t = 1 / (1 + p * x);
-  const y = 1 - (((((a5 * t + a4) * t) + a3) * t + a2) * t + a1) * t * Math.exp(-x * x);
-  return sign * y;
-}
-
 
 const NormalCurve: React.FC<NormalCurveProps> = ({ curves, setSvgString, showLegend }) => {
   const ref = useRef<SVGSVGElement>(null);
@@ -67,7 +39,7 @@ const NormalCurve: React.FC<NormalCurveProps> = ({ curves, setSvgString, showLeg
   for (let i = 0; i <= N; i++) {
     const x = minX + i * step;
     for (const { mu, sigma } of safeCurves) {
-      const y = normalPDF(x, mu, sigma);
+      const y = normalPdf(x, mu, sigma);
       if (y > maxY) maxY = y;
     }
   }
@@ -140,7 +112,7 @@ const NormalCurve: React.FC<NormalCurveProps> = ({ curves, setSvgString, showLeg
         const points: [number, number][] = [];
         for (let i = 0; i <= N; i++) {
           const x = minX + i * step;
-          const y = normalPDF(x, mu, sigma);
+          const y = normalPdf(x, mu, sigma);
           const px = PADDING + OFFSET + ((x - minX) / (maxX - minX)) * (WIDTH - 2 * PADDING);
           const py = HEIGHT - PADDING - (y / maxY) * (HEIGHT - 2 * PADDING);
           points.push([px, py]);
@@ -160,7 +132,7 @@ const NormalCurve: React.FC<NormalCurveProps> = ({ curves, setSvgString, showLeg
       {safeCurves.map(({ mu, sigma, color }, idx) => {
         // 计算 mu 处的概率密度对应的 y 坐标
         const px = PADDING + OFFSET + ((mu - minX) / (maxX - minX)) * (WIDTH - 2 * PADDING);
-        const yVal = normalPDF(mu, mu, sigma);
+        const yVal = normalPdf(mu, mu, sigma);
         const py = HEIGHT - PADDING - (yVal / maxY) * (HEIGHT - 2 * PADDING);
         return (
           <line
@@ -211,7 +183,7 @@ export const CDFCurve: React.FC<{
     const points: [number, number][] = [];
     for (let i = 0; i <= N; i++) {
       const x = minX + i * step;
-      const y = normalCDF(x, mu, sigma);
+      const y = normalCdf(x, mu, sigma);
       const px = PADDING + OFFSET + ((x - minX) / (maxX - minX)) * (WIDTH - 2 * PADDING);
       const py = HEIGHT - PADDING - y * (HEIGHT - 2 * PADDING);
       points.push([px, py]);
