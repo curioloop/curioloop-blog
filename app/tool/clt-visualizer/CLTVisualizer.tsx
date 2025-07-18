@@ -57,17 +57,16 @@ function getSampler(dist: string) {
   }
 }
 
-export default function CLTVisualizer() {
+export default function CLTVisualizer({preview = false}) {
+
   const [dist, setDist] = useState("normal");
   const [params, setParams] = useState<any>({ mu: 0, sigma: 1, lambda: 1, a: 0, b: 5 });
   const [sampleCount, setSampleCount] = useState(1000);
   const [sampleSize, setSampleSize] = useState(10);
   const [rawSamples, setRawSamples] = useState<number[]>([]);
   const [meanSamples, setMeanSamples] = useState<number[]>([]);
-  const [urlInitialized, setUrlInitialized] = useState(false);
 
   useEffect(() => {
-    if (urlInitialized) return;
     if (typeof window === "undefined") return;
     const search = window.location.search;
     if (!search) return;
@@ -104,7 +103,6 @@ export default function CLTVisualizer() {
     if (paramsObj.sampleSize && !isNaN(Number(paramsObj.sampleSize))) {
       setSampleSize(Number(paramsObj.sampleSize));
     }
-    setUrlInitialized(true);
     const distDef = DISTRIBUTIONS.find(d => d.key === distKey);
     const hasAllParams = distDef && distDef.params.every(p => newParams[p] !== undefined && !isNaN(Number(newParams[p])));
     if (hasAllParams && paramsObj.sampleCount && paramsObj.sampleSize) {
@@ -113,7 +111,7 @@ export default function CLTVisualizer() {
       updateSample(Number(paramsObj.sampleCount), Number(paramsObj.sampleSize), sampler, newParams);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [urlInitialized]);
+  }, []);
 
   // 采样并计算均值
   const handleSample = () => {
@@ -169,87 +167,89 @@ export default function CLTVisualizer() {
 
   return (
     <>
-      <h1 className="text-3xl font-bold pt-5 text-center text-black">Central Limit Theorem Visualizer</h1>
-      <div className="w-full max-w-2xl bg-white rounded-lg shadow p-6 mt-6">
-        <div className="flex flex-wrap gap-4 mb-2 items-end w-full">
-          <label className="flex flex-col text-xs font-bold text-gray-600">
-            Distribution
-            <select
-              value={dist}
-              onChange={e => setDist(e.target.value)}
-              className="border rounded px-2 py-1 text-xs bg-gray-50 focus:bg-white w-full min-w-[160px]"
-            >
-              {DISTRIBUTIONS.map(d => (
-                <option key={d.key} value={d.key}>{d.name}</option>
-              ))}
-            </select>
-          </label>
-          {DISTRIBUTIONS.find(d => d.key === dist)?.params.map(p => (
-            <label key={p} className="flex flex-col text-xs font-bold text-gray-600">
-              {p}
+      {!preview && <h1 className="text-3xl font-bold pt-5 text-center text-black">Central Limit Theorem Visualizer</h1>}
+      <div className={`w-full max-w-2xl bg-white rounded p-6 ${!preview ? 'shadow mt-6' : ''}`}>
+        {!preview && (<>
+          <div className="flex flex-wrap gap-4 mb-2 items-end w-full">
+            <label className="flex flex-col text-xs font-bold text-gray-600">
+              Distribution
+              <select
+                value={dist}
+                onChange={e => setDist(e.target.value)}
+                className="border rounded px-2 py-1 text-xs bg-gray-50 focus:bg-white w-full min-w-[160px]"
+              >
+                {DISTRIBUTIONS.map(d => (
+                  <option key={d.key} value={d.key}>{d.name}</option>
+                ))}
+              </select>
+            </label>
+            {DISTRIBUTIONS.find(d => d.key === dist)?.params.map(p => (
+              <label key={p} className="flex flex-col text-xs font-bold text-gray-600">
+                {p}
+                <input
+                  type="number"
+                  value={params[p]}
+                  step="any"
+                  onChange={e => setParams((old: any) => ({ ...old, [p]: e.target.value }))}
+                  className="border rounded px-2 py-1 text-xs bg-gray-50 focus:bg-white w-full min-w-[100px]"
+                />
+              </label>
+            ))}
+          </div>
+          <div className="flex flex-wrap gap-4 mb-4 items-end w-full">
+            <label className="flex flex-col text-xs font-bold text-gray-600">
+              Number of Samples
               <input
                 type="number"
-                value={params[p]}
-                step="any"
-                onChange={e => setParams((old: any) => ({ ...old, [p]: e.target.value }))}
+                value={sampleCount}
+                min={1}
+                step={1}
+                onChange={e => setSampleCount(Number(e.target.value))}
                 className="border rounded px-2 py-1 text-xs bg-gray-50 focus:bg-white w-full min-w-[100px]"
               />
             </label>
-          ))}
-        </div>
-        <div className="flex flex-wrap gap-4 mb-4 items-end w-full">
-          <label className="flex flex-col text-xs font-bold text-gray-600">
-            Number of Samples
-            <input
-              type="number"
-              value={sampleCount}
-              min={1}
-              step={1}
-              onChange={e => setSampleCount(Number(e.target.value))}
-              className="border rounded px-2 py-1 text-xs bg-gray-50 focus:bg-white w-full min-w-[100px]"
-            />
-          </label>
-          <label className="flex flex-col text-xs font-bold text-gray-600">
-            Sample Size
-            <input
-              type="number"
-              value={sampleSize}
-              min={1}
-              step={1}
-              onChange={e => setSampleSize(Number(e.target.value))}
-              className="border rounded px-2 py-1 text-xs bg-gray-50 focus:bg-white w-full min-w-[100px]"
-            />
-          </label>
-          <button
-            onClick={handleSample}
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition text-xs font-bold mt-4">
-            Resample
-          </button>
-          <button
-            className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition text-xs font-bold mt-4"
-            onClick={async () => {
-              if (typeof window === 'undefined') return;
-              const distDef = DISTRIBUTIONS.find(d => d.key === dist);
-              let distParamStr = dist;
-              if (distDef) {
-                const paramStr = distDef.params.map(p => params[p]).join(',');
-                distParamStr = `${dist}(${paramStr})`;
-              }
-              const baseUrl = window.location.origin + window.location.pathname;
-              const urlParams = [
-                `dist=${distParamStr}`,
-                `sampleCount=${sampleCount}`,
-                `sampleSize=${sampleSize}`
-              ].join('&');
-              const url = baseUrl + '?' + urlParams;
-              await navigator.clipboard.writeText(url);
-              window.history.replaceState(null, '', url);
-            }}
-          >
-            Copy URL
-          </button>
-        </div>
-        <div className="flex flex-col gap-8 justify-center items-center mt-6">
+            <label className="flex flex-col text-xs font-bold text-gray-600">
+              Sample Size
+              <input
+                type="number"
+                value={sampleSize}
+                min={1}
+                step={1}
+                onChange={e => setSampleSize(Number(e.target.value))}
+                className="border rounded px-2 py-1 text-xs bg-gray-50 focus:bg-white w-full min-w-[100px]"
+              />
+            </label>
+            <button
+              onClick={handleSample}
+              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition text-xs font-bold mt-4">
+              Resample
+            </button>
+            <button
+              className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition text-xs font-bold mt-4"
+              onClick={async () => {
+                if (typeof window === 'undefined') return;
+                const distDef = DISTRIBUTIONS.find(d => d.key === dist);
+                let distParamStr = dist;
+                if (distDef) {
+                  const paramStr = distDef.params.map(p => params[p]).join(',');
+                  distParamStr = `${dist}(${paramStr})`;
+                }
+                const baseUrl = window.location.origin + window.location.pathname;
+                const urlParams = [
+                  `dist=${distParamStr}`,
+                  `sampleCount=${sampleCount}`,
+                  `sampleSize=${sampleSize}`
+                ].join('&');
+                const url = baseUrl + '?' + urlParams;
+                await navigator.clipboard.writeText(url);
+                window.history.replaceState(null, '', url);
+              }}
+            >
+              Copy URL
+            </button>
+          </div>
+        </>)}
+        <div className={`flex flex-col gap-8 justify-center items-center ${!preview ? 'mt-6' : ''}`}>
           <div>
             <div className="text-xs text-gray-500 mb-1 text-center">Samples Distribution</div>
             <svg width={WIDTH} height={HEIGHT} className="bg-gray-100 rounded shadow" viewBox={`0 0 ${WIDTH} ${HEIGHT}`}> 

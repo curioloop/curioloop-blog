@@ -1,3 +1,4 @@
+import Preview from "../Preview";
 import ConfidenceInterval from "./ConfidenceInterval";
 
 export const metadata = {
@@ -6,5 +7,9 @@ export const metadata = {
 };
 
 export default function ConfidenceIntervalPage() {
-  return <ConfidenceInterval/>;
+  return (
+    <Preview>
+      <ConfidenceInterval />
+    </Preview>
+  );
 }

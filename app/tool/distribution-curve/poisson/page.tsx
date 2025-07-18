@@ -1,3 +1,5 @@
+
+import Preview from "../../Preview";
 import PoissonDistribution from "./PoissonDistribution";
 
 export const metadata = {
@@ -5,6 +7,11 @@ export const metadata = {
   description: "Interactive online tool to visualize and compare Poisson distributions. Adjust lambda, add multiple curves, and export SVG/PNG. Use it online for instant probability curve analysis.",
 };
 
+
 export default function PoissonDistributionPage() {
-  return <PoissonDistribution />;
+  return (
+    <Preview>
+      <PoissonDistribution />
+    </Preview>
+  );
 }

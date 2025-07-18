@@ -27,17 +27,15 @@ function getPValue(z: number, tail: "left" | "right" | "two") {
   }
 }
 
-export default function ZTestDemo() {
+export default function ZTestVisualizer({ preview = false }) {
   const [alpha, setAlpha] = useState(5);
   const [tail, setTail] = useState<"left" | "right" | "two">("two");
   const [sampleMean, setSampleMean] = useState(1.2);
   const [mu, setMu] = useState(1);
   const [sigma, setSigma] = useState(1);
   const [n, setN] = useState(30);
-  const [urlInitialized, setUrlInitialized] = useState(false);
 
   useEffect(() => {
-    if (urlInitialized) return;
     if (typeof window === "undefined") return;
     const search = window.location.search;
     if (!search) return;
@@ -60,8 +58,7 @@ export default function ZTestDemo() {
     if (paramsObj.sampleMean && !isNaN(Number(paramsObj.sampleMean))) {
       setSampleMean(Number(paramsObj.sampleMean));
     }
-    setUrlInitialized(true);
-  }, [urlInitialized]);
+  }, []);
 
   // z statistic
   const z = (sampleMean - mu) / (sigma / Math.sqrt(n));
@@ -151,8 +148,9 @@ export default function ZTestDemo() {
 
   return (
     <>
-      <h1 className="text-3xl font-bold pt-5 text-center text-black">Z-Test Visualizer</h1>
-      <div className="max-w-2xl mx-auto p-6 bg-white rounded shadow mt-8">
+      {!preview && <h1 className="text-3xl font-bold pt-5 text-center text-black">Z-Test Visualizer</h1>}
+        <div className={`max-w-2xl mx-auto bg-white rounded p-6 ${!preview ? 'shadow mt-6' : ''}`}>
+        {!preview && (
         <div className="mb-6 grid grid-cols-1 sm:grid-cols-2 gap-4 font-bold text-gray-600">
           <div className="flex flex-col gap-2">
             <label className="text-xs mb-1 font-bold text-gray-600" htmlFor="mu-input">μ (Population Mean)</label>
@@ -253,8 +251,7 @@ export default function ZTestDemo() {
               Copy URL
             </button>
           </div>
-        </div>
-        {/* 检验假设展示 */}
+        </div>)}
         <div className="mb-4 text-center">
           {tail === "left" && (
             <div className="text-sm text-gray-700 font-mono">

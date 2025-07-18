@@ -4,7 +4,7 @@ import React, { useState, useRef, useEffect } from "react";
 import PoissonCurve, { PoissonCurveConfig, CDFCurve } from "./PoissonCurve";
 import { downloadSvg, exportSvgToPng, COMMON_COLORS } from "@/tools/distCurve";
 
-export default function PoissonDistribution() {
+export default function PoissonDistribution({ preview = false }) {
 
   const [curves, setCurves] = useState<PoissonCurveConfig[]>([
     { lambda: 3, color: COMMON_COLORS[0], name: undefined }
@@ -79,9 +79,9 @@ export default function PoissonDistribution() {
 
   return (
     <>
-      <h1 className="text-3xl font-bold pt-5 text-center text-black">Poisson Distribution Curve Tool</h1>
-      <div className="w-full max-w-2xl bg-white rounded-lg shadow p-6 mt-6">
-        {/* Curve list for editing */}
+      {!preview && <h1 className="text-3xl font-bold pt-5 text-center text-black">Poisson Distribution Curve Tool</h1>}
+      <div className={`w-full max-w-2xl bg-white rounded p-6 ${!preview ? 'shadow mt-6' : ''}`}>
+        {!preview && (
         <div className="mb-4">
           {curves.map((curve, idx) => (
             <div
@@ -193,8 +193,9 @@ export default function PoissonDistribution() {
               </button>
             </div>
           ))}
-        </div>
+        </div>)}
         <PoissonCurve curves={curves} setSvgString={setSvgString} showLegend={showLegend} />
+        {!preview && (<>
         <div className="flex items-center justify-center m-5 gap-4">
           <div className="flex items-center">
             <input
@@ -217,11 +218,12 @@ export default function PoissonDistribution() {
             <label htmlFor="show-cdf" className="text-xs text-gray-600 select-none cursor-pointer">Show CDF</label>
           </div>
         </div>
-        {/* CDF 区域始终渲染，隐藏时用 hidden 保证 setCdfSvgString 可用 */}
         <div className={showCDF ? "" : "hidden"}>
           <CDFCurve curves={curves} showLegend={showLegend} setSvgString={setCdfSvgString}/>
         </div>
+        </>)}
       </div>
+      {!preview && (
       <div className="w-full flex flex-row flex-wrap gap-2 justify-center items-center mt-6">
         <button
           onClick={handleAddCurve}
@@ -358,7 +360,7 @@ export default function PoissonDistribution() {
         >
           Copy URL
         </button>
-      </div>
+      </div>)}
     </>
   );
 }

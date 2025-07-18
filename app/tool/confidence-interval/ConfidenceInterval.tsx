@@ -14,14 +14,12 @@ const getZ = (confLevel: number) => {
   return normSInv(p);
 };
 
-export default function ConfidenceInterval() {
+export default function ConfidenceInterval({preview = false}) {
   const [confLevel, setConfLevel] = useState(90);
   const [sampleSize, setSampleSize] = useState(1);
   const [sampleCount, setSampleCount] = useState(30);
   const [means, setMeans] = useState<number[]>([]);
-  const [urlInitialized, setUrlInitialized] = useState(false);
   useEffect(() => {
-    if (urlInitialized) return;
     if (typeof window === "undefined") return;
     const search = window.location.search;
     if (!search) return;
@@ -35,8 +33,7 @@ export default function ConfidenceInterval() {
     if (paramsObj.sampleCount && !isNaN(Number(paramsObj.sampleCount))) {
       setSampleCount(Number(paramsObj.sampleCount));
     }
-    setUrlInitialized(true);
-  }, [urlInitialized]);
+  }, []);
   const z = getZ(confLevel);
   const xMin = -4, xMax = 4, N = 200;
   const points = Array.from({ length: N + 1 }, (_, i) => {
@@ -74,11 +71,11 @@ export default function ConfidenceInterval() {
 
   return (
   <>
-    <h1 className="text-3xl font-bold pt-5 text-center text-black">Confidence Interval Visualizer</h1>
-    <div className="max-w-2xl mx-auto p-6 bg-white rounded shadow mt-8">
+    {!preview && <h1 className="text-3xl font-bold pt-5 text-center text-black">Confidence Interval Visualizer</h1>}
+      <div className={`w-full max-w-2xl bg-white rounded p-6 ${!preview ? 'shadow mt-6' : ''}`}>
+      {!preview && (
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:gap-6 items-center justify-center">
-        {/* Parameter settings area */}
-        <div className="flex flex-col sm:flex-row gap-3 sm:gap-6 items-center">
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-6 items-center">
           <div className="flex flex-col items-start font-bold text-gray-600">
             <label className="text-xs mb-1" htmlFor="conf-level-input">Confidence Level</label>
             <div className="flex items-center gap-1">
@@ -143,7 +140,7 @@ export default function ConfidenceInterval() {
         >
           Copy URL
         </button>
-      </div>
+      </div>)}
       <div>
         <div className="text-xs text-gray-500 mb-1 text-center">Z ~ 𝓝(0,1)</div>
         <svg

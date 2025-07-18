@@ -1,3 +1,4 @@
+import Preview from "../Preview";
 import CLTVisualizer from "./CLTVisualizer";
 
 export const metadata = {
@@ -6,5 +7,9 @@ export const metadata = {
 };
 
 export default function CLTVisualizerPage() {
-  return <CLTVisualizer/>;
+  return (
+    <Preview>
+      <CLTVisualizer />
+    </Preview>
+  );
 }

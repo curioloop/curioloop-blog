@@ -4,7 +4,7 @@ import React, { useState, useRef, useEffect } from "react";
 import NormalCurve, { CDFCurve } from "./NormalCurve";
 import { downloadSvg, exportSvgToPng, COMMON_COLORS } from "@/tools/distCurve";
 
-export default function NormallDistribution() {
+export default function NormallDistribution({ preview = false }) {
 
   const [curves, setCurves] = useState<({ mu: number; sigma: number; color: string; name?: string })[]>([
     { mu: 0, sigma: 1, color: COMMON_COLORS[0], name: undefined }
@@ -81,9 +81,9 @@ export default function NormallDistribution() {
 
   return (
     <>
-      <h1 className="text-3xl font-bold pt-5 text-center text-black">Normal Distribution Curve Tool</h1>
-      <div className="w-full max-w-2xl bg-white rounded-lg shadow p-6 mt-6">
-        {/* Curve list for editing */}
+      {!preview && <h1 className="text-3xl font-bold pt-5 text-center text-black">Normal Distribution Curve Tool</h1>}
+      <div className={`w-full max-w-2xl bg-white rounded p-6 ${!preview ? 'shadow mt-6' : ''}`}>
+        {!preview && (
         <div className="mb-4">
           {curves.map((curve, idx) => (
             <div
@@ -209,9 +209,10 @@ export default function NormallDistribution() {
               </button>
             </div>
           ))}
-        </div>
+        </div>)}
         <NormalCurve curves={curves} setSvgString={setSvgString} showLegend={showLegend} />
-         <div className="flex items-center justify-center m-5 gap-4">
+        {!preview && (<>
+        <div className="flex items-center justify-center m-5 gap-4">
           <div className="flex items-center">
             <input
               type="checkbox"
@@ -233,11 +234,11 @@ export default function NormallDistribution() {
             <label htmlFor="show-cdf" className="text-xs text-gray-600 select-none cursor-pointer">Show CDF</label>
           </div>
         </div>
-        {/* CDF 区域始终渲染，隐藏时用 hidden 保证 setCdfSvgString 可用 */}
         <div className={showCDF ? "" : "hidden"}>
           <CDFCurve curves={curves} showLegend={showLegend} setSvgString={setCdfSvgString}/>
-        </div>
+        </div></>)}
       </div>
+      {!preview && (
       <div className="w-full flex flex-row flex-wrap gap-2 justify-center items-center mt-6">
         <button
           onClick={handleAddCurve}
@@ -375,7 +376,7 @@ export default function NormallDistribution() {
         >
           Copy URL
         </button>
-      </div>
+      </div>)}
     </>
   );
 }

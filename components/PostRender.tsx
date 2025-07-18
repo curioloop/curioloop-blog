@@ -18,9 +18,11 @@ import rehypePrettyCode from "rehype-pretty-code"
 
 import { BlogPost, fixPostImage } from '@/blogs/post'
 import VideoPreview from "@/components/VideoPreview"
+import PreviewLink from "@/components/PreviewLink"
 import PostContent from './PostContent'
 import clsx from 'clsx'
 import mermaidGraph from '@/blogs/graph'
+import { parse } from 'path'
 
 type Props = {
   post: BlogPost
@@ -30,6 +32,19 @@ const PostLink: FunctionComponent<
 DetailedHTMLProps<AnchorHTMLAttributes<HTMLAnchorElement>, HTMLAnchorElement>
 > = ({ children, href }) => {
   const className = "no-underline hover:underline text-light-hov dark:text-dark-hov"
+
+  const match = href?.match(/^(\d+)x(\d+):(.+)$/);
+  if (match) {
+    const w = parseInt(match[1]), h = parseInt(match[2]), href = match[3];
+    return href.startsWith('http') ? (
+      <PreviewLink href={href} width={w} height={h} target="_blank" rel="noopener noreferrer external nofollow">
+        {children}
+      </PreviewLink>
+    ) : <PreviewLink href={href} width={w} height={h}>
+        {children}
+      </PreviewLink>;
+  }
+
   return href?.startsWith('http') ? (
     <a href={href} className={className} target="_blank" rel="noopener noreferrer external nofollow">
       {children}
@@ -81,7 +96,7 @@ const PostRender = async ({ post }:Props) => {
         a: PostLink,
         pre: PostPre,
         img: PostImg,
-        VideoPreview
+        VideoPreview,
       },
       options: { 
         mdxOptions: { 
