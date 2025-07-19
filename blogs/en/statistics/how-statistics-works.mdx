@@ -1,0 +1,482 @@
+---
+title: How Statistics Work
+date: 2025-07-22
+cover: '/cover/Galton-Board-TShirt.png'
+tags: ['Statistics']
+---
+
+Statistics is the fundamental cornerstone of Machine Learning (ML) and Artificial Intelligence (AI). It provides the essential tools for understanding data, uncovering patterns, and quantifying uncertainty.
+
+From data preprocessing and model training to evaluation, every stage of ML and AI relies heavily on statistical principles. 
+
+Without statistics, modern machine learning and artificial intelligence wouldn't exist; it offers the crucial theoretical foundation and methodological guidance for these transformative technologies.
+
+[comment]:summary
+
+## Basic Concepts
+
+### Related Terms
+
+**Sample Space (Ω)** refers to the complete set of all possible outcomes of a random experiment:
+
+- Rolling a die: $\Omega_{\text{dice}}=\{1,2,3,4,5,6\}$
+- Disk failure interval: $\Omega_{\text{MTBF}}=[0,∞)$
+- Requests per second: $\Omega_{\text{QPS}}=\{1,2,3,...,∞\}$
+- Intraday stock price change: $\Omega_{\text{return}}=[-100\%,∞)$
+
+**Random Variable (X : Ω → R)** is a function that maps each elementary outcome in the sample space to a real number:
+
+- The result of rolling a die is 5: $X_{\text{dice}} = 5$
+- Disk runs for more than 100,000 hours without failure: $X_{\text{MTBF}} > 100\text k$
+- QPS of a service at a certain time is 10k: $X_{\text{QPS}} = 10\text k$
+- Stock price drops: $X_{\text{return}} < 0$
+
+**Event** is a subset of the sample space, used to describe outcomes of interest and their corresponding probabilities:
+
+- "Rolling an even number on a die"
+  - $\{2,4,6\} \supset\Omega_{\text{dice}}$
+  - $P(X\text{ is odd})$
+- "Rolling less than 3 on a die"
+  - $\{1,2\} \supset\Omega_{\text{dice}}$
+  - $P(X<3)$
+- "Disk runs for more than 100,000 hours without failure"
+  - $[100\text k,∞) \supset\Omega_{\text{dice}}$
+  - $P(X > 100\text k)$
+- "Disk fails between 50,000 and 80,000 hours"
+  - $[50\text k,80\text k] \supset\Omega_{\text{dice}}$
+  - $P(50\text k ≤ X ≤ 80\text k)$
+
+### Probability Distribution
+
+The sample space contains all possibilities, so the sum of probabilities over the entire sample space is $1$. An event is a subset of the sample space, so the probability of an event ranges from $0$ to $1$.
+
+Depending on whether the sample space is countable, random variables can be divided into two types:
+- Discrete random variables: the sample space is countable, and the probability of a specific sample can be calculated\
+  For example: $P(X_{\text{dice}} = 5) = 1/6$
+- Continuous random variables: the sample space is uncountable, and only the probability over an interval can be calculated\
+  For example: $P(X_{\text{return}} < 0) = 50\%$
+
+When the sample space consists of countable sample points **ω**, the probability of an event (subset) is calculated as follows:
+- Iterate over each sample point $\omega$ in the subset
+- Calculate the probability $P(\omega)$ for each sample point
+- Sum the probabilities $∑P(\omega)$
+
+However, this naive event probability calculation only applies to discrete variables, not continuous random variables. To unify the calculation of event probabilities, we introduce the concept of probability distributions.
+
+A probability distribution is a set of functions that describe the probability of a random variable $X$ taking on various possible values. When using random variables to represent events, we can use the probability distribution to calculate the probability of an event.
+
+Probability distributions essentially summarize patterns observed in daily life:
+
+- If a die is fair, the result of rolling it follows a **Uniform Distribution**\
+  [$X_{\text{dice}} \sim \text{Uniform}(a,b)$](650x450:tool/distribution-curve/uniform?curve1=1,6,212121,dice), where a and b are the minimum and maximum values
+
+- If the failure rate is independent of usage time, disk MTBF follow an **Exponential Distribution**\
+  [$X_{\text{MTBF}} \sim \text{Exp}(\lambda)$](650x450:/tool/distribution-curve/exponential?curve1=0.0001,212121,MTBF), where λ is the average failure rate
+
+- If each request is independent, the QPS of a service follows a **Poisson Distribution**\
+  [$X_{\text{QPS}} \sim \text{Poisson}(\lambda)$](650x450:/tool/distribution-curve/poisson?curve1=10,212121,QPS), where λ is the mean QPS
+
+- If stock price changes are unpredictable, the log return follows a **Normal Distribution**\
+  [$\ln(X_{\text{return}}) ~ \text{Normal}(\mu,\sigma)$](650x450:/tool/distribution-curve/normal?curve1=0.1,2,212121,Δln(S)), where μ is the previous closing price, σ is the volatility and
+  $\ln(X_{\text{return}}) =\ln (S_{t+1}/S_t) = \ln S_{t+1} − \ln S_t = ε_{t+1} \sim \text{Normal}(\mu,\sigma) $
+
+### Distribution Functions
+
+To accurately describe the probability distribution of a random variable, three core functions are needed:
+
+- **Probability Mass Function $p(x)$ (PMF)**: describes the probability of a discrete random variable taking a specific value:
+  - [$p_{X_{\text{dice}}}(x) = \text{Uniform}(1,6)$](650x450:/tool/distribution-curve/uniform?curve1=1,6,212121,dice)
+  - [$p_{X_{\text{QPS}}}(x) = \text{Poisson}(10)$](650x450:/tool/distribution-curve/poisson?curve1=10,212121,QPS)
+
+- **Probability Density Function $f(x)$ (PDF)**: describes the likelihood of a continuous random variable near a specific value:
+  - [$f_{X_{\text{MTBF}}} = \text{Exp}(1/10000) $](650x450:/tool/distribution-curve/exponential?curve1=0.0001,212121,MTBF)
+  - [$f_{X_{\text{log-return}}} = \text{Normal}(100,0.1)$](650x450:/tool/distribution-curve/normal?curve1=0.1,2,212121,Δln(S))
+
+- **Cumulative Distribution Function $F(x)$ (CDF)**: describes the probability that a random variable is less than or equal to a specific value:
+  - $P(X≤x)=F_X(x)$           Probability that $X$ is less than or equal to $x$
+  - $P(X>x)=1−F_X(x)$         Probability that $X$ is greater than $x$
+  - $P(a<X≤b)=F_X(b)-F_X(a)$  Probability that $X$ falls in the interval $(a,b]$
+
+The inverse function of the CDF, $F_X^{-1}(x)$, is called the **Inverse CDF** or **Quantile Function**. It is used to calculate the value $x = F_X^{-1}(p)$ such that $P(X≤x) = p$. Although it does not directly describe the probability distribution, it plays an important role in hypothesis testing.
+
+### Properties of Probability
+
+In practice, we mainly focus on two core properties of random variables:
+
+- **Expectation (Mean)**: the weighted average of all possible values of a random variable and their probabilities
+  - Continuous: $E(X)=∫xf(x)dx$
+  - Discrete: $E(X)=∑_ix_ip(x_i)$
+
+- **Variance**: the average squared distance between all possible values and the mean (uncertainty)
+  - Continuous: $Var(X)=E[(X−E(X))^2]=∫(x−μ)^2f(x)dx$
+  - Discrete: $Var(X)=E[(X−E(X))^2]=∑(x_i−μ)^2 p(x_i)$
+
+If the probability distribution of a random variable is known, its variance and mean can be directly obtained from the distribution.
+
+For example, for $\text{Uniform}(a,b)$:
+- $E(X)=\frac{a+b}2 $
+- $Var(X)=\frac{(b-a+1)^2-1}{12}$
+
+So for $X_\text{dice} \sim \text{Uniform}(1,6)$:
+- $E(X_\text{dice})=\frac{1+6}2=3.5$
+- $Var(X_\text{dice})=\frac{(6-1+1)^2-1}{12}=3$
+
+### Sampling Survey
+
+In practice, we often face the following situations:
+- The probability distribution of the random variable is unknown
+- The sample space is too large for a census
+
+To study the properties of a random variable, we can only draw **samples** from the **population**:
+- Population mean: $$\mu = \frac{1}{N}\sum^N_ix_i$$
+- Population variance: $$\sigma^2 = \frac{1}{N}\sum^n_i(x_i -\mu)^2$$
+- Sample mean: $$\bar{x} = \frac{1}{n}\sum^n_ix_i$$
+- Sample variance (biased): $$\hat{\sigma^2} = \frac{1}{n}\sum^n_i(x_i -\bar{x})^2$$
+- Sample variance (unbiased): $$s^2 = \frac{1}{n-1}\sum^n_i(x_i -\bar{x})^2$$
+
+The purpose of sampling is to obtain estimates $\bar x,s^2$ that are as close as possible to the population $\mu,\sigma^2$. When the number of samples $m$ is large enough, the sample mean approaches the population mean: $\mu = \frac{1}{m}\sum^m_{i}X_i\ (m \to \infty)$.
+
+The population size $N$ is usually very large, while $n$ is the sample size in a single survey. When $n \ll N $, the probability of drawing extreme values is small, leading to an underestimation of variance, so $\hat{\sigma^2}$ is biased downward. When the sample size is small, the unbiased estimate $s^2$ is usually used as an approximation for $\sigma^2$.
+
+## Normal Distribution
+
+### Central Limit Theorem
+
+With the concept of random variables, we can study sample data as follows:
+- Assume the population follows a certain distribution
+- Estimate the parameters of that distribution from the sample
+- Analyze based on the probability distribution function
+
+> When there is not enough prior knowledge, it is usually assumed that the random variable follows a normal distribution
+
+The theoretical basis for this assumption is **Asymptotic Normality** in statistics:
+> As the sample size approaches infinity, the distribution of the random variable approaches a normal distribution
+
+A special case of asymptotic normality is the **Central Limit Theorem (CLT)**:
+> For a random variable following any distribution, as the number of samples increases, the mean will always follow a normal distribution
+
+To help understand, here are some interactive experiments where you can adjust the sample size and observe the distribution:
+
+- [Uniform distribution sampling](700x700:/tool/clt-visualizer?dist=uniform(1,6)&sampleCount=1000&sampleSize=100)
+- [Exponential distribution sampling](700x700:/tool/clt-visualizer?dist=exponential(0.1)&sampleCount=1000&sampleSize=100)
+
+Asymptotic normality and the central limit theorem are the foundation of many statistical applications:
+> Based on the sample mean and standard deviation, you can construct a confidence interval for the population mean, even if the population distribution is unknown
+
+This allows us to make statistical inferences based on the normal distribution for many non-normal data sets.
+
+The formal statement of the central limit theorem (can be skipped):
+
+- Given a random variable $X$ following any distribution.
+- Let $$Y_n$$ be the mean of $n$ samples of $X$: $$Y_n = \frac{1}{n}\sum^n_{i=1}X_i$$, with:
+  - Expectation $$E[Y_n] = E[\frac{1}{n}\sum^n_{i=1}X_i] = \frac{1}{n}\sum^n_{i=1}E[X_i] = \frac{1}{n}nE[X] = E[X]$$
+  - Variance $$Var[Y_n] = Var[\frac{1}{n}\sum^n_{i=1}X_i] = \frac{1}{n^2}\sum^n_{i=1}Var[X_i] = \frac{1}{n^2}nVar(X) = \frac{Var(X)}{n}$$
+
+- When $n > 30$, $$Y_n$$ follows a normal distribution $$Y_n \sim \mathcal{N}(E[X],\frac{Var(X)}{n})$$, and the standardized form $$\frac{Y_n-E[X]}{\sqrt{Var(X)/n}} \sim \mathcal{N}(0,1)$$.
+
+### Normal Distribution
+
+**[Normal Distribution](650x450:/tool/distribution-curve/normal)** is one of the most important and common continuous probability distributions in probability and statistics. Its probability density function forms the characteristic **bell curve**. Most data points are concentrated near the mean, and the further from the mean, the less likely they are to occur.
+
+![Empirical-Rule?width=700](/picture/how-statistics-work/empirical_rule.svg)
+
+The normal distribution is fully determined by two parameters:
+- **Mean (μ)**: determines the center of the distribution
+- **Standard Deviation (σ)**: determines the "width" or spread
+  - Larger standard deviation: more spread out, flatter and wider bell curve
+  - Smaller standard deviation: more concentrated, taller and narrower bell curve
+
+The normal distribution gives rise to three commonly used distributions in statistics:
+- **Z Distribution**
+
+    Any normal random variable $X$ can be transformed into a standard normal variable $Z = \frac{(X−μ)}σ \sim \mathcal N(0,1)$.
+    The value of $Z$ is called the z-score, indicating how many standard deviations $X$ is from its mean $μ$.
+    We will use the z-score to construct confidence intervals.
+
+- **Chi-Square Distribution**
+
+    Suppose $Z_1,...Z_k$ are $k$ independent standard normal random variables $\mathcal N(0,1)$.
+    Their sum of squares follows a chi-square distribution with $k$ degrees of freedom: $Z_1^2+\cdots+Z_k ^2 \sim χ^2(k)$.
+    Used to test independence and homogeneity between multiple random variables.
+
+- **t Distribution**
+
+    Given $Z \sim N(0,1)$ and $V \sim χ^2(k) $, the ratio $T=\frac{Z}{\sqrt{V/k}} \sim t(k) $ follows a t-distribution with $k$ degrees of freedom.
+    Mainly used for statistical inference on the mean of a normal population when the population standard deviation is unknown and the sample size is small.
+
+### Empirical Rule
+
+The core value of the normal distribution is the **Empirical Rule**:
+- About 68% of data falls within 1 standard deviation of the mean ($μ±σ$)
+- About 95% falls within 2 standard deviations ($μ±2σ$)
+- About 99.7% falls within 3 standard deviations ($μ±3σ$)
+
+Although the empirical rule is only approximate, it provides valuable insight and decision support in many practical applications. For example, the probability of a data point falling more than 3 standard deviations from the mean is less than 0.3%. Thus, the 3-sigma rule can be used to quickly identify **outliers**.
+
+In practice, 6-sigma is often used instead of 3-sigma:
+- 3-sigma means a 99.73% pass rate, i.e., 2700 defects per million opportunities (DPMO)
+- 6-sigma means a 99.99966% pass rate, i.e., only 3.4 defects per million opportunities
+
+In many modern industries and services, a 3-sigma defect rate is unacceptable:
+- Healthcare: a 2700‱ medical error rate would harm many patients
+- Aerospace: a 2700‱ defect rate in aircraft parts would be catastrophic
+- Financial services: a 2700‱ transaction error rate would cause huge losses and trust crises
+
+Only the near-zero defect pursuit of 6-sigma meets today's high quality requirements.
+
+## Confidence Interval
+
+In statistics, we often face the following errors:
+- The estimated mean $\bar x$ from the sample differs from the true population mean $\mu$
+- The estimated regression parameter $\bar \beta$ differs from the true value $\beta$
+- The predicted value $\bar y$ from regression differs from the actual value $y$
+
+These errors are unknown and unavoidable due to the unknowability of the population.
+
+To measure the effectiveness of a statistical task, we introduce the concept of a [**Confidence Interval**](700x580:/tool/confidence-interval):
+- Treat the estimate as the sample mean $x̄$ of a normal distribution
+- Set a symmetric interval centered on the population mean $μ$
+- Calculate the probability that the sample mean $x̄$ falls within this interval
+
+The two sides of the confidence interval are called the **Margin of Error**:
+- The probability that $x̄$ falls outside the margin is the **Significance Level (α)**
+- The probability that $x̄$ falls inside the margin is the **Confidence Level ($1-α$)**
+
+There are two ways to interpret the confidence level:
+- The probability that $x̄$ falls within the confidence interval centered on $μ$
+- The probability that the confidence interval centered on $x̄$ contains $μ$
+
+With a fixed sample size $n$:
+- [Higher confidence level means a larger interval, higher probability of containing the mean, but greater error](700x580:/tool/confidence-interval?confLevel=90&sampleSize=1&sampleCount=30)
+- [Lower confidence level means a smaller interval, lower probability of containing the mean, but smaller error](700x580:/tool/confidence-interval?confLevel=50&sampleSize=1&sampleCount=30)
+
+With the same confidence level $1-α$:
+- [More samples mean smaller variance, less error between sample and population mean](700x580:/tool/confidence-interval?confLevel=90&sampleSize=12&sampleCount=50)
+- [Fewer samples mean larger variance, more error between sample and population mean](700x580:/tool/confidence-interval?confLevel=90&sampleSize=2&sampleCount=50)
+
+The formulaic expression for confidence level $1-α$ (can be skipped):
+
+According to CLT, the sample mean $$\bar{x} $$ follows a normal distribution $$\bar{X} \sim \mathcal{N}(\mu,\frac{\sigma^2}{n})$$, and the standardized form $$\frac{\bar{X} - \mu}{\frac{\sigma}{\sqrt{n}}} \sim \mathcal{N}(0,1)$$
+- Calculate the sample mean $$\bar{x} $$ and standard deviation $$\frac{\sigma}{\sqrt{n}}$$ (assuming population standard deviation $$\sigma$$ is known)
+- Given confidence level $$1-α$$
+- Use $F_Z^{-1}(\frac{1-α}2)$ to calculate the corresponding z-score $$z_{(1-α)/2}$$ = $$\frac{\bar{x} - \mu}{\frac{\sigma}{\sqrt{n}}} $$
+- The margin for the sample mean is $$\mu - z_{(1-α)/2} \cdot \frac{\sigma}{\sqrt{n}} < \bar{x} < \mu + z_{(1-α)/2} \cdot \frac{\sigma}{\sqrt{n}}$$
+- Rearranged: $$\bar{x} - z_{(1-α)/2} \cdot \frac{\sigma}{\sqrt{n}} < \mu < \bar{x} + z_{(1-α)/2} \cdot \frac{\sigma}{\sqrt{n}}$$
+
+So we are $1-α$ confident that the mean $\mu$ is in the interval $$\bar{x} \pm z_{(1-α)/2} \cdot \frac{\sigma}{\sqrt{n}}$$.
+
+Usually, the population standard deviation $$\sigma$$ in $$\frac{\bar{x} - \mu}{\frac{\sigma}{\sqrt{n}}}$$ is unknown, so the unbiased sample standard deviation $s$ is used instead. The resulting $$\frac{\bar{x} - \mu}{\frac{s}{\sqrt{n}}}$$ no longer follows the Z distribution, but a t-distribution with $n-1$ degrees of freedom $$\mathcal{t}_{n-1}$$. The statistic is replaced by the t-score, and the confidence interval is $$\bar{x} \pm t_{(1-α)/2} \cdot \frac{s}{\sqrt{n}}$$.
+
+## Hypothesis Testing
+
+Hypothesis testing is a very important tool in statistical inference. It allows us to make judgments or inferences about population parameters based on sample data. Simply put, it is about using sample data to judge whether a hypothesis about the population is true.
+
+There is always error between sample statistics and the true population value. Hypothesis testing helps us make data-driven decisions under uncertainty. It provides a rigorous framework for assessing whether observed phenomena are due to random fluctuation or a real effect.
+
+The core idea is proof by contradiction:
+- Propose a hypothesis $H_0$, then collect sample data
+- Calculate the probability of observing the sample data under $H_0$
+- If the probability is very small, $H_0$ is inconsistent with reality and is rejected
+
+In hypothesis testing, two mutually exclusive hypotheses are proposed:
+- **Null Hypothesis ($H_0$)**: usually the statement the researcher wants to reject, or a statement of "no effect" or "no difference"
+- **Alternative Hypothesis ($H_1$)**: usually the statement the researcher wants to prove, the opposite of $H_0$
+
+> When $H_0$ is rejected, $H_1$ is accepted
+
+Note that both $H_0$ and $H_1$ are hypotheses about the unknown population:
+- Hypotheses must be set based on the population, e.g., $$H_0: \mu = 12$$
+- Hypotheses cannot be set based on the sample, e.g., $$H_0: \bar{x} \ge 12$$
+
+### Significance Level
+
+Using $H_0$ to represent the hypothesis to be rejected:
+- $H_0 = \text{true}$ means the hypothesis is not true (inconsistent with reality)
+- $H_0 = \text{false}$ means the hypothesis is true (consistent with reality)
+
+When making decisions, there are four possibilities:
+- Reject $H_0$ and $H_0 = \text{true}$ (Type I error)
+- Reject $H_0$ and $H_0 = \text{false}$ (Correct)
+- Fail to reject $H_0$ and $H_0 = \text{true}$ (Correct)
+- Fail to reject $H_0$ and $H_0 = \text{false}$ (Type II error)
+
+There are two types of errors:
+- **Type I Error**: rejecting a true hypothesis (False Positive)
+- **Type II Error**: failing to reject a false hypothesis (False Negative)
+
+Due to sampling error, both types of errors are unavoidable. Their probabilities are:
+- Type I error: $$\alpha = P(\text{Reject } H_0|H_0)$$
+- Type II error: $$\beta =  P(\text{Accept } H_0|H_1)$$
+
+> The significance level α determines whether to reject $H_0$
+
+By setting the significance level, you can control the probability of these errors:
+1. $H_0$ is set based on the population mean $\mu$
+2. Lower α means a larger confidence interval $1-α$
+3. The probability that the sample mean $\bar x$ falls outside the interval is lower
+4. This means stronger evidence is needed to reject $H_0$
+
+Adjusting α affects both error probabilities:
+- Lower α: $H_0$ is more likely to be accepted, less likely to be rejected. Reduces Type I error risk, increases Type II error risk.
+- Higher α: $H_0$ is more likely to be rejected, less likely to be accepted. Reduces Type II error risk, increases Type I error risk.
+
+Another important metric is the **Power of Test**: $1-β = P(\text{Reject } H_0|H_1)$, i.e.,
+
+> When $H_1$ is true, the probability of correctly rejecting $H_0$
+
+Higher power means higher sensitivity and a greater ability to detect real effects.
+
+### Test Statistics
+
+When designing a test, you need to choose the appropriate statistical test based on the data type, distribution, sample size, and hypothesis type, for example:
+
+- Z-test: when the population standard deviation $\sigma$ is known and the sample size is large, to test whether the sample mean $\bar x$ matches the population mean $\mu$ in $H_0$
+- t-test: when the population standard deviation $\sigma$ is unknown or the sample size is small, to test whether the sample mean $\bar x$ matches the population mean $\mu$ in $H_0$
+- F-test: compares the variances of two samples to test whether their population variances are equal
+- Chi-square test: uses the chi-square statistic to test whether two samples follow the same population distribution
+
+Different tests use different **Test Statistics**:
+
+- One-sample Z-test: $Z=\frac{\bar{x}-\mu}{\sigma/\sqrt n}$
+  - $μ$: hypothesized population mean
+  - $σ$: known population standard deviation
+  - $\bar{x}$: sample mean
+  - $n$: sample size
+
+- One-sample t-test: $T=\frac{\bar X-\mu}{s\sqrt n}$
+  - $μ$: hypothesized population mean
+  - $\bar{x}$: sample mean
+  - $s$: sample standard deviation
+  - $n$: sample size
+
+- F-test: $F=\frac{s_1^2}{s_2^2}$
+  - $s_1^2$: larger sample variance
+  - $s_2^2$: smaller sample variance
+
+- Chi-square test: $\chi^2=\sum\frac{(O_i-E_i)^2}{E_i}$
+  - $E_i$: **Expected Frequency**
+  - $O_i$: **Observed Frequency**
+
+All test statistics are random variables that follow their respective probability distributions. After calculating the statistic, the next step is to use the significance level α to decide whether to reject $H_0$.
+
+### Types of Tests
+
+For clarity, the following uses the Z mean test as an example.
+
+Given a population variance $σ = 3$ and a hypothesis $μ = 66.7$, three types of tests can be designed:
+
+- **Right-tailed test**
+  - $H_0: μ ≤ 66.7$
+  - $H_1: μ > 66.7$
+
+- **Left-tailed test**
+  - $H_0: μ ≥ 66.7$
+  - $H_1: μ < 66.7$
+
+- **Two-tailed test**
+  - $H_0: μ = 66.7$
+  - $H_1: μ ≠ 66.7$
+
+Which type to use depends on your research question and the direction of difference you are looking for:
+|Test Type|$H_1$ Form|Rejection Region|Purpose|
+|:-:|:-:|:-:|:-:|
+|Right-tailed|parameter > value|right|prove parameter "increased" or is "greater than" a benchmark|
+|Left-tailed|parameter < value|left|prove parameter "decreased" or is "less than" a benchmark|
+|Two-tailed|parameter ≠ value|both|prove parameter is "different from" a benchmark, regardless of direction|
+
+### Drawing Conclusions
+
+After calculating the test statistic, there are two ways to make a decision:
+
+- Calculate the p-value and compare it to the significance level α
+- Calculate the critical value for α and compare the test statistic to the critical value
+
+#### p-value
+
+The p-value is the probability of observing the current data or more extreme data under $H_0 = \text{true}$.
+
+The p-value is compared to the preset significance level α:
+- $\text{p-value} ≤α$: the result is rare under $H_0 = \text{true}$, strong evidence to reject $H_0$
+- $\text{p-value} >α$: the result is common under $H_0 = \text{true}$, not enough evidence to reject $H_0$
+
+The p-value is essentially a probability, and can be calculated using the CDF:
+- Z statistic: $X \sim Z$, use $F_X(x)$ to get the p-value for $x$
+- Chi-square statistic: $X \sim \chi^2$, use $F_X(x)$ to get the p-value for $x$
+
+Let $X$ be the hypothesized population distribution, $x_{\text{obs}}$ the observed statistic. The p-value for different test types:
+
+- Left-tailed: $\text{p-value}=P(X≤x_{\text{obs}}|H_0=true)=F_X(x_{\text{obs}})$
+- Right-tailed: $\text{p-value}=P(X≥x_{\text{obs}}|H_0=true)=1-F_X(x_{\text{obs}})$
+- Two-tailed (symmetric): $\text{p-value}=2×P(X≥|x_{\text{obs}}||H_0=true)=2×F_X(|x_{\text{obs}}|)$
+
+Returning to the Z mean test example, the decision process using p-value:
+- [Right-tailed: $H_1: \mu > 66.7$](500x350:/tool/ztest-visualizer?alpha=5&tail=right&mu=66.7&sigma=3&n=10&sampleMean=68.442)
+  - Sample mean $\bar x = 68.442$
+  - Statistic $Z = \frac{68.442 - 66.7}{3/\sqrt{10}} = 1.8362$
+  - CDF $F_Z(1.8362) = 0.9668 $
+  - Right-tail p-value $P(\hat{X}>68.442|\mu=66.7) = 1 - 0.9668 =0.0332$
+  - Since p-value < 0.05, it is reasonable to reject $H_0$ and accept $H_1$
+
+- [Two-tailed: $H_1: \mu \ne 66.7$](500x350:/tool/ztest-visualizer?alpha=5&tail=two&mu=66.7&sigma=3&n=10&sampleMean=68.442)
+  - Sample mean $\bar x = 68.442$
+  - Statistic $Z = \frac{68.442 - 66.7}{3/\sqrt{10}} = 1.8362$
+  - CDF $F_Z(1.8362) = 0.9668 $
+  - Two-tailed p-value $P(|\hat{X}-66.7|>|68.442 - 66.7|\ |\mu=66.7) = (1-0.9668) * 2 = 0.0663$
+  - Since p-value > 0.05, it is reasonable to accept $H_0$ and reject $H_1$
+
+- [Left-tailed: $H_1: \mu < 64.252$](500x350:/tool/ztest-visualizer?alpha=5&tail=left&mu=66.7&sigma=3&n=10&sampleMean=64.252)
+  - Sample mean $\bar x = 64.252$
+  - Statistic $Z = \frac{64.252 - 66.7}{3/\sqrt{10}} = −2.581$
+  - CDF $F_Z(−2.581) = 0.0049 $
+  - Left-tail p-value $P(\hat{X}<64.252|\mu=66.7) = 0.0049 $
+  - Since p-value < 0.05, it is reasonable to reject $H_0$ and accept $H_1$
+
+#### Critical Value
+
+Another intuitive approach is to compare the **Critical Value**. The critical value has the same unit as the statistic, so they can be directly compared. To convert α to the corresponding critical value, use the Inverse CDF.
+
+For significance level α, the critical value for different test types:
+
+- Left-tailed: $k_{\alpha}=F^{−1}(α)$
+- Right-tailed: $k_{\alpha}=F^{−1}(1-α)$
+- Two-tailed (symmetric): $k_{\alpha 2}=F_X^{−1}(α/2),\ k_{\alpha 1}=F_X^{−1}(1-\frac{α}2)$
+
+If the observed value $x_{\text{obs}}$ (not the statistic) is more extreme than the critical value, we have enough reason to reject $H_0$:
+- Left-tailed: $x_{\text{obs}} < k_{\alpha}$
+- Right-tailed: $x_{\text{obs}} > k_{\alpha}$
+- Two-tailed: $x_{\text{obs}} < k_{\alpha 2} \text{ or } x_{\text{obs}} > k_{\alpha 1}$
+
+Returning to the Z mean test example, the decision process using critical value:
+- [Right-tailed: $H_1: \mu > 66.7$](500x350:/tool/ztest-visualizer?alpha=5&tail=right&mu=66.7&sigma=3&n=10&sampleMean=68.442)
+  - Sample mean $\bar x = 68.442$
+  - Inverse CDF $F_Z^{-1}(1-0.05) = 1.645 $
+  - Map Z to $\mathcal N(66.7,3)$: right-tail critical value $k_{\alpha} = 66.7 + 1.645 \times (3/\sqrt{10}) = 68.2607$
+  - Since $68.442 > 68.2607$, it is reasonable to reject $H_0$ and accept $H_1$
+
+- [Two-tailed: $H_1: \mu \ne 66.7$](500x350:/tool/ztest-visualizer?alpha=5&tail=two&mu=66.7&sigma=3&n=10&sampleMean=68.442)
+  - Sample mean $\bar x = 68.442$
+  - Inverse CDF:
+    - $F_{Z 2}^{-1}(0.05/2) = −1.96$
+    - $F_{Z 1}^-1(1-0.05/2) = 1.96$
+  - Map Z to $\mathcal N(66.7,3)$: critical values
+    - $k_{\alpha 2} = 66.7 - |−1.96| \times (3/\sqrt{10}) = 64.8406$
+    - $k_{\alpha 1} = 66.7 + |1.96| \times (3/\sqrt{10}) = 68.5594$
+  - Since $68.442 \in [64.8406,68.5594]$, it is reasonable to accept $H_0$ and reject $H_1$
+
+- [Left-tailed: $H_1: \mu < 64.252$](500x350:/tool/ztest-visualizer?alpha=5&tail=left&mu=66.7&sigma=3&n=10&sampleMean=64.252)
+  - Sample mean $\bar x = 64.252$
+  - Inverse CDF $F_Z^{-1}(0.05) = -1.645 $
+  - Map Z to $\mathcal N(66.7,3)$: left-tail critical value $k_{\alpha} = 66.7 - 1.645 \times (3/\sqrt{10}) = 65.1393$
+  - Since $64.252 < 65.1393$, it is reasonable to reject $H_0$ and accept $H_1$
+
+### Summary of Process
+
+To summarize, the basic steps of hypothesis testing are:
+1. Propose mutually exclusive hypotheses
+2. Choose a significance level
+3. Choose the appropriate statistical test method
+4. Calculate the test statistic
+5. Draw a conclusion based on the corresponding p-value or critical value
+
+Note: Failing to reject the null hypothesis does not mean it is true, only that there is not enough evidence to prove it is false.
+

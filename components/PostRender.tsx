@@ -37,10 +37,10 @@ DetailedHTMLProps<AnchorHTMLAttributes<HTMLAnchorElement>, HTMLAnchorElement>
   if (match) {
     const w = parseInt(match[1]), h = parseInt(match[2]), href = match[3];
     return href.startsWith('http') ? (
-      <PreviewLink href={href} width={w} height={h} target="_blank" rel="noopener noreferrer external nofollow">
+      <PreviewLink href={href} width={w} height={h} linkClass={className} target="_blank" rel="noopener noreferrer external nofollow">
         {children}
       </PreviewLink>
-    ) : <PreviewLink href={href} width={w} height={h}>
+    ) : <PreviewLink href={href} width={w} height={h} linkClass={className}>
         {children}
       </PreviewLink>;
   }

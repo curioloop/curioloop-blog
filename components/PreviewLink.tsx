@@ -7,12 +7,16 @@ const PreviewLink = ({
   children,
   width = 1000,
   height = 500,
+  linkClass = "",
+  spinClass = "w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full mx-auto", 
   ...rest
 }: {
   href: string;
   children: React.ReactNode;
   width?: number;
   height?: number;
+  linkClass?: string;
+  spinClass?: string;
 } & React.AnchorHTMLAttributes<HTMLAnchorElement>) => {
   const [show, setShow] = useState(false);
   const [popupStyle, setPopupStyle] = useState<React.CSSProperties>({});
@@ -83,13 +87,8 @@ const PreviewLink = ({
     >
       <div style={{position:'relative',width:'100%',height:'100%'}}>
         {loading && (
-          <div style={{
-            position: 'absolute',
-            left: 0, top: 0, right: 0, bottom: 0,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            background: 'rgba(255,255,255,0.7)', zIndex: 2
-          }}>
-            <div className="animate-spin" style={{width:32,height:32,border:'4px solid #2563eb',borderTop:'4px solid transparent',borderRadius:'50%',margin:'auto'}} />
+          <div className="absolute inset-0 flex items-center justify-center bg-white/70 z-20">
+            <div className={spinClass} />
           </div>
         )}
         <iframe
@@ -112,6 +111,7 @@ const PreviewLink = ({
       <a
         ref={anchorRef}
         href={href}
+        className={linkClass}
         onMouseEnter={() => {
           if (timer.current) clearTimeout(timer.current);
           timer.current = setTimeout(() => {

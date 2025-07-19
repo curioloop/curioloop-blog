@@ -33,6 +33,7 @@
     "pbac": "PBAC",
     "redis": "Redis",
     "system-design": "SystemDesign",
+    "statistics": "Statistics",
     "distributed-system": "DistributedSystem",
     "backend-dev": "BackendDev",
     "frontend-dev": "FrontendDev",
