@@ -2,6 +2,8 @@
 import React, { useRef, useState } from "react";
 import ReactDOM from "react-dom";
 
+import clsx from 'clsx'
+
 const PreviewLink = ({
   href,
   children,
@@ -88,7 +90,7 @@ const PreviewLink = ({
       <div style={{position:'relative',width:'100%',height:'100%'}}>
         {loading && (
           <div className="absolute inset-0 flex items-center justify-center bg-white/70 z-20">
-            <div className={spinClass} />
+            <div className={clsx("animate-spin",spinClass)} />
           </div>
         )}
         <iframe

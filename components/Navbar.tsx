@@ -17,7 +17,7 @@ const Navbar = () => {
           <span className="text-lg">{t('title')}</span>
         </a>
       </h1>
-      <div className="flex items-stretch justify-center grow overflow-x-auto xl:mr-3 ">
+      <div className="flex items-stretch justify-center grow overflow-x-clip xl:mr-3 ">
         <div className="flex items-stretch justify-start xl:mr-auto">
           <Navlink className="flex grow-0 m-0 px-3 py-4 items-center cursor-pointer text-light-txt dark:text-dark-txt hover:text-light-hov dark:hover:text-dark-hov hover:bg-light-bg-hov dark:hover:bg-dark-bg-hov" href={`/${locale}`}>{t('home')}</Navlink>
           <Navlink className="flex grow-0 m-0 px-3 py-4 items-center cursor-pointer text-light-txt dark:text-dark-txt hover:text-light-hov dark:hover:text-dark-hov hover:bg-light-bg-hov dark:hover:bg-dark-bg-hov" href={`/${locale}/search`}>{t('search')}</Navlink>
