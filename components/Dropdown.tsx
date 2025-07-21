@@ -29,7 +29,7 @@ const Dropdown = ({children, options, isSelected, onSelected}: Props) => {
   return (
     <div onBlur={(e) => blurClose(e)}>
       <div>
-      <button className="h-6 w-6" onClick={toggle}>
+      <button className="h-6 w-6 pt-1" onClick={toggle}>
           {children}
         </button>
       </div>
