@@ -311,18 +311,16 @@ export default function ExponentialDistribution({preview = false}) {
                     </div>
                     <div className="flex flex-row gap-2 justify-center items-center mt-2">
                       <button
-                        className="px-3 py-1 bg-white text-blue-700 border border-blue-600 rounded hover:bg-blue-50 transition text-sm"
+                        className="before:content-['Curve'] px-3 py-1 bg-white text-blue-700 border border-blue-600 rounded hover:bg-blue-50 transition text-sm"
                         disabled={!svgString}
                         onClick={async () => {
                           const height = Math.max(100, pngHeight);
                           await exportSvgToPng(svgString, height * 2, height, "exponential-curves");
                           setShowPngSize(false);
                         }}
-                      >
-                        Curve
-                      </button>
+                      />
                       <button
-                        className="px-3 py-1 bg-white text-blue-700 border border-blue-600 rounded hover:bg-blue-50 transition text-sm"
+                        className="before:content-['CDF'] px-3 py-1 bg-white text-blue-700 border border-blue-600 rounded hover:bg-blue-50 transition text-sm"
                         disabled={!cdfSvgString}
                         onClick={async () => {
                           const height = Math.max(100, pngHeight);
@@ -331,9 +329,7 @@ export default function ExponentialDistribution({preview = false}) {
                           }
                           setShowPngSize(false);
                         }}
-                      >
-                        CDF
-                      </button>
+                      />
                     </div>
                   </div>
                 </div>

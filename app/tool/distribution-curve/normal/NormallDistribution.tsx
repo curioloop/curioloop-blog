@@ -242,24 +242,21 @@ export default function NormallDistribution({ preview = false }) {
       <div className="w-full flex flex-row flex-wrap gap-2 justify-center items-center mt-6">
         <button
           onClick={handleAddCurve}
-          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
-        >
-          New Curve
-        </button>
+          className="before:content-['New_Curve'] px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
+        />
         {(svgString || cdfSvgString) && (
           <div className="relative">
             <button
               ref={svgDropdownBtnRef}
-              className="px-4 py-2 bg-white text-blue-700 border border-blue-600 rounded hover:bg-blue-50 transition"
+              className="before:content-['Export_as_SVG'] px-4 py-2 bg-white text-blue-700 border border-blue-600 rounded hover:bg-blue-50 transition"
               onClick={() => setSvgDropdownOpen(v => !v)}
             >
-              Export as SVG
               <svg className="inline ml-1 -mt-1 w-3 h-3" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
             </button>
             {svgDropdownOpen && (
               <div className="absolute z-10 right-0 mt-2 w-auto bg-white border border-gray-200 rounded shadow p-2 flex flex-row gap-2 justify-center items-center" style={{minWidth:155}}>
                 <button
-                  className="px-3 py-1 bg-white text-blue-700 border border-blue-600 rounded hover:bg-blue-50 transition text-sm"
+                  className="before:content-['Curve'] px-3 py-1 bg-white text-blue-700 border border-blue-600 rounded hover:bg-blue-50 transition text-sm"
                   disabled={!svgString}
                   onClick={() => {
                     if (svgString) {
@@ -267,11 +264,9 @@ export default function NormallDistribution({ preview = false }) {
                     }
                     setSvgDropdownOpen(false);
                   }}
-                >
-                 Curve
-                </button>
+                />
                 <button
-                  className="px-3 py-1 bg-white text-blue-700 border border-blue-600 rounded hover:bg-blue-50 transition text-sm"
+                  className="before:content-['CDF'] px-3 py-1 bg-white text-blue-700 border border-blue-600 rounded hover:bg-blue-50 transition text-sm"
                   disabled={!cdfSvgString}
                   onClick={() => {
                     if (cdfSvgString) {
@@ -279,9 +274,7 @@ export default function NormallDistribution({ preview = false }) {
                     }
                     setSvgDropdownOpen(false);
                   }}
-                >
-                 CDF
-                </button>
+                />
               </div>
             )}
           </div>
@@ -327,18 +320,16 @@ export default function NormallDistribution({ preview = false }) {
                     </div>
                     <div className="flex flex-row gap-2 justify-center items-center mt-2">
                       <button
-                        className="px-3 py-1 bg-white text-blue-700 border border-blue-600 rounded hover:bg-blue-50 transition text-sm"
+                        className="before:content-['Curve'] px-3 py-1 bg-white text-blue-700 border border-blue-600 rounded hover:bg-blue-50 transition text-sm"
                         disabled={!svgString}
                         onClick={async () => {
                           const height = Math.max(100, pngHeight);
                           await exportSvgToPng(svgString, height * 2, height, "normal-curves");
                           setShowPngSize(false);
                         }}
-                      >
-                        Curve
-                      </button>
+                      />
                       <button
-                        className="px-3 py-1 bg-white text-blue-700 border border-blue-600 rounded hover:bg-blue-50 transition text-sm"
+                        className="before:content-['CDF'] px-3 py-1 bg-white text-blue-700 border border-blue-600 rounded hover:bg-blue-50 transition text-sm"
                         disabled={!cdfSvgString}
                         onClick={async () => {
                           const height = Math.max(100, pngHeight);
@@ -347,9 +338,7 @@ export default function NormallDistribution({ preview = false }) {
                           }
                           setShowPngSize(false);
                         }}
-                      >
-                        CDF
-                      </button>
+                      />
                     </div>
                   </div>
                 </div>
