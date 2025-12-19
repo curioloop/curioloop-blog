@@ -1,0 +1,844 @@
+---
+title: Linear Regression
+cover: '/cover/Linear-Regression-Funny.png'
+date: 2025-09-23
+tags: ['Statistics', 'TimeSeriesAnalysis']
+---
+
+Linear regression provides a simple yet powerful way to quantify relationships between variables.
+
+Its core idea is to find a linear equation that describes the relationship between two or more variables, and then use that relationship for prediction or analysis.
+
+Although real-world relationships are often more complex, linear regression remains a cornerstone of many data analysis and forecasting tasks and serves as the foundation for more advanced models.
+
+[comment]:summary
+
+
+## Model specification
+
+A model typically consists of two types of variables:
+
+- **Exogenous variables**
+   Known variables determined by factors outside the model, usually denoted by a vector $x \in \mathbb{R}^k$.
+- **Endogenous variables**
+   Unknown variables determined within the model, usually denoted by a scalar $y \in \mathbb{R}$.
+
+If $x$ and $y$ satisfy a linear relationship, we can model them using linear regression:
+
+$$y = \beta_0 + \beta_1x_1 + \cdots + \beta_kx_k + \varepsilon$$
+- $\beta \in R^{k+1}$ 是回归系数 regression parameters 
+- $\varepsilon \in R$ 是随机误差 random error
+
+In matrix form,
+
+$\boldsymbol{y = X\beta + \varepsilon}$
+- $\boldsymbol y = (y_1, \ldots, y_n)$
+- $\boldsymbol \beta = (\beta_0, \beta_1, \ldots, \beta_k)$
+- $\boldsymbol \varepsilon = (\varepsilon_1, \ldots, \varepsilon_n)$
+- $\boldsymbol X = \begin{bmatrix}
+1 & x_{1,1} & \cdots & x_{k,1} \\
+1 & x_{1,2} & \cdots & x_{k,2} \\
+\vdots & \vdots & \cdots & \vdots \\
+1 & x_{1,n} & \cdots & x_{k,n} \\
+\end{bmatrix}$
+
+To make the model well-defined, we usually assume the error term is white noise, i.e. $\boldsymbol \varepsilon \sim \text{NID}(0,\sigma^2)$.
+This means the errors come from random noise in the system from which the model cannot extract additional information:
+
+- Independently and identically distributed.
+- Zero mean: the systematic mean is captured by the intercept $\beta_0$.
+- Constant variance $\sigma^2$:
+   - For survey data, $\sigma^2$ depends on the population and sampling process.
+   - For sensor data, $\sigma^2$ is determined by sensor precision.
+
+Once we estimate the coefficients $\boldsymbol \beta$, we obtain fitted values $\boldsymbol{\hat y = X\beta}$.
+The difference between observations and fitted values $\boldsymbol{e = y -\hat y} = (e_1, \ldots, e_n)$ is called the **residual**.
+
+The error term is a modeling assumption specified before estimation, whereas the residuals are realized errors after fitting the model.
+To judge model quality, we check whether the residuals are consistent with the original error assumptions.
+
+Common violations of model assumptions include:
+
+- Non-zero mean: missing an intercept term.
+- Nonlinear trends: linear specification is inadequate; need nonlinear terms.
+- Autocorrelation.
+- Heteroscedasticity.
+
+## Parameter estimation
+
+There are two standard ways to estimate $\boldsymbol \beta$:
+
+- Ordinary least squares (OLS)
+- Maximum likelihood estimation (MLE)
+
+Under the assumption $\boldsymbol \varepsilon \sim \text{NID}(0,\sigma^2)$, OLS and MLE yield the same estimator.
+
+### OLS
+
+The model’s lack of fit is measured by the residual sum of squares
+
+$$\sum_{i=1}^n e_i^2 = \sum_{i=1}^n (y_i-\hat y_i)^2$$
+
+We seek parameters $\boldsymbol \beta$ that minimize this quantity:
+
+$$\min_\beta\big[(\boldsymbol {y -X \beta})'(\boldsymbol {y -X \beta})\big]$$
+
+- Expand:
+
+$(\boldsymbol {y -X \beta})'(\boldsymbol {y -X \beta}) = \boldsymbol{y}'\boldsymbol{y} - 2\boldsymbol{\beta}'\boldsymbol{X}'\boldsymbol{y} + \boldsymbol{\beta}'\boldsymbol{X}'\boldsymbol{X}\boldsymbol{\beta}$
+
+- Differentiate w.r.t. $\beta$:
+
+$\dfrac{\partial}{\partial \beta}[(\boldsymbol {y -X \beta})'(\boldsymbol {y -X \beta})] = -2\boldsymbol{X'y} + 2\boldsymbol{X'X\beta}$
+
+- Solve for $\boldsymbol\beta$:
+
+$$\hat{\boldsymbol\beta} = (\boldsymbol{X' X})^{-1}\boldsymbol X'\boldsymbol y$$
+
+### MLE
+
+Since the errors are normal $\varepsilon_i \sim \mathcal{N}(0, \sigma^2)$,
+
+$$P(\varepsilon_i)=\frac{1}{\sqrt{2\pi\sigma^2}}\exp\bigg(-\frac{(\varepsilon_i-0)^2}{2\sigma^2}\bigg) $$
+
+The probability of observing $(x_i, y_i)$ given $\boldsymbol\beta$ is
+
+$$P(x_i,y_i|\beta)=\frac{1}{\sqrt{2\pi\sigma^2}}\exp\bigg(-\frac{(y_i-x_i\beta)^2}{2\sigma^2}\bigg)$$
+
+Thus the sample follows
+
+$$\boldsymbol y \sim \mathcal{N}(\boldsymbol X \boldsymbol\beta, \sigma^2I)$$
+
+The joint density (likelihood) of the whole sample is
+
+$$L(\beta,\sigma^2) = \prod_{i=1}^n P(x_i,y_i|\beta) = \left(\frac{1}{\sqrt{2\pi\sigma^2}}\right)^n\exp\bigg(-\frac{1}{2\sigma^2}(\boldsymbol y -\boldsymbol X\boldsymbol\beta)'(\boldsymbol y -\boldsymbol X\boldsymbol\beta)\bigg)$$
+
+We want parameters that maximize $L(\beta,\sigma^2)$.
+
+For convenience, consider the log-likelihood
+
+$$
+\ell(\beta,\sigma^2) = \log L(\beta,\sigma^2)
+   = -\frac{n}{2}\log(2\pi\sigma^2)
+      -\frac{1}{2\sigma^2}(\boldsymbol y -\boldsymbol X\boldsymbol\beta)'(\boldsymbol y -\boldsymbol X\boldsymbol\beta)
+$$
+
+Differentiating w.r.t. $\beta$ and $\sigma^2$ gives
+
+- $\dfrac{\partial \ell}{\partial \beta} = \dfrac{1}{\sigma^2}\boldsymbol{X'}(\boldsymbol{y-X\beta})$
+- $\dfrac{\partial \ell}{\partial \sigma^2} = -\dfrac{n}{2\sigma^2} + \dfrac{1}{(2\sigma^2)^2}(\boldsymbol y -\boldsymbol X\boldsymbol\beta)'(\boldsymbol y -\boldsymbol X\boldsymbol\beta)$
+
+Solving yields
+
+- $\hat{\boldsymbol\beta} = (\boldsymbol{X' X})^{-1}\boldsymbol X'\boldsymbol y$
+- $\hat\sigma^2 = \dfrac{1}{n}(\boldsymbol y -\boldsymbol X\hat{\boldsymbol\beta})'(\boldsymbol y -\boldsymbol X\hat{\boldsymbol\beta}) = \dfrac{1}{n}\sum^n_i e_i^2$
+- $\log L = -\dfrac{n}{2}\log(2\pi\hat\sigma^2)-\dfrac{1}{2\sigma^2}(n\hat\sigma^2)
+   = -\dfrac{n}{2}\log\big(2\pi\tfrac{\sum^n_i e_i^2}{n}\big) - \dfrac{n}{2}
+   = -\dfrac{n}{2}\big[\log(2\pi)+\log(\tfrac{\sum^n_i e_i^2}{n}) + 1\big]$
+
+## Prediction
+
+When using the model for prediction, we need to account for several sources of uncertainty:
+
+- Model error $Var(\boldsymbol\varepsilon)$: random noise in the system.
+- Estimation error $Var(\hat{\boldsymbol\beta})$: difference between the estimator $\hat{\boldsymbol\beta}$ and the true parameter $\boldsymbol \beta$.
+- Prediction error $Var(y^*)$: difference between the predicted value $y^*$ and the true outcome $y$.
+
+### Model error
+
+Because the model is an abstraction of reality, error is unavoidable.
+
+Model error measures the discrepancy between true values and fitted (or predicted) values and is typically assessed via residuals.
+
+In practice, we estimate the error variance $Var(\boldsymbol\varepsilon) = \sigma^2$ by the unbiased residual variance
+
+$$\hat\sigma^2 = \frac{1}{n-k-1}(\boldsymbol y -\boldsymbol X\hat{\boldsymbol\beta})'(\boldsymbol y -\boldsymbol X\hat{\boldsymbol\beta}) = \frac{1}{n-k-1}\sum^n_i e_i^2$$
+
+### Estimation error
+
+From the white-noise assumption we have
+
+- $E(\boldsymbol\varepsilon) = 0$.
+- $Var(\boldsymbol\varepsilon) = \sigma^2$.
+
+Since $\hat{\boldsymbol\beta}$ is an unbiased estimator of $\boldsymbol\beta$, we have $E(\hat{\boldsymbol\beta}) = \boldsymbol\beta$.
+
+Substitute $\boldsymbol {y = X\beta + \varepsilon}$ into $\hat{\boldsymbol\beta} = (\boldsymbol{X' X})^{-1}\boldsymbol X'\boldsymbol y$:
+
+$$
+\begin{matrix}\hat{\boldsymbol\beta} 
+&=&(\boldsymbol{X' X})^{-1}\boldsymbol X'(\boldsymbol{X\beta + \varepsilon}) \\
+&=&(\boldsymbol{X' X})^{-1}\boldsymbol X'\boldsymbol{X\beta} +(\boldsymbol{X' X})^{-1}\boldsymbol X'\boldsymbol\varepsilon\\
+&=&\boldsymbol{\beta} +(\boldsymbol{X' X})^{-1}\boldsymbol X'\boldsymbol\varepsilon\end{matrix}
+$$
+
+Then
+
+$$
+\begin{matrix}Var(\hat{\boldsymbol\beta}) 
+&=& E(\hat{\boldsymbol\beta}^2) - E^2(\hat{\boldsymbol\beta}) \\
+&=& E(\hat{\boldsymbol\beta}^2) - \boldsymbol\beta^2 \\
+&=& E\big[\big(\boldsymbol{\beta} +(\boldsymbol{X' X})^{-1}\boldsymbol X'\boldsymbol\varepsilon\big)^2\big]- \boldsymbol\beta^2 \\
+&=& \boldsymbol\beta^2 + E\big[\big((\boldsymbol{X' X})^{-1}\boldsymbol X'\boldsymbol\varepsilon\big)^2\big]- \boldsymbol\beta^2 \\
+&=& \big((\boldsymbol{X' X})^{-1}\boldsymbol X'\big)^2E(\boldsymbol\varepsilon^2)\end{matrix}
+$$
+
+Here
+
+- $E(\boldsymbol\varepsilon^2) = Var(\boldsymbol\varepsilon) - E^2(\boldsymbol\varepsilon) = \sigma^2$.
+- $\big((\boldsymbol{X' X})^{-1}\boldsymbol X'\big)^2 = (\boldsymbol{X' X})^{-1}\boldsymbol X'\boldsymbol X (\boldsymbol{X' X})^{'-1} = (\boldsymbol{X' X})^{-1}$.
+
+Thus
+
+$$Var(\hat{\boldsymbol\beta}) = \hat\sigma^2(\boldsymbol{X' X})^{-1}$$
+
+### Prediction error
+
+Given $\hat{\boldsymbol \beta}$ and a predictor vector $\boldsymbol x^*$, the predicted mean is
+
+$$\hat{y}^* = E(y^*|\boldsymbol y,\boldsymbol X, \boldsymbol x^*) = \boldsymbol x^* \hat{\boldsymbol\beta} = \boldsymbol x^*(\boldsymbol X'\boldsymbol X)^{-1}\boldsymbol X'\boldsymbol y$$
+
+Prediction uncertainty arises from the estimation error in $\hat{\boldsymbol \beta}$, i.e. $Var(\hat{\boldsymbol\beta}) = \sigma^2(\boldsymbol{X' X})^{-1}$, so the variance of the predicted mean is
+
+$$Var(y^*|\boldsymbol X, \boldsymbol x^*) = Var(\boldsymbol x^* \hat{\boldsymbol\beta}|\boldsymbol X) =\boldsymbol x^*Var(\hat{\boldsymbol\beta}) (\boldsymbol x^*)' = \hat\sigma^2\boldsymbol x^*(\boldsymbol X'\boldsymbol X)^{-1}(\boldsymbol x^*)'$$
+
+In addition, we need to account for model error $Var(\boldsymbol\varepsilon) = \sigma^2$ when predicting an individual observation:
+
+$$Var(y^*|\boldsymbol X, \boldsymbol x^*) + Var(\boldsymbol\varepsilon) = \hat\sigma^2 \big[1 + \boldsymbol x^*(\boldsymbol X'\boldsymbol X)^{-1}(\boldsymbol x^*)' \big]$$
+
+From these variances we obtain the corresponding standard errors:
+
+- Standard error of the predicted **mean**: $\text{SE}_{\text{mean}} = \sqrt{Var(y^*|\boldsymbol X, \boldsymbol x^*) }$.
+- Standard error of a predicted **observation**: $\text{SE}_{\text{obs}} = \sqrt{Var(y^*|\boldsymbol X, \boldsymbol x^*) + Var(\boldsymbol\varepsilon)}$.
+
+Here we assume $\boldsymbol x^*$ is known and do not treat it as a source of variance.
+If $\boldsymbol x^*$ is itself estimated, its estimation error should also be included.
+
+### Confidence intervals
+
+Predictions are always uncertain, and we quantify this uncertainty with confidence intervals.
+
+The theory behind this is the [Central Limit Theorem](https://en.wikipedia.org/wiki/Normal_distribution#Central_limit_theorem): when the sample size is large enough, the sample mean is approximately normally distributed.
+
+The model prediction can be viewed as the mean of a normal distribution, and around this mean there is a symmetric [probability interval](https://en.wikipedia.org/wiki/Normal_distribution#Standard_deviation_and_coverage).
+
+Via the [quantile function](https://en.wikipedia.org/wiki/Normal_distribution#Quantile_function), we connect probabilities and standard errors. A classic example is the [3-sigma rule](https://en.wikipedia.org/wiki/68%E2%80%9395%E2%80%9399.7_rule):
+
+- Probability of falling in $\mu\pm1\sigma$ is 68.27%.
+- Probability of falling in $\mu\pm2\sigma$ is 95.45%.
+- Probability of falling in $\mu\pm3\sigma$ is 99.73%.
+
+When reporting model predictions, besides the point forecast $\hat y$, we usually provide a confidence interval:
+
+- $P\big(y \in [\hat y \pm1.64\, \text{SE}_{\text{obs}}]\big) \approx 90\%$.
+- $P\big(y \in [\hat y \pm1.96\, \text{SE}_{\text{obs}}]\big) \approx 95\%$.
+- $P\big(y \in [\hat y \pm2.57\, \text{SE}_{\text{obs}}]\big) \approx 99\%$.
+
+The width of the interval depends on:
+
+- Confidence level: higher confidence → wider interval → lower apparent precision.
+- Model accuracy: better models yield narrower intervals at the same confidence level.
+
+## Numerical methods
+
+### LU decomposition
+
+To compute $\hat{\boldsymbol\beta} = (\boldsymbol{X' X})^{-1}\boldsymbol X'\boldsymbol y$, we need the inverse of $\boldsymbol X'\boldsymbol X$.
+
+However, not every matrix is invertible; only square matrices with non-zero determinants have inverses.
+
+When there is multicollinearity, $\boldsymbol X'\boldsymbol X$ becomes singular and non-invertible.
+
+One common way to compute inverses is [Gaussian elimination](https://en.wikipedia.org/wiki/Gaussian_elimination#Finding_the_inverse_of_a_matrix).
+
+Another is LU decomposition.
+
+To compute $A^{-1}$ via LU decomposition:
+
+- Factor $A$ into a lower-triangular matrix $L$ and an upper-triangular matrix $U$:
+
+$$A \to LU = \begin{bmatrix}\ell_{11}&0&0\\\ell_{21}&\ell_{22}&0\\\ell_{31}&\ell_{32}&\ell_{33}\end{bmatrix} \times \begin{bmatrix}u_{11}&u_{12}&u_{13}\\0&u_{22}&u_{23}\\0&0&u_{33}\end{bmatrix}$$
+
+- Replace $A$ with $LU$ and note
+
+$$A^{-1}=(LU)^{-1} = U^{-1} L^{-1}$$
+
+- Solve for the inverses of the triangular matrices $L^{-1}$ and $U^{-1}$:
+   - $LL^{-1}=I \to \begin{bmatrix}\ell_{11}&0&0\\\ell_{21}&\ell_{22}&0\\\ell_{31}&\ell_{32}&\ell_{33}\end{bmatrix} \times \begin{bmatrix}x_{11}&0&0\\x_{21}&x_{22}&0\\x_{31}&x_{32}&x_{33}\end{bmatrix} = I$
+   - $UU^{-1}=I \to \begin{bmatrix}u_{11}&u_{12}&u_{13}\\0&u_{22}&u_{23}\\0&0&u_{33}\end{bmatrix} \times \begin{bmatrix}y_{11}&y_{12}&y_{13}\\0&y_{22}&y_{23}\\0&0&y_{33}\end{bmatrix} = I$
+
+LU itself is computed using Gaussian elimination and has time complexity $O(n^3)$.
+
+But once $L$ and $U$ are available, solving systems is cheaper than recomputing a full inverse from scratch.
+
+```go
+package main
+
+import (
+    "fmt"
+    "gonum.org/v1/gonum/blas"
+    "gonum.org/v1/gonum/blas/blas64"
+    "gonum.org/v1/gonum/lapack/lapack64"
+)
+
+func main() {
+
+    swap := []int{0, 0, 0}
+    work := []float64{0, 0, 0}
+
+    // Decompose A = LU
+    A := blas64.General{3, 3, []float64{
+       2, -1, 0,
+       -1, 2, -1,
+       0, -1, 2,
+    }, 3}
+    if ok := lapack64.Getrf(A, swap); !ok {
+       panic("LU decomposition unstable")
+    }
+
+    // Print L
+    fmt.Printf("[1 0 0]\n[%.2f 1 0]\n[%.2f %.2f 1]\n", A.Data[3], A.Data[6], A.Data[7])
+    // Print U
+    fmt.Printf("[%.2f %.2f %.2f]\n[0 %.2f %.2f]\n[0 0 %.2f]\n", A.Data[0], A.Data[1], A.Data[2], A.Data[4], A.Data[5], A.Data[8])
+
+    // Solve LL⁻ = I with iteration
+    // Solve UU⁻ = I with iteration
+    // Calculate A⁻ = U⁻L⁻
+    if ok := lapack64.Getri(A, swap, work, len(work)); !ok {
+       panic("LU inverse failed")
+    }
+
+    fmt.Printf("[%.2f %.2f %.2f]\n[%.2f %.2f %.2f]\n[%.2f %.2f %.2f]\n",
+       A.Data[0], A.Data[1], A.Data[2], A.Data[3], A.Data[4], A.Data[5], A.Data[6], A.Data[7], A.Data[8])
+
+    // Verify AxA⁻ = I
+    B := blas64.General{3, 3, []float64{
+       2, -1, 0,
+       -1, 2, -1,
+       0, -1, 2,
+    }, 3}
+
+    C := blas64.General{3, 3, []float64{
+       0, 0, 0,
+       0, 0, 0,
+       0, 0, 0,
+    }, 3}
+
+    blas64.Gemm(blas.NoTrans, blas.NoTrans, 1, A, B, 0, C)
+
+    fmt.Printf("[%.2f %.2f %.2f]\n[%.2f %.2f %.2f]\n[%.2f %.2f %.2f]\n",
+       C.Data[0], C.Data[1], C.Data[2], C.Data[3], C.Data[4], C.Data[5], C.Data[6], C.Data[7], C.Data[8])
+}
+
+```
+
+### QR decomposition
+
+In practice, directly inverting high-dimensional matrices is usually a bad idea:
+
+- The inverse of a sparse matrix may be dense, increasing memory and computation cost.
+- Floating-point operations accumulate numerical error, which can hurt stability.
+
+In most applications, including regression, we only need to solve a system like $\boldsymbol{X'X\beta} = \boldsymbol{X'y}$; computing the inverse is just one way to do that.
+
+See for example:
+
+https://math.stackexchange.com/questions/3185211/what-does-qr-decomposition-have-to-do-with-least-squares-method
+
+Consider solving $A'Ax=A'b$ using QR decomposition:
+
+- Factor $A$ as $A = QR$, where $Q$ is orthogonal and $R$ is upper triangular:
+
+$$A \to QR = \begin{bmatrix}a_{11}&a_{12}&a_{13}\\a_{21}&a_{22}&a_{23}\\a_{31}&a_{32}&a_{33}\\a_{41}&a_{42}&a_{43}\end{bmatrix} \to \begin{bmatrix}q_{11}&q_{12}&q_{13}&q_{14}\\q_{21}&q_{22}&q_{23}&q_{24}\\q_{31}&q_{32}&q_{33}&q_{34}\\q_{41}&q_{42}&q_{43}&q_{44}\end{bmatrix} \times \begin{bmatrix}r_{11}&r_{12}&r_{13}\\0&r_{22}&r_{23}\\0&0&r_{33}\\0&0&0\end{bmatrix}$$
+
+- Substitute into the normal equations:
+
+$$(QR)'(QR)x=(QR)'b \ \to\ R'Q'QRx=R'Q'b$$
+
+- Use $QQ'=I$ to get
+
+$$R'Rx=R'Q'b \ \to\ Rx=Q'b$$
+
+- Solve the triangular system for $x$:
+
+$$\begin{bmatrix}r_{11}&r_{12}&r_{13}\\0&r_{22}&r_{23}\\0&0&r_{33}\\0&0&0\end{bmatrix} \times \begin{bmatrix}x_{1}\\x_{2}\\x_{3}\end{bmatrix} = \begin{bmatrix}q_{11}b_1+q_{21}b_2+q_{31}b_3+q_{41}b_4\\q_{12}b_1+q_{22}b_2+q_{32}b_3+q_{42}b_4\\q_{13}b_1+q_{23}b_2+q_{33}b_3+q_{43}b_4\\q_{14}b_1+q_{24}b_2+q_{34}b_3+q_{44}b_4\end{bmatrix}$$
+
+With QR, the covariance of the estimator can be written as
+
+$$Var(\hat{\boldsymbol\beta}) / \sigma^2  = (\boldsymbol{X' X})^{-1} =((QR)'QR)^{-1} = R^{-1}(Q'Q)R'^{-1} = R^{-1}R'^{-1}=(R'R)^{-1}$$
+
+```go
+package main
+
+import (
+    "fmt"
+    "gonum.org/v1/gonum/blas"
+    "gonum.org/v1/gonum/blas/blas64"
+    "gonum.org/v1/gonum/lapack/lapack64"
+)
+
+func main() {
+
+    y := []float64{2, 3, 5, 7, 10}
+    X := []float64{
+       1, 1, 10, 1,
+       1, 2, 8, 0,
+       1, 3, 9, 1,
+       1, 4, 7, 1,
+       1, 5, 6, 0,
+    }
+
+    A := blas64.General{5, 4, X, 4}
+    b := blas64.Vector{4, y, 1}
+
+    // Decompose A = QR
+    QR := blas64.General{5, 4, make([]float64, len(A.Data)), 4}
+    copy(QR.Data, A.Data)
+
+    work := []float64{0}
+    tau := make([]float64, min(QR.Rows, QR.Cols))
+
+    lapack64.Geqrf(QR, tau, work, -1)
+    work = make([]float64, int(work[0]))
+    lapack64.Geqrf(QR, tau, work, len(work))
+
+    // Restore Q
+    R := blas64.Triangular{blas.Upper, blas.NonUnit, 4, QR.Data, 4}
+    Q := blas64.General{5, 4, make([]float64, len(QR.Data)), 4}
+    copy(Q.Data, QR.Data)
+
+    lapack64.Orgqr(Q, tau, work, -1)
+    work = make([]float64, int(work[0]))
+    lapack64.Orgqr(Q, tau, work, len(work))
+
+    // Print Q
+    fmt.Printf("[%.2f %.2f %.2f %.2f]\n"+
+       "[%.2f %.2f %.2f %.2f]\n"+
+       "[%.2f %.2f %.2f %.2f]\n"+
+       "[%.2f %.2f %.2f %.2f]\n"+
+       "[%.2f %.2f %.2f %.2f]\n",
+       Q.Data[0], Q.Data[1], Q.Data[2], Q.Data[3],
+       Q.Data[4], Q.Data[5], Q.Data[6], Q.Data[7],
+       Q.Data[8], Q.Data[9], Q.Data[10], Q.Data[11],
+       Q.Data[12], Q.Data[13], Q.Data[14], Q.Data[15],
+       Q.Data[16], Q.Data[17], Q.Data[18], Q.Data[19])
+
+    // Print R
+    fmt.Printf("[%.2f %.2f %.2f %.2f]\n"+
+       "[0 %.2f %.2f %.2f]\n"+
+       "[0 0 %.2f %.2f]\n"+
+       "[0 0 0 %.2f]\n",
+       R.Data[0], R.Data[1], R.Data[2], R.Data[3],
+       R.Data[5], R.Data[6], R.Data[7],
+       R.Data[10], R.Data[11],
+       R.Data[15])
+
+    // Calculate Qᵀb
+    Qb := blas64.Vector{4, make([]float64, 4), 1}
+    blas64.Gemv(blas.Trans, 1, Q, b, 0, Qb)
+
+    // Solve Rx = Qᵀb
+    x := blas64.General{4, 1, Qb.Data, 1}
+    if ok := lapack64.Trtrs(blas.NoTrans, R, x); !ok {
+       panic("Solve X failed")
+    }
+
+    // Print x
+    fmt.Printf("[%.2f %.2f %.2f %.2f]\n",
+       x.Data[0], x.Data[1], x.Data[2], x.Data[3])
+
+    // Calculate RᵀR
+    RR := blas64.General{4, 4, make([]float64, 16), 4}
+    for i := 0; i < R.N; i++ {
+       for j := i; j < R.N; j++ {
+          RR.Data[i*R.N+j] = R.Data[i*R.N+j]
+       }
+    }
+    blas64.Trmm(blas.Left, blas.Trans, 1, R, RR)
+
+    // Calculate (RᵀR)⁻
+    swap := make([]int, 4)
+    work = make([]float64, 4)
+    if ok := lapack64.Getrf(RR, swap); !ok {
+       panic("LU decomposition unstable")
+    }
+    if ok := lapack64.Getri(RR, swap, work, len(work)); !ok {
+       panic("LU inverse failed")
+    }
+
+    // Print (RᵀR)⁻
+    fmt.Printf("[%.2f %.2f %.2f %.2f]\n"+
+       "[%.2f %.2f %.2f %.2f]\n"+
+       "[%.2f %.2f %.2f %.2f]\n"+
+       "[%.2f %.2f %.2f %.2f]\n",
+       RR.Data[0], RR.Data[1], RR.Data[2], RR.Data[3],
+       RR.Data[4], RR.Data[5], RR.Data[6], RR.Data[7],
+       RR.Data[8], RR.Data[9], RR.Data[10], RR.Data[11],
+       RR.Data[12], RR.Data[13], RR.Data[14], RR.Data[15])
+
+    // Calculate residual e
+    beta := blas64.Vector{4, x.Data, 1}
+    residual := blas64.Vector{len(y), make([]float64, len(y)), 1}
+    copy(residual.Data, y)
+    blas64.Gemv(blas.NoTrans, 1, A, beta, -1, residual)
+
+    // Calculate unbiased variance σ² = Σe² / (n-k-1)
+    freedomDeg := float64(len(y) - (beta.N - 1) - 1)
+    unbiasedVar := blas64.Dot(residual, residual) / freedomDeg
+    fmt.Printf("[%.2f %.2f %.2f %.2f %.2f] / %.2f -> %.2f\n",
+       residual.Data[0], residual.Data[1], residual.Data[2], residual.Data[3], residual.Data[4], freedomDeg, unbiasedVar)
+
+    // Predicate
+    xStar := blas64.Vector{4, []float64{1, 2, 1, 2}, 1}
+    yStar := blas64.Dot(beta, xStar)
+
+    // Calculate (σ²(XᵀX)⁻)xᵀ
+    xStarT := blas64.General{4, 1, xStar.Data, 1}
+    predVar := blas64.General{beta.N, 1, make([]float64, beta.N), 1}
+    blas64.Gemm(blas.NoTrans, blas.NoTrans, unbiasedVar, RR, xStarT, 0, predVar)
+
+    // Calculate prediction variance x(σ²(XᵀX)⁻)xᵀ
+    predVarT := blas64.Vector{beta.N, predVar.Data, 1}
+    yVar := blas64.Dot(xStar, predVarT)
+    fmt.Printf("%.2f (±%.2f)\n", yStar, yVar)
+
+}
+
+```
+
+### SVD decomposition
+
+When a matrix is not invertible, we can use its pseudoinverse $A^+$ as a substitute. The pseudoinverse satisfies the Moore–Penrose conditions:
+
+- $AA^+A = A$
+- $A^+AA^+ = A^+$
+- $(AA^+)^* = AA^+$
+- $(A^+A)^* = A^+A$
+
+Even if we cannot invert $A$, we can still solve systems using $A^+$.
+
+One way to construct $A^+$ is via SVD.
+
+- Factor a matrix $A$ as $A = U\Sigma V^*$ where $U$ and $V$ are orthogonal and $\Sigma$ is diagonal:
+
+$$
+A \to U\Sigma V^* = \begin{bmatrix}a_{11}&a_{12}\\a_{21}&a_{22}\\a_{31}&a_{32}\end{bmatrix} \to \begin{bmatrix}u_{11}&u_{12}&u_{13}\\u_{21}&u_{22}&u_{23}\\u_{31}&u_{32}&u_{33}\end{bmatrix} \times \begin{bmatrix}\sigma_{1}&0\\0&\sigma_{2}\\0&0\end{bmatrix} \times \begin{bmatrix}\nu_{11}&\nu_{12}\\\nu_{21}&\nu_{22}\end{bmatrix}
+$$
+
+- Construct the pseudoinverse of $\Sigma$:
+
+$$
+\Sigma^+ = \begin{bmatrix}\frac{1}{\sigma_{1}}&0&0\\0&\frac{1}{\sigma_{2}}&0\end{bmatrix}
+$$
+
+- Then define the pseudoinverse of $A$:
+
+$$
+A^+ = V\Sigma^+ U^* = \begin{bmatrix}\nu_{11}&\nu_{21}\\\nu_{12}&\nu_{22}\end{bmatrix} \times \begin{bmatrix}\frac{1}{\sigma_{1}}&0&0\\0&\frac{1}{\sigma_{2}}&0\end{bmatrix}
+   	imes \begin{bmatrix}u_{11}&u_{21}&u_{31}\\u_{12}&u_{22}&u_{32}\\u_{13}&u_{23}&u_{33}\end{bmatrix} 
+$$
+
+Implementation-wise, we handle two cases:
+
+- If $\dim(V) < \dim(U)$,
+
+$$\begin{bmatrix}\frac{\nu_{11}}{\sigma_1}&\frac{\nu_{21}}{\sigma_2}&0\\\frac{\nu_{12}}{\sigma_1}&\frac{\nu_{22}}{\sigma_2}&0\end{bmatrix}
+      	imes \begin{bmatrix}u_{11}&u_{21}&u_{31}\\u_{12}&u_{22}&u_{32}\\u_{13}&u_{23}&u_{33}\end{bmatrix} \to \begin{bmatrix}\frac{\nu_{11}}{\sigma_1}&\frac{\nu_{21}}{\sigma_2}\\\frac{\nu_{12}}{\sigma_1}&\frac{\nu_{22}}{\sigma_2}\end{bmatrix}
+      	imes \begin{bmatrix}u_{11}&u_{21}\\u_{12}&u_{22}\\u_{13}&u_{23}\end{bmatrix}$$
+
+- If $\dim(U) < \dim(V)$,
+
+$$\begin{bmatrix}\nu_{11}&\nu_{21}&\nu_{31}\\\nu_{12}&\nu_{22}&\nu_{32}\\\nu_{13}&\nu_{23}&\nu_{33}\end{bmatrix} \times \begin{bmatrix}\frac{u_{11}}{\sigma_1}&\frac{u_{21}}{\sigma_1}\\\frac{u_{12}}{\sigma_2}&\frac{u_{22}}{\sigma_2}\\0&0\end{bmatrix} \to
+      \begin{bmatrix}\nu_{11}&\nu_{21}\\\nu_{12}&\nu_{22}\\\nu_{13}&\nu_{23}\end{bmatrix} \times \begin{bmatrix}\frac{u_{11}}{\sigma_1}&\frac{u_{21}}{\sigma_1}\\\frac{u_{12}}{\sigma_2}&\frac{u_{22}}{\sigma_2}\end{bmatrix}
+      $$
+
+One can verify that $A^+$ satisfies the Moore–Penrose conditions:
+
+- $AA^+A=U\Sigma V^*V\Sigma^+U^*U\Sigma V^*=U\Sigma\Sigma^+\Sigma V^*=U\Sigma V^*=A$
+- $A^+AA^+=V\Sigma^+U^*U\Sigma V^*V\Sigma^+=V\Sigma^+\Sigma\Sigma^+V^*=V\Sigma^+V^*=A^+$
+- $(AA^+)^*=(U\Sigma V^*V\Sigma^+U^*)^*=U\Sigma\Sigma^+U^*=AA^+$
+- $(A^+A)^*=(V\Sigma^+U^*U\Sigma V^*)^*=V\Sigma^+\SigmaV^*=A^+A$
+
+From the derivation in this post, OLS admits the representation
+
+$$\hat{\boldsymbol\beta} = (\boldsymbol{X^* X})^+\boldsymbol X^*\boldsymbol y = \boldsymbol X^+\boldsymbol y$$
+
+so we can estimate regression parameters via the pseudoinverse constructed from SVD.
+
+https://math.stackexchange.com/questions/4440503/moore-penrose-pseudoinverse-solves-the-least-squares-problem-svd-framework
+
+Using the pseudoinverse, we can simplify the covariance expression as
+
+$$
+Var(\hat{\boldsymbol\beta}) / \sigma^2  = (\boldsymbol{X' X})^{-1} 
+= (\boldsymbol{X' X})^{+}=\boldsymbol X^+(\boldsymbol X')^{+}=\boldsymbol X^+(\boldsymbol X^{+}){'}
+$$
+
+```go
+package main
+
+import (
+    "fmt"
+    "gonum.org/v1/gonum/blas"
+    "gonum.org/v1/gonum/blas/blas64"
+    "gonum.org/v1/gonum/lapack"
+    "gonum.org/v1/gonum/lapack/lapack64"
+)
+
+func main() {
+
+    y := []float64{2, 3, 5, 7, 10}
+    X := []float64{
+       1, 1, 10, 1,
+       1, 2, 8, 0,
+       1, 3, 9, 1,
+       1, 4, 7, 1,
+       1, 5, 6, 0,
+    }
+
+    A := blas64.General{5, 4, X, 4}
+    b := blas64.Vector{4, y, 1}
+
+    // Decompose A = UΣVᵀ
+    SVD := blas64.General{5, 4, make([]float64, len(A.Data)), 4}
+    copy(SVD.Data, A.Data)
+
+    U := blas64.General{A.Rows, A.Rows, make([]float64, A.Rows*A.Rows), A.Rows}
+    V := blas64.General{A.Cols, A.Cols, make([]float64, A.Cols*A.Cols), A.Cols}
+    S := make([]float64, min(A.Rows, A.Cols))
+
+    work := []float64{0}
+    lapack64.Gesvd(lapack.SVDAll, lapack.SVDAll, SVD, U, V, S, work, -1)
+    work = make([]float64, int(work[0]))
+    if ok := lapack64.Gesvd(lapack.SVDAll, lapack.SVDAll, SVD, U, V, S, work, len(work)); !ok {
+       panic("SVD decomposition failed")
+    }
+
+    // Print U
+    fmt.Printf("[%.2f %.2f %.2f %.2f %.2f]\n"+
+       "[%.2f %.2f %.2f %.2f %.2f]\n"+
+       "[%.2f %.2f %.2f %.2f %.2f]\n"+
+       "[%.2f %.2f %.2f %.2f %.2f]\n"+
+       "[%.2f %.2f %.2f %.2f %.2f]\n",
+       U.Data[0], U.Data[1], U.Data[2], U.Data[3], U.Data[4],
+       U.Data[5], U.Data[6], U.Data[7], U.Data[8], U.Data[9],
+       U.Data[10], U.Data[11], U.Data[12], U.Data[13], U.Data[14],
+       U.Data[15], U.Data[16], U.Data[17], U.Data[18], U.Data[19],
+       U.Data[20], U.Data[21], U.Data[22], U.Data[23], U.Data[24])
+
+    // Print Σ
+    fmt.Printf("[%.2f 0 0 0 0]\n"+
+       "[0 %.2f 0 0 0]\n"+
+       "[0 0 %.2f 0 0]\n"+
+       "[0 0 0 %.2f 0]\n"+
+       "[0 0 0 0 0]\n",
+       S[0], S[1], S[2], S[3])
+
+    // Print Vᵀ
+    fmt.Printf("[%.2f %.2f %.2f %.2f]\n"+
+       "[%.2f %.2f %.2f %.2f]\n"+
+       "[%.2f %.2f %.2f %.2f]\n"+
+       "[%.2f %.2f %.2f %.2f]\n",
+       V.Data[0], V.Data[1], V.Data[2], V.Data[3],
+       V.Data[4], V.Data[5], V.Data[6], V.Data[7],
+       V.Data[8], V.Data[9], V.Data[10], V.Data[11],
+       V.Data[12], V.Data[13], V.Data[14], V.Data[15])
+
+    // Calculate Σ⁺
+    for i := 0; i < len(S); i++ {
+       if S[i] > 0 {
+          S[i] = 1 / S[i]
+       }
+    }
+
+    if A.Rows > A.Cols {
+       // Calculate V = (Σ⁺ᵀVᵀ)ᵀ
+       for i := 0; i < len(V.Data); i++ {
+          V.Data[i] *= S[i/A.Cols]
+       }
+       U.Cols = A.Cols // trim U
+    } else {
+       // Calculate U = (UΣ⁺ᵀ)ᵀ
+       for i := 0; i < len(U.Data); i++ {
+          U.Data[i] *= S[i%A.Rows]
+       }
+       V.Rows = A.Rows // trim V
+    }
+
+    // Calculate A⁺ = VΣ⁺Uᵀ = Vᵀ x Uᵀ
+    INV := blas64.General{A.Cols, A.Rows, make([]float64, A.Cols*A.Rows), A.Rows}
+    blas64.Gemm(blas.ConjTrans, blas.ConjTrans, 1, V, U, 0, INV)
+
+    fmt.Printf("[%.2f %.2f %.2f %.2f %.2f]\n"+
+       "[%.2f %.2f %.2f %.2f %.2f]\n"+
+       "[%.2f %.2f %.2f %.2f %.2f]\n"+
+       "[%.2f %.2f %.2f %.2f %.2f]\n",
+       INV.Data[0], INV.Data[1], INV.Data[2], INV.Data[3], INV.Data[4],
+       INV.Data[5], INV.Data[6], INV.Data[7], INV.Data[8], INV.Data[9],
+       INV.Data[10], INV.Data[11], INV.Data[12], INV.Data[13], INV.Data[14],
+       INV.Data[15], INV.Data[16], INV.Data[17], INV.Data[18], INV.Data[19])
+
+    // Calculate x = A⁺b
+    x := blas64.Vector{4, make([]float64, 4), 1}
+    blas64.Gemv(blas.NoTrans, 1, INV, b, 0, x)
+
+    // Print x
+    fmt.Printf("[%.2f %.2f %.2f %.2f]\n",
+       x.Data[0], x.Data[1], x.Data[2], x.Data[3])
+
+    // Calculate A⁺A⁺ᵀ
+    AA := blas64.General{4, 4, make([]float64, 16), 4}
+    blas64.Gemm(blas.NoTrans, blas.Trans, 1, INV, INV, 0, AA)
+
+    // Print A⁺A⁺ᵀ
+    fmt.Printf("[%.2f %.2f %.2f %.2f]\n"+
+       "[%.2f %.2f %.2f %.2f]\n"+
+       "[%.2f %.2f %.2f %.2f]\n"+
+       "[%.2f %.2f %.2f %.2f]\n",
+       AA.Data[0], AA.Data[1], AA.Data[2], AA.Data[3],
+       AA.Data[4], AA.Data[5], AA.Data[6], AA.Data[7],
+       AA.Data[8], AA.Data[9], AA.Data[10], AA.Data[11],
+       AA.Data[12], AA.Data[13], AA.Data[14], AA.Data[15])
+
+    // Calculate residual e
+    beta := blas64.Vector{4, x.Data, 1}
+    residual := blas64.Vector{len(y), make([]float64, len(y)), 1}
+    copy(residual.Data, y)
+    blas64.Gemv(blas.NoTrans, 1, A, beta, -1, residual)
+
+    // Calculate unbiased variance σ² = Σe² / (n-k-1)
+    freedomDeg := float64(len(y) - (beta.N - 1) - 1)
+    unbiasedVar := blas64.Dot(residual, residual) / freedomDeg
+    fmt.Printf("[%.2f %.2f %.2f %.2f %.2f] / %.2f -> %.2f\n",
+       residual.Data[0], residual.Data[1], residual.Data[2], residual.Data[3], residual.Data[4], freedomDeg, unbiasedVar)
+
+    // Predicate
+    xStar := blas64.General{2, 4, []float64{
+       1, 2, 1, 2,
+       1, 2, 2, 1,
+    }, 4}
+    yStar := blas64.Vector{2, []float64{0, 0}, 1}
+    blas64.Gemv(blas.NoTrans, 1, xStar, beta, 0, yStar)
+
+    // Calculate prediction variance x(σ²(XᵀX)⁻)xᵀ
+    predVar := blas64.General{xStar.Rows, beta.N, make([]float64, beta.N*xStar.Rows), beta.N}
+    blas64.Gemm(blas.NoTrans, blas.Trans, unbiasedVar, xStar, AA, 0, predVar)
+    yVar := make([]float64, 2)
+    for i := 0; i < len(predVar.Data); i++ {
+       yVar[i/beta.N] += predVar.Data[i] * xStar.Data[i]
+    }
+    fmt.Printf("%.2f ± %.2f, %.2f ± %.2f\n",
+       yStar.Data[0], yVar[0], yStar.Data[1], yVar[1])
+
+}
+
+```
+
+## Model diagnostics
+
+### Coefficient of determination
+
+The coefficient of determination, or $R^2$, measures how well the regression model fits the data.
+
+- Total sum of squares: $\text{SS}_{\text{tot}} = \sum^n_i( y_i-\bar y)^2$
+- Residual sum of squares: $\text{SS}_{\text{res}} = \sum^n_i(y_i-\hat y_i)^2 = \sum_i e_i^2$
+- Coefficient of determination: $R^2 = 1 - \dfrac{\text{SS}_{\text{res}}/n}{\text{SS}_{\text{tot}}/n} = 1 - \dfrac{\text{SS}_{\text{res}}}{\text{SS}_{\text{tot}}}$
+
+Interpretation:
+
+- $\text{SS}_{\text{tot}}$: total variation in the data.
+- $\text{SS}_{\text{res}}$: variation in the response not explained by the model.
+- $R^2$: proportion of variance in the response explained by the model.
+
+The range of $R^2$ is $[0, 1]$:
+
+- $R^2 = 1$: perfect fit; the model explains all variation in $y$.
+- $R^2 = 0$: the model explains none of the variation.
+
+Adding irrelevant predictors always increases $R^2$, which can lead to overly complex and overfitted models.
+
+To penalize unnecessary parameters, we introduce degrees of freedom:
+
+- Sample degrees of freedom: $n-1$.
+- Residual degrees of freedom: $n-k-1$ (subtract $k$ regressors and 1 intercept).
+
+This leads to the adjusted $R^2$:
+
+$$\bar R^2 = 1 - \frac{\text{SS}_{\text{res}}/(n-k-1)}{\text{SS}_{\text{tot}}/(n-1)} =  1-\frac{(1-R^2)(n-1)}{n-k-1}$$
+
+### Information criteria
+
+In practice, we often compare multiple candidate models. Information criteria provide a quantitative way to trade off goodness of fit and model complexity.
+
+Goodness of fit is usually represented by the log-likelihood.
+
+For linear regression,
+
+$$\log(L) = -\tfrac{n}{2}\big(\log(2\pi)+\log(\tfrac{\text{SS}_{\text{res}}}{n}) + 1\big)$$
+
+Three common information criteria are:
+
+- Akaike Information Criterion (AIC)
+
+$$AIC = -2\log(L)+2k$$
+
+- Bayesian Information Criterion (BIC)
+
+$$BIC = -2\log(L)+\log(n)k$$
+
+- Corrected Akaike Information Criterion (AICc)
+
+$$AIC_C = AIC + \frac{2k(k+1)}{n-k-1}$$
+
+**AIC**: balances likelihood and number of parameters $k$, and is widely used for large samples.
+
+**BIC**: imposes a stronger penalty on model complexity and tends to favor more parsimonious models. It is popular when overfitting is a concern or when we believe the data come from some true underlying model.
+
+**AICc**: corrects AIC for small sample sizes, where AIC can favor overly complex models.
+
+If we mainly care about predictive performance rather than whether a particular model is “true”, AIC is often preferred; BIC is more common in econometrics.
+
+### Condition number
+
+See for example:
+
+https://www.cnblogs.com/daniel-D/p/3219802.html
+
+### Significance tests
+
+Once we have estimated coefficients, we can use hypothesis tests to assess model parsimony and variable importance.
+
+**t-test**
+
+The t-statistic is used to test whether a single predictor has a significant effect on the response.
+
+- Hypotheses:
+   - $H_0 : \beta = 0$ (the predictor has no effect).
+   - $H_1 : \beta \ne 0$ (the predictor has an effect).
+
+- t-statistic:
+
+   $t = \dfrac{\hat\beta - \beta_0}{SE(\hat\beta)}$
+
+   - $\hat\beta$: estimated coefficient.
+   - $\beta_0$: hypothesized value (usually 0).
+   - $SE(\hat\beta)$: standard error of $\hat\beta$.
+
+- Test procedure:
+   - Compute the degrees of freedom $n-k-1$.
+   - Look up the critical value for the chosen significance level and df.
+   - Perform a two-sided test and decide whether to reject $H_0$.
+
+- Interpretation:
+   - Rejecting $H_0$ implies the predictor has a statistically significant effect.
+   - Failing to reject $H_0$ suggests the effect is not statistically significant.
+
+**F-test**
+
+The F-statistic is used to test the overall significance of the regression model.
+
+### Residual diagnostics
+
+- **Durbin–Watson test**: detects autocorrelation, especially first-order serial correlation.
+- **Shapiro–Wilk test**: tests normality of residuals.
+- **Levene or Bartlett test**: tests homogeneity of variance across groups.

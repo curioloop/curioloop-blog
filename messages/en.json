@@ -34,6 +34,7 @@
     "redis": "Redis",
     "system-design": "SystemDesign",
     "statistics": "Statistics",
+    "time-series-analysis": "TimeSeriesAnalysis",
     "distributed-system": "DistributedSystem",
     "backend-dev": "BackendDev",
     "frontend-dev": "FrontendDev",

@@ -1,0 +1,836 @@
+---
+title: 线性回归
+cover: '/cover/Linear-Regression-Funny.png'
+date: 2025-09-23
+tags: ['统计', '时间序列分析']
+---
+
+线性回归提供了一种简洁而强大的方式来量化变量之间的关系。
+
+它的核心思想是找到一个线性方程，来描述两个或多个变量之间的线性关系，并利用这种关系进行预测或分析。
+
+尽管现实世界中的关系可能更复杂，但线性回归模型仍是许多数据分析和预测任务的基石，为更高级的模型提供了重要的基础和参考。
+
+[comment]:summary
+
+
+## 模型设定
+
+一个模型通常由两部分组成：
+- 外生变量 **（Exogenous Variables）**
+   由模型以外的因素决定的已知变量，通常使用向量 $x \in R^k$ 表示
+- 内生变量 **（Endogenous Variables）**
+   由模型决定的未知变量，通常使用标量 $y \in R$ 表示
+
+
+如果两者间满足一个线性关系，则可以使用线性回归进行建模
+
+$$y = \beta_0 + \beta_1x_1 + \cdots + \beta_kx_k + \varepsilon$$
+- $\beta \in R^{k+1}$ 是回归系数 regression parameters 
+- $\varepsilon \in R$ 是随机误差 random error
+
+改写为矩阵形式 $\boldsymbol{y = X\beta + \varepsilon}$
+- $\boldsymbol y = (y_1, \ldots, y_n)$
+- $\boldsymbol \beta = (\beta_0, \beta_1, \ldots, \beta_k)$
+- $\boldsymbol \varepsilon = (\varepsilon_1, \ldots, \varepsilon_n)$
+- $\boldsymbol X = \begin{bmatrix}
+1 & x_{1,1} & \cdots & x_{k,1} \\
+1 & x_{1,2} & \cdots & x_{k,2} \\
+\vdots & \vdots & \cdots & \vdots \\
+1 & x_{1,n} & \cdots & x_{k,n} \\
+\end{bmatrix}$
+
+为了保证模型的有效性，通常假设误差项是一个白噪声序列，即 $\boldsymbol \varepsilon \sim \text{NID}(0,\sigma^2)$
+这意味着误差来源于系统内的一些随机噪声，模型无法从中提取更多的信息
+- 独立同分布
+- 假设均值为 0 是因为系统均值能被截距项 $\beta_0$ 捕获了
+- 方差 $\sigma^2$ 是一个系统相关的常量
+  - 假设数据来源于某次问卷调查，则该值与样本分布有关
+  - 假设数据来源于某个传感器，则该值由传感器精度决定
+
+
+当通过某种形式求解出系数 $\boldsymbol \beta$ 后，可以根据系数计算估计值 $\boldsymbol{\hat y = \beta x}$
+估计值与实际值间的误差 $\boldsymbol{e = y -\hat y} = (e_1, \ldots, e_n)$ 称之为残差 residual
+
+误差项是建模前人为设定的误差假设，而残差项是模型的实际误差
+衡量一个模型优劣的方式，就是判断残差项是否符合建模前的误差假设
+
+一些常见违反模型假设的情况：
+- 均值非零：缺乏截距项
+- 存在非线性趋势：增加非线性项目
+- 自相关
+- 异方差
+
+## 参数估计
+
+估计系数 $\boldsymbol \beta$ 的方式有两种：
+
+- 最小二乘估计 [Ordinary least squares](https://en.wikipedia.org/wiki/Ordinary_least_squares)
+- 极大似然估计 [Maximum likelihood estimation](https://en.wikipedia.org/wiki/Maximum_likelihood_estimation)
+
+在 $\boldsymbol \varepsilon \sim \text{NID}(0,\sigma^2)$ 的假设前提下，两者是等价的
+
+### OLS
+
+模型的拟合误差可以表示为残差之和 $\sum_{i=1}^n e_i^2 = \sum_{i=1}^n (y_i-\hat y_i)^2$
+
+只要找到一组参数 $\boldsymbol \beta$ 使得残差和最小，即 $\min_\beta\big[(\boldsymbol {y -X \beta})'(\boldsymbol {y -X \beta})\big]$
+
+- 展开函数 $(\boldsymbol {y -X \beta})'(\boldsymbol {y -X \beta}) = \boldsymbol{y}'\boldsymbol{y} - 2\boldsymbol{\beta}'\boldsymbol{X}'\boldsymbol{y} + \boldsymbol{\beta}'\boldsymbol{X}'\boldsymbol{X\beta}$
+- 系数求导 $\dfrac{\partial}{\partial \beta}[(\boldsymbol {y -X \beta})'(\boldsymbol {y -X \beta})] = -2\boldsymbol{X'y} + 2\boldsymbol{X'X\beta}$
+- 求解系数 $\hat{\boldsymbol\beta} = (\boldsymbol{X' X})^{-1}\boldsymbol X'\boldsymbol y$
+
+### MLE
+
+由于误差项服从正态分布 $\varepsilon_i \sim \mathcal{N}(0, \sigma^2)$
+
+$$P(\varepsilon_i)=\frac{1}{\sqrt{2\pi\sigma^2}}\exp\bigg(-\frac{(\varepsilon_i-0)^2}{2\sigma^2}\bigg) $$
+
+某个样本来源于参数 $\boldsymbol \beta$ 的概率可以表示为
+
+$$P(x_i,y_i|\beta)=\frac{1}{\sqrt{2\pi\sigma^2}}\exp\bigg(-\frac{(y_i-x_i\beta)^2}{2\sigma^2}\bigg)$$
+
+这意味着样本符合正态分布 $\boldsymbol y \sim \mathcal{N}(\boldsymbol X \boldsymbol\beta, \sigma^2I)$
+
+整个样本集的联合概率密度函数（即似然函数）可以表示为
+
+$$L(\beta,\sigma^2) = \prod_{i=1}^n P(x_i,y_i|\beta) = (\frac{1}{\sqrt{2\pi\sigma^2}})^n\exp\bigg(-\frac{1}{2\sigma^2}(\boldsymbol y -\boldsymbol X\boldsymbol\beta)'(\boldsymbol y -\boldsymbol X\boldsymbol\beta)\bigg)$$
+
+此时要求得一组参数 $\boldsymbol \beta$，使得样本出现的概率最大，即 $\max_\beta L(\beta,\sigma^2)$
+
+为了方便计算，将似然函数改写为对数似然函数 log-likelihood
+
+$$
+\ell(\beta,\sigma^2) = \log L(\beta,\sigma^2)
+   = -\frac{n}{2}\log(2\pi\sigma^2)
+      -\frac{1}{2\sigma^2}(\boldsymbol y -\boldsymbol X\boldsymbol\beta)'(\boldsymbol y -\boldsymbol X\boldsymbol\beta)
+$$
+
+对 $\beta$ 与 $\sigma^2$ 分别进行求导
+
+- $\dfrac{\partial \ell}{\partial \beta} = \dfrac{1}{\sigma^2}\boldsymbol{X'}(\boldsymbol{y-X\beta})$
+- $\dfrac{\partial \ell}{\partial \sigma^2} = -\dfrac{n}{2\sigma^2} + \dfrac{1}{(2\sigma^2)^2}(\boldsymbol y -\boldsymbol X\boldsymbol\beta)'(\boldsymbol y -\boldsymbol X\boldsymbol\beta)$
+
+求解得到
+
+- $\hat{\boldsymbol\beta} = (\boldsymbol{X' X})^{-1}\boldsymbol X'\boldsymbol y$
+- $\hat\sigma^2 = \dfrac{1}{n}(\boldsymbol y -\boldsymbol X\hat{\boldsymbol\beta})'(\boldsymbol y -\boldsymbol X\hat{\boldsymbol\beta}) = \dfrac{1}{n}\sum^n_i e_i^2$
+- $\log L = -\dfrac{n}{2}\log(2\pi\hat\sigma^2)-\dfrac{1}{2\sigma^2}(n\hat\sigma^2)
+   = -\dfrac{n}{2}\log\big(2\pi\tfrac{\sum^n_i e_i^2}{n}\big) - \dfrac{n}{2}
+   = -\dfrac{n}{2}\big[\log(2\pi)+\log(\tfrac{\sum^n_i e_i^2}{n}) + 1\big]$
+
+## 模型预测
+
+使用模型进行预测时，需要考虑以下误差：
+
+- 模型误差 $Var(\boldsymbol\varepsilon)$ 表示系统随机噪声引入的误差
+- 估计误差 $Var(\hat{\boldsymbol\beta})$ 表示估计值 $\hat{\boldsymbol\beta}$ 与真实值 $\boldsymbol \beta$ 间的差异
+- 预测误差 $Var(y^*)$ 表示预测值 $y^*$ 与真实值 $y$ 间的差异
+
+### 模型误差
+
+由于模型是现实世界的抽象，因此不可避免的会存在误差
+
+模型误差表示真实值与预测值之间的差异，通常可以通过残差进行衡量
+
+通常情况下，模型误差 $Var(\boldsymbol\varepsilon) = \sigma^2$ 会使用残差误差的无偏估计替代
+
+$$\hat\sigma^2 = \frac{1}{n-k-1}(\boldsymbol y -\boldsymbol X\hat{\boldsymbol\beta})'(\boldsymbol y -\boldsymbol X\hat{\boldsymbol\beta}) = \frac{1}{n-k-1}\sum^n_i e_i^2$$
+
+### 估计误差
+
+设定模型时，假设误差为白噪声且独立同分布，这意味着误差项具有以下特性：
+
+- 模型误差期望 $E(\boldsymbol\varepsilon) = 0$
+- 模型误差方差 $Var(\boldsymbol\varepsilon) = \sigma^2$
+
+由于 $\boldsymbol\beta$ 是 $\hat{\boldsymbol\beta}$ 的无偏估计，因此 $E(\hat{\boldsymbol\beta}) = \boldsymbol\beta$
+
+将 $\boldsymbol {y = X\beta + \varepsilon}$ 代入 $\hat{\boldsymbol\beta} = (\boldsymbol{X' X})^{-1}\boldsymbol X'\boldsymbol y$ 得到
+
+$$
+\begin{matrix}\hat{\boldsymbol\beta} 
+&=&(\boldsymbol{X' X})^{-1}\boldsymbol X'(\boldsymbol{X\beta + \varepsilon}) \\
+&=&(\boldsymbol{X' X})^{-1}\boldsymbol X'\boldsymbol{X\beta} +(\boldsymbol{X' X})^{-1}\boldsymbol X'\boldsymbol\varepsilon\\
+&=&\boldsymbol{\beta} +(\boldsymbol{X' X})^{-1}\boldsymbol X'\boldsymbol\varepsilon\end{matrix}
+$$
+
+$$
+\begin{matrix}Var(\hat{\boldsymbol\beta}) 
+&=& E(\hat{\boldsymbol\beta}^2) - E^2(\hat{\boldsymbol\beta}) \\
+&=& E(\hat{\boldsymbol\beta}^2) - \boldsymbol\beta^2 \\
+&=& E\big[\big(\boldsymbol{\beta} +(\boldsymbol{X' X})^{-1}\boldsymbol X'\boldsymbol\varepsilon\big)^2\big]- \boldsymbol\beta^2 \\
+&=& \boldsymbol\beta^2 + E\big[\big((\boldsymbol{X' X})^{-1}\boldsymbol X'\boldsymbol\varepsilon\big)^2\big]- \boldsymbol\beta^2 \\
+&=& \big((\boldsymbol{X' X})^{-1}\boldsymbol X'\big)^2E(\boldsymbol\varepsilon^2)\end{matrix}
+$$
+
+其中：
+
+- $E(\boldsymbol\varepsilon^2) = Var(\boldsymbol\varepsilon) - E^2(\boldsymbol\varepsilon) = \sigma^2$
+- $\big((\boldsymbol{X' X})^{-1}\boldsymbol X'\big)^2 = (\boldsymbol{X' X})^{-1}\boldsymbol X'\boldsymbol X (\boldsymbol{X' X})^{'-1} = (\boldsymbol{X' X})^{-1}$
+
+最终得到：$Var(\hat{\boldsymbol\beta}) 
+= \hat\sigma^2(\boldsymbol{X' X})^{-1}$
+
+### 预测误差
+
+给定参数估计值 $\hat{\boldsymbol \beta}$ 与预测变量向量 $\boldsymbol x^*$，对应的预测观测值为
+
+$$\hat{y}^* = E(y^*|\boldsymbol y,\boldsymbol X, \boldsymbol x^*) = \boldsymbol x^* \hat{\boldsymbol\beta} = \boldsymbol x^*(\boldsymbol X'\boldsymbol X)^{-1}\boldsymbol X'\boldsymbol y$$
+
+预测误差来源于 $\hat{\boldsymbol \beta}$ 的估计误差 $Var(\hat{\boldsymbol\beta}) 
+= \sigma^2(\boldsymbol{X' X})^{-1}$，因此预测均值的不确定性为
+
+$$Var(y^*|\boldsymbol X, \boldsymbol x^*) = Var(\boldsymbol x^* \hat{\boldsymbol\beta}|\boldsymbol X) =\boldsymbol x^*Var(\hat{\boldsymbol\beta}) (\boldsymbol x^*)' = \hat\sigma^2\boldsymbol x^*(\boldsymbol X'\boldsymbol X)^{-1}(\boldsymbol x^*)'$$
+
+此外，预测时还需要考虑模型误差 $Var(\boldsymbol\varepsilon) = \sigma^2$ 对观测值 $\hat{y}^*$ 的影响
+
+$$Var(y^*|\boldsymbol X, \boldsymbol x^*) + Var(\boldsymbol\varepsilon) = \hat\sigma^2 \big[1 + \boldsymbol x^*(\boldsymbol X'\boldsymbol X)^{-1}(\boldsymbol x^*)' \big]$$
+
+基于方差公式，可以得到对应的标准差为
+
+- 均值预测标准误差 $\text{SE}_{\text{mean}} = \sqrt{Var(y^*|\boldsymbol X, \boldsymbol x^*) }$
+- 观测预测标准误差 $\text{SE}_{\text{obs}} = \sqrt{Var(y^*|\boldsymbol X, \boldsymbol x^*) + Var(\boldsymbol\varepsilon)}$
+
+注意，这里我们假定 $\boldsymbol x^*$ 是已知的，因此未将其作为方差来源
+
+如果 $\boldsymbol x^*$ 是估计值，还需要将其本身的估计误差也考虑进去
+
+### 置信区间
+
+预测始终会存在误差，为了量化这种误差，需要用到置信区间
+
+模型预测的底层原理是 [中心极限定理](https://zh.wikipedia.org/wiki/%E6%AD%A3%E6%80%81%E5%88%86%E5%B8%83#%E4%B8%AD%E5%A4%AE%E6%A5%B5%E9%99%90%E5%AE%9A%E7%90%86) / [Central Limit Theorem](https://en.wikipedia.org/wiki/Normal_distribution#Central_limit_theorem)，当样本数量足够多时，样本均值会呈现正态分布
+
+模型预测值实际上是正态分布的均值，围绕这个均值存在一个对称的 [概率分布区间](https://zh.wikipedia.org/wiki/%E6%AD%A3%E6%80%81%E5%88%86%E5%B8%83#%E6%A8%99%E6%BA%96%E5%81%8F%E5%B7%AE) / [probability distribution interval](https://en.wikipedia.org/wiki/Normal_distribution#Standard_deviation_and_coverage)
+
+通过 [百分位函数](https://en.wikipedia.org/wiki/Normal_distribution#Quantile_function) / [quantile function](https://en.wikipedia.org/wiki/Normal_distribution#Quantile_function) 可以在概率与标准误差之间建立联系，一个典型的例子是 [3-sigma](https://en.wikipedia.org/wiki/68%E2%80%9395%E2%80%9399.7_rule) 定律
+
+- 随机抽样落在 $\mu\pm1\sigma$ 区间的概率为 68.27%
+- 随机抽样落在 $\mu\pm2\sigma$ 区间的概率为 95.45%
+- 随机抽样落在 $\mu\pm3\sigma$ 区间的概率为 99.73%
+
+使用模型进行预测时，除了给出预测值 $\hat y$ 外，还需要给出对应的置信区间
+
+- 真实值 $y$ 落在 $\hat y \pm1.64\ \text{SE}_{\text{obs}}$ 区间内的概率为 90%
+- 真实值 $y$ 落在 $\hat y \pm1.96\ \text{SE}_{\text{obs}}$ 区间内的概率为 95%
+- 真实值 $y$ 落在 $\hat y \pm2.57\ \text{SE}_{\text{obs}}$ 区间内的概率为 99%
+
+置信区间的大小取决于：
+
+- 置信水平：置信水平越高，预测成立的概率越高，但预测精度会下降
+- 模型精度：模型精度越高，相同置信水平下区间更小，预测精度越高
+
+## 计算方式
+
+### LU 分解
+
+计算参数估计值 $\hat{\boldsymbol\beta} = (\boldsymbol{X' X})^{-1}\boldsymbol X'\boldsymbol y$ 时，涉及到对矩阵 $\boldsymbol X'\boldsymbol X$ 进行求逆
+
+然而并不是所有矩阵都有逆，只有当矩阵是方阵且行列式非零时，才存在逆矩阵
+
+当存在多重共线性时， $\boldsymbol X'\boldsymbol X$ 是奇异矩阵，无法求逆
+
+一种常用的求逆方式是 [高斯消元法](https://en.wikipedia.org/wiki/Gaussian_elimination#Finding_the_inverse_of_a_matrix)
+
+另一种方式是使用 LU 分解进行求逆
+
+使用 LU 分解求方阵 $A$ 的逆矩阵 $A^{-1}$ 的步骤如下：
+
+- 将方阵 A 分解为一个下三角矩阵 L 和一个上三角矩阵 U 的乘积
+
+$$A \to LU = \begin{bmatrix}\ell_{11}&0&0\\\ell_{21}&\ell_{22}&0\\\ell_{31}&\ell_{32}&\ell_{33}\end{bmatrix} \times \begin{bmatrix}u_{11}&u_{12}&u_{13}\\0&u_{22}&u_{23}\\0&0&u_{33}\end{bmatrix}$$
+
+- 使用 LU 替换 A 得到
+
+$$A^{-1}=(LR)^{-1} = R^{-1} L^{-1}$$
+
+- 求解三角矩阵 $L^{-1}$ 与 $R^{-1}$
+    - $LL^{-1}=I \to \begin{bmatrix}\ell_{11}&0&0\\\ell_{21}&\ell_{22}&0\\\ell_{31}&\ell_{32}&\ell_{33}\end{bmatrix} \times \begin{bmatrix}x_{11}&0&0\\x_{21}&x_{22}&0\\x_{31}&x_{32}&x_{33}\end{bmatrix} = \begin{bmatrix}1\\1\\1\end{bmatrix}$
+    - $UU^{-1}=I \to \begin{bmatrix}u_{11}&u_{12}&u_{13}\\0&u_{22}&u_{23}\\0&0&u_{33}\end{bmatrix} \times \begin{bmatrix}y_{11}&y_{12}&y_{13}\\0&y_{22}&y_{23}\\0&0&y_{33}\end{bmatrix} = \begin{bmatrix}1\\1\\1\end{bmatrix}$
+
+LU 分解也是基于高斯消元法实现，两者时间复杂度均为 $O(n^3)$
+
+但后续求逆过程基于三角矩阵实现，计算量相较于直接使用消元法更少
+
+```go
+package main
+
+import (
+    "fmt"
+    "gonum.org/v1/gonum/blas"
+    "gonum.org/v1/gonum/blas/blas64"
+    "gonum.org/v1/gonum/lapack/lapack64"
+)
+
+func main() {
+
+    swap := []int{0, 0, 0}
+    work := []float64{0, 0, 0}
+
+    // Decompose A = LU
+    A := blas64.General{3, 3, []float64{
+       2, -1, 0,
+       -1, 2, -1,
+       0, -1, 2,
+    }, 3}
+    if ok := lapack64.Getrf(A, swap); !ok {
+       panic("LU decomposition unstable")
+    }
+
+    // Print L
+    fmt.Printf("[1 0 0]\n[%.2f 1 0]\n[%.2f %.2f 1]\n", A.Data[3], A.Data[6], A.Data[7])
+    // Print U
+    fmt.Printf("[%.2f %.2f %.2f]\n[0 %.2f %.2f]\n[0 0 %.2f]\n", A.Data[0], A.Data[1], A.Data[2], A.Data[4], A.Data[5], A.Data[8])
+
+    // Solve LL⁻ = I with iteration
+    // Solve UU⁻ = I with iteration
+    // Calculate A⁻ = U⁻L⁻
+    if ok := lapack64.Getri(A, swap, work, len(work)); !ok {
+       panic("LU inverse failed")
+    }
+
+    fmt.Printf("[%.2f %.2f %.2f]\n[%.2f %.2f %.2f]\n[%.2f %.2f %.2f]\n",
+       A.Data[0], A.Data[1], A.Data[2], A.Data[3], A.Data[4], A.Data[5], A.Data[6], A.Data[7], A.Data[8])
+
+    // Verify AxA⁻ = I
+    B := blas64.General{3, 3, []float64{
+       2, -1, 0,
+       -1, 2, -1,
+       0, -1, 2,
+    }, 3}
+
+    C := blas64.General{3, 3, []float64{
+       0, 0, 0,
+       0, 0, 0,
+       0, 0, 0,
+    }, 3}
+
+    blas64.Gemm(blas.NoTrans, blas.NoTrans, 1, A, B, 0, C)
+
+    fmt.Printf("[%.2f %.2f %.2f]\n[%.2f %.2f %.2f]\n[%.2f %.2f %.2f]\n",
+       C.Data[0], C.Data[1], C.Data[2], C.Data[3], C.Data[4], C.Data[5], C.Data[6], C.Data[7], C.Data[8])
+}
+
+```
+
+### QR 分解
+
+实际应用中，直接对高阶方阵进行求逆并不是一个明智的选择
+
+- 稀疏矩阵的逆矩阵可能是一个稠密矩阵，会占用大量的内存与计算资源
+- 求逆过程中存在大量的浮点数计算，误差累积最终会影响数值稳定性
+
+通常情况下，求逆只是一个中间过程
+
+对于线性回归，我们最终的目的是求解方程组 $\boldsymbol{X'X\beta} = \boldsymbol{X'y}$，求逆只是其中一个过程
+
+https://math.stackexchange.com/questions/3185211/what-does-qr-decomposition-have-to-do-with-least-squares-method
+
+对于方程组 $A'Ax=A'b$，可以考虑使用 QR 分解进行求解
+
+- 将矩阵 A 分解为一个下正交方阵 Q 和一个上三角矩阵 R 的乘积
+
+$$A \to QR = \begin{bmatrix}a_{11}&a_{12}&a_{13}\\a_{21}&a_{22}&a_{23}\\a_{31}&a_{32}&a_{33}\\a_{41}&a_{42}&a_{43}\end{bmatrix} \to \begin{bmatrix}q_{11}&q_{12}&q_{13}&q_{14}\\q_{21}&q_{22}&q_{23}&q_{24}\\q_{31}&q_{32}&q_{33}&q_{34}\\q_{41}&q_{42}&q_{43}&q_{44}\end{bmatrix} \times \begin{bmatrix}r_{11}&r_{12}&r_{13}\\0&r_{22}&r_{23}\\0&0&r_{33}\\0&0&0\end{bmatrix}$$
+
+- 使用 QR 替换 A 得到
+
+$$(QR)'(QR)x=(QR)'b \ \to\ R'Q'QRx=R'Q'b$$
+
+- 代入 $QQ'=I$ 得到
+    
+$$R'Rx=R'Q'b \ \to\ Rx=Q'b$$
+    
+- 求解方程组即可得到 $x$
+
+$$\begin{bmatrix}r_{11}&r_{12}&r_{13}\\0&r_{22}&r_{23}\\0&0&r_{33}\\0&0&0\end{bmatrix} \times \begin{bmatrix}x_{1}\\x_{2}\\x_{3}\end{bmatrix} = \begin{bmatrix}q_{11}b_1+q_{21}b_2+q_{31}b_3+q_{41}b_4\\q_{12}b_1+q_{22}b_2+q_{32}b_3+q_{42}b_4\\q_{13}b_1+q_{23}b_2+q_{33}b_3+q_{43}b_4\\q_{14}b_1+q_{24}b_2+q_{34}b_3+q_{44}b_4\end{bmatrix}$$
+
+使用 QR 分解时，估计误差的计算方式如下：
+
+$$Var(\hat{\boldsymbol\beta}) / \sigma^2  = (\boldsymbol{X' X})^{-1} =((QR)'QR)^{-1} = R^{-1}(Q'Q)R'^{-1} = R^{-1}R'^{-1}=(R'R)^{-1}$$
+
+```go
+package main
+
+import (
+    "fmt"
+    "gonum.org/v1/gonum/blas"
+    "gonum.org/v1/gonum/blas/blas64"
+    "gonum.org/v1/gonum/lapack/lapack64"
+)
+
+func main() {
+
+    y := []float64{2, 3, 5, 7, 10}
+    X := []float64{
+       1, 1, 10, 1,
+       1, 2, 8, 0,
+       1, 3, 9, 1,
+       1, 4, 7, 1,
+       1, 5, 6, 0,
+    }
+
+    A := blas64.General{5, 4, X, 4}
+    b := blas64.Vector{4, y, 1}
+
+    // Decompose A = QR
+    QR := blas64.General{5, 4, make([]float64, len(A.Data)), 4}
+    copy(QR.Data, A.Data)
+
+    work := []float64{0}
+    tau := make([]float64, min(QR.Rows, QR.Cols))
+
+    lapack64.Geqrf(QR, tau, work, -1)
+    work = make([]float64, int(work[0]))
+    lapack64.Geqrf(QR, tau, work, len(work))
+
+    // Restore Q
+    R := blas64.Triangular{blas.Upper, blas.NonUnit, 4, QR.Data, 4}
+    Q := blas64.General{5, 4, make([]float64, len(QR.Data)), 4}
+    copy(Q.Data, QR.Data)
+
+    lapack64.Orgqr(Q, tau, work, -1)
+    work = make([]float64, int(work[0]))
+    lapack64.Orgqr(Q, tau, work, len(work))
+
+    // Print Q
+    fmt.Printf("[%.2f %.2f %.2f %.2f]\n"+
+       "[%.2f %.2f %.2f %.2f]\n"+
+       "[%.2f %.2f %.2f %.2f]\n"+
+       "[%.2f %.2f %.2f %.2f]\n"+
+       "[%.2f %.2f %.2f %.2f]\n",
+       Q.Data[0], Q.Data[1], Q.Data[2], Q.Data[3],
+       Q.Data[4], Q.Data[5], Q.Data[6], Q.Data[7],
+       Q.Data[8], Q.Data[9], Q.Data[10], Q.Data[11],
+       Q.Data[12], Q.Data[13], Q.Data[14], Q.Data[15],
+       Q.Data[16], Q.Data[17], Q.Data[18], Q.Data[19])
+
+    // Print R
+    fmt.Printf("[%.2f %.2f %.2f %.2f]\n"+
+       "[0 %.2f %.2f %.2f]\n"+
+       "[0 0 %.2f %.2f]\n"+
+       "[0 0 0 %.2f]\n",
+       R.Data[0], R.Data[1], R.Data[2], R.Data[3],
+       R.Data[5], R.Data[6], R.Data[7],
+       R.Data[10], R.Data[11],
+       R.Data[15])
+
+    // Calculate Qᵀb
+    Qb := blas64.Vector{4, make([]float64, 4), 1}
+    blas64.Gemv(blas.Trans, 1, Q, b, 0, Qb)
+
+    // Solve Rx = Qᵀb
+    x := blas64.General{4, 1, Qb.Data, 1}
+    if ok := lapack64.Trtrs(blas.NoTrans, R, x); !ok {
+       panic("Solve X failed")
+    }
+
+    // Print x
+    fmt.Printf("[%.2f %.2f %.2f %.2f]\n",
+       x.Data[0], x.Data[1], x.Data[2], x.Data[3])
+
+    // Calculate RᵀR
+    RR := blas64.General{4, 4, make([]float64, 16), 4}
+    for i := 0; i < R.N; i++ {
+       for j := i; j < R.N; j++ {
+          RR.Data[i*R.N+j] = R.Data[i*R.N+j]
+       }
+    }
+    blas64.Trmm(blas.Left, blas.Trans, 1, R, RR)
+
+    // Calculate (RᵀR)⁻
+    swap := make([]int, 4)
+    work = make([]float64, 4)
+    if ok := lapack64.Getrf(RR, swap); !ok {
+       panic("LU decomposition unstable")
+    }
+    if ok := lapack64.Getri(RR, swap, work, len(work)); !ok {
+       panic("LU inverse failed")
+    }
+
+    // Print (RᵀR)⁻
+    fmt.Printf("[%.2f %.2f %.2f %.2f]\n"+
+       "[%.2f %.2f %.2f %.2f]\n"+
+       "[%.2f %.2f %.2f %.2f]\n"+
+       "[%.2f %.2f %.2f %.2f]\n",
+       RR.Data[0], RR.Data[1], RR.Data[2], RR.Data[3],
+       RR.Data[4], RR.Data[5], RR.Data[6], RR.Data[7],
+       RR.Data[8], RR.Data[9], RR.Data[10], RR.Data[11],
+       RR.Data[12], RR.Data[13], RR.Data[14], RR.Data[15])
+
+    // Calculate residual e
+    beta := blas64.Vector{4, x.Data, 1}
+    residual := blas64.Vector{len(y), make([]float64, len(y)), 1}
+    copy(residual.Data, y)
+    blas64.Gemv(blas.NoTrans, 1, A, beta, -1, residual)
+
+    // Calculate unbiased variance σ² = Σe² / (n-k-1)
+    freedomDeg := float64(len(y) - (beta.N - 1) - 1)
+    unbiasedVar := blas64.Dot(residual, residual) / freedomDeg
+    fmt.Printf("[%.2f %.2f %.2f %.2f %.2f] / %.2f -> %.2f\n",
+       residual.Data[0], residual.Data[1], residual.Data[2], residual.Data[3], residual.Data[4], freedomDeg, unbiasedVar)
+
+    // Predicate
+    xStar := blas64.Vector{4, []float64{1, 2, 1, 2}, 1}
+    yStar := blas64.Dot(beta, xStar)
+
+    // Calculate (σ²(XᵀX)⁻)xᵀ
+    xStarT := blas64.General{4, 1, xStar.Data, 1}
+    predVar := blas64.General{beta.N, 1, make([]float64, beta.N), 1}
+    blas64.Gemm(blas.NoTrans, blas.NoTrans, unbiasedVar, RR, xStarT, 0, predVar)
+
+    // Calculate prediction variance x(σ²(XᵀX)⁻)xᵀ
+    predVarT := blas64.Vector{beta.N, predVar.Data, 1}
+    yVar := blas64.Dot(xStar, predVarT)
+    fmt.Printf("%.2f (±%.2f)\n", yStar, yVar)
+
+}
+
+```
+
+### SVD 分解
+
+当矩阵不可逆时，一种替代方案是求伪逆 $A^+$ 作为近似，其满足以下 Moore-Penrose 性质：
+
+- $AA^+A = A$
+- $A^+AA^+ = A^+$
+- $(AA^+)^* = AA^+$
+- $(A^+A)^* = A^+A$
+
+即便无法求逆，也可以借助 $A^+$ 的性质实现消元与求解方程组
+
+一种构造的 $A^+$ 的方式是借助 SVD 分解
+
+- 将方矩阵 $A$ 分解为正交方阵 $U、V$ 与对角矩阵 $\Sigma$ 的乘积
+
+$$
+A \to U\Sigma V^* = \begin{bmatrix}a_{11}&a_{12}\\a_{21}&a_{22}\\a_{31}&a_{32}\end{bmatrix} \to \begin{bmatrix}u_{11}&u_{12}&u_{13}\\u_{21}&u_{22}&u_{23}\\u_{31}&u_{32}&u_{33}\end{bmatrix} \times \begin{bmatrix}\sigma_{1}&0\\0&\sigma_{2}\\0&0\end{bmatrix} \times \begin{bmatrix}\nu_{11}&\nu_{12}\\\nu_{21}&\nu_{22}\end{bmatrix}
+$$
+
+- 通过以下方式构造 对角矩阵 $\Sigma$ 的伪逆 $\Sigma^+$
+
+$$
+\Sigma^+ = \begin{bmatrix}\frac{1}{\sigma_{1}}&0&0\\0&\frac{1}{\sigma_{2}}&0\end{bmatrix}
+$$
+
+- 接着使用以下公式即可构造伪逆 
+    
+$$
+A^+ = V\Sigma^+ U^* = \begin{bmatrix}\nu_{11}&\nu_{21}\\\nu_{12}&\nu_{22}\end{bmatrix} \times \begin{bmatrix}\frac{1}{\sigma_{1}}&0&0\\0&\frac{1}{\sigma_{2}}&0\end{bmatrix}
+    \times \begin{bmatrix}u_{11}&u_{21}&u_{31}\\u_{12}&u_{22}&u_{32}\\u_{13}&u_{23}&u_{33}\end{bmatrix} 
+$$
+    
+    具体实现时，可以分情况处理：
+    
+    - 当 dim(V) < dim(U) 时
+        
+        $$\begin{bmatrix}\frac{\nu_{11}}{\sigma_1}&\frac{\nu_{21}}{\sigma_2}&0\\\frac{\nu_{12}}{\sigma_1}&\frac{\nu_{22}}{\sigma_2}&0\end{bmatrix}
+        \times \begin{bmatrix}u_{11}&u_{21}&u_{31}\\u_{12}&u_{22}&u_{32}\\u_{13}&u_{23}&u_{33}\end{bmatrix} \to \begin{bmatrix}\frac{\nu_{11}}{\sigma_1}&\frac{\nu_{21}}{\sigma_2}\\\frac{\nu_{12}}{\sigma_1}&\frac{\nu_{22}}{\sigma_2}\end{bmatrix}
+        \times \begin{bmatrix}u_{11}&u_{21}\\u_{12}&u_{22}\\u_{13}&u_{23}\end{bmatrix}$$
+        
+    - 当 dim(U) < dim(V) 时
+        
+        $$\begin{bmatrix}\nu_{11}&\nu_{21}&\nu_{31}\\\nu_{12}&\nu_{22}&\nu_{32}\\\nu_{13}&\nu_{23}&\nu_{33}\end{bmatrix} \times \begin{bmatrix}\frac{u_{11}}{\sigma_1}&\frac{u_{21}}{\sigma_1}\\\frac{u_{12}}{\sigma_2}&\frac{u_{22}}{\sigma_2}\\0&0\end{bmatrix} \to
+        \begin{bmatrix}\nu_{11}&\nu_{21}\\\nu_{12}&\nu_{22}\\\nu_{13}&\nu_{23}\end{bmatrix} \times \begin{bmatrix}\frac{u_{11}}{\sigma_1}&\frac{u_{21}}{\sigma_1}\\\frac{u_{12}}{\sigma_2}&\frac{u_{22}}{\sigma_2}\end{bmatrix}
+        $$
+
+可验证该 $A^+$ 其满足以下 Moore-Penrose 性质：
+
+- $AA^+A=UΣV^*VΣ^+U^*UΣV^*=UΣΣ^+ΣV^*=UΣV^*=A$
+- $A^+AA^+=VΣ^+U^*UΣV^*VΣ^+=VΣ^+ΣΣ^+V^*=VΣ^+V^*=A^+$
+- $(AA^+)^*=(UΣV^*VΣ^+U^*)^*=UΣΣ^+U^*=AA^+$
+- $(A^+A)^*=(VΣ^+U^*UΣV^*)^*=VΣ^+ΣV^*=A^+A$
+
+根据这篇博客中的证明过程，OLS 中存在关系 $\hat{\boldsymbol\beta} = (\boldsymbol{X^* X})^+\boldsymbol X^*\boldsymbol y = \boldsymbol X^+\boldsymbol y$
+
+因此可以使用 SVD 构造伪逆的方式估计模型参数
+
+https://math.stackexchange.com/questions/4440503/moore-penrose-pseudoinverse-solves-the-least-squares-problem-svd-framework
+
+使用伪逆求解时，可以使用 $(\boldsymbol{X^* X})^+\boldsymbol X^*\boldsymbol = \boldsymbol X^+$ 简化估计误差公式：
+
+$$
+Var(\hat{\boldsymbol\beta}) / \sigma^2  = (\boldsymbol{X' X})^{-1} 
+= (\boldsymbol{X' X})^{+}=\boldsymbol X^+(\boldsymbol X')^{+}=\boldsymbol X^+(\boldsymbol X^{+}){'}
+$$
+
+```go
+package main
+
+import (
+    "fmt"
+    "gonum.org/v1/gonum/blas"
+    "gonum.org/v1/gonum/blas/blas64"
+    "gonum.org/v1/gonum/lapack"
+    "gonum.org/v1/gonum/lapack/lapack64"
+)
+
+func main() {
+
+    y := []float64{2, 3, 5, 7, 10}
+    X := []float64{
+       1, 1, 10, 1,
+       1, 2, 8, 0,
+       1, 3, 9, 1,
+       1, 4, 7, 1,
+       1, 5, 6, 0,
+    }
+
+    A := blas64.General{5, 4, X, 4}
+    b := blas64.Vector{4, y, 1}
+
+    // Decompose A = UΣVᵀ
+    SVD := blas64.General{5, 4, make([]float64, len(A.Data)), 4}
+    copy(SVD.Data, A.Data)
+
+    U := blas64.General{A.Rows, A.Rows, make([]float64, A.Rows*A.Rows), A.Rows}
+    V := blas64.General{A.Cols, A.Cols, make([]float64, A.Cols*A.Cols), A.Cols}
+    S := make([]float64, min(A.Rows, A.Cols))
+
+    work := []float64{0}
+    lapack64.Gesvd(lapack.SVDAll, lapack.SVDAll, SVD, U, V, S, work, -1)
+    work = make([]float64, int(work[0]))
+    if ok := lapack64.Gesvd(lapack.SVDAll, lapack.SVDAll, SVD, U, V, S, work, len(work)); !ok {
+       panic("SVD decomposition failed")
+    }
+
+    // Print U
+    fmt.Printf("[%.2f %.2f %.2f %.2f %.2f]\n"+
+       "[%.2f %.2f %.2f %.2f %.2f]\n"+
+       "[%.2f %.2f %.2f %.2f %.2f]\n"+
+       "[%.2f %.2f %.2f %.2f %.2f]\n"+
+       "[%.2f %.2f %.2f %.2f %.2f]\n",
+       U.Data[0], U.Data[1], U.Data[2], U.Data[3], U.Data[4],
+       U.Data[5], U.Data[6], U.Data[7], U.Data[8], U.Data[9],
+       U.Data[10], U.Data[11], U.Data[12], U.Data[13], U.Data[14],
+       U.Data[15], U.Data[16], U.Data[17], U.Data[18], U.Data[19],
+       U.Data[20], U.Data[21], U.Data[22], U.Data[23], U.Data[24])
+
+    // Print Σ
+    fmt.Printf("[%.2f 0 0 0 0]\n"+
+       "[0 %.2f 0 0 0]\n"+
+       "[0 0 %.2f 0 0]\n"+
+       "[0 0 0 %.2f 0]\n"+
+       "[0 0 0 0 0]\n",
+       S[0], S[1], S[2], S[3])
+
+    // Print Vᵀ
+    fmt.Printf("[%.2f %.2f %.2f %.2f]\n"+
+       "[%.2f %.2f %.2f %.2f]\n"+
+       "[%.2f %.2f %.2f %.2f]\n"+
+       "[%.2f %.2f %.2f %.2f]\n",
+       V.Data[0], V.Data[1], V.Data[2], V.Data[3],
+       V.Data[4], V.Data[5], V.Data[6], V.Data[7],
+       V.Data[8], V.Data[9], V.Data[10], V.Data[11],
+       V.Data[12], V.Data[13], V.Data[14], V.Data[15])
+
+    // Calculate Σ⁺
+    for i := 0; i < len(S); i++ {
+       if S[i] > 0 {
+          S[i] = 1 / S[i]
+       }
+    }
+
+    if A.Rows > A.Cols {
+       // Calculate V = (Σ⁺ᵀVᵀ)ᵀ
+       for i := 0; i < len(V.Data); i++ {
+          V.Data[i] *= S[i/A.Cols]
+       }
+       U.Cols = A.Cols // trim U
+    } else {
+       // Calculate U = (UΣ⁺ᵀ)ᵀ
+       for i := 0; i < len(U.Data); i++ {
+          U.Data[i] *= S[i%A.Rows]
+       }
+       V.Rows = A.Rows // trim V
+    }
+
+    // Calculate A⁺ = VΣ⁺Uᵀ = Vᵀ x Uᵀ
+    INV := blas64.General{A.Cols, A.Rows, make([]float64, A.Cols*A.Rows), A.Rows}
+    blas64.Gemm(blas.ConjTrans, blas.ConjTrans, 1, V, U, 0, INV)
+
+    fmt.Printf("[%.2f %.2f %.2f %.2f %.2f]\n"+
+       "[%.2f %.2f %.2f %.2f %.2f]\n"+
+       "[%.2f %.2f %.2f %.2f %.2f]\n"+
+       "[%.2f %.2f %.2f %.2f %.2f]\n",
+       INV.Data[0], INV.Data[1], INV.Data[2], INV.Data[3], INV.Data[4],
+       INV.Data[5], INV.Data[6], INV.Data[7], INV.Data[8], INV.Data[9],
+       INV.Data[10], INV.Data[11], INV.Data[12], INV.Data[13], INV.Data[14],
+       INV.Data[15], INV.Data[16], INV.Data[17], INV.Data[18], INV.Data[19])
+
+    // Calculate x = A⁺b
+    x := blas64.Vector{4, make([]float64, 4), 1}
+    blas64.Gemv(blas.NoTrans, 1, INV, b, 0, x)
+
+    // Print x
+    fmt.Printf("[%.2f %.2f %.2f %.2f]\n",
+       x.Data[0], x.Data[1], x.Data[2], x.Data[3])
+
+    // Calculate A⁺A⁺ᵀ
+    AA := blas64.General{4, 4, make([]float64, 16), 4}
+    blas64.Gemm(blas.NoTrans, blas.Trans, 1, INV, INV, 0, AA)
+
+    // Print A⁺A⁺ᵀ
+    fmt.Printf("[%.2f %.2f %.2f %.2f]\n"+
+       "[%.2f %.2f %.2f %.2f]\n"+
+       "[%.2f %.2f %.2f %.2f]\n"+
+       "[%.2f %.2f %.2f %.2f]\n",
+       AA.Data[0], AA.Data[1], AA.Data[2], AA.Data[3],
+       AA.Data[4], AA.Data[5], AA.Data[6], AA.Data[7],
+       AA.Data[8], AA.Data[9], AA.Data[10], AA.Data[11],
+       AA.Data[12], AA.Data[13], AA.Data[14], AA.Data[15])
+
+    // Calculate residual e
+    beta := blas64.Vector{4, x.Data, 1}
+    residual := blas64.Vector{len(y), make([]float64, len(y)), 1}
+    copy(residual.Data, y)
+    blas64.Gemv(blas.NoTrans, 1, A, beta, -1, residual)
+
+    // Calculate unbiased variance σ² = Σe² / (n-k-1)
+    freedomDeg := float64(len(y) - (beta.N - 1) - 1)
+    unbiasedVar := blas64.Dot(residual, residual) / freedomDeg
+    fmt.Printf("[%.2f %.2f %.2f %.2f %.2f] / %.2f -> %.2f\n",
+       residual.Data[0], residual.Data[1], residual.Data[2], residual.Data[3], residual.Data[4], freedomDeg, unbiasedVar)
+
+    // Predicate
+    xStar := blas64.General{2, 4, []float64{
+       1, 2, 1, 2,
+       1, 2, 2, 1,
+    }, 4}
+    yStar := blas64.Vector{2, []float64{0, 0}, 1}
+    blas64.Gemv(blas.NoTrans, 1, xStar, beta, 0, yStar)
+
+    // Calculate prediction variance x(σ²(XᵀX)⁻)xᵀ
+    predVar := blas64.General{xStar.Rows, beta.N, make([]float64, beta.N*xStar.Rows), beta.N}
+    blas64.Gemm(blas.NoTrans, blas.Trans, unbiasedVar, xStar, AA, 0, predVar)
+    yVar := make([]float64, 2)
+    for i := 0; i < len(predVar.Data); i++ {
+       yVar[i/beta.N] += predVar.Data[i] * xStar.Data[i]
+    }
+    fmt.Printf("%.2f ± %.2f, %.2f ± %.2f\n",
+       yStar.Data[0], yVar[0], yStar.Data[1], yVar[1])
+
+}
+
+```
+
+## 评价指标
+
+### 决定系数
+
+决定系数，也称为判定系数，是一个统计学概念，用于衡量回归模型的拟合优度
+
+- 总平方和 total sum of squares $\text{SS}_{\text{tot}} = \sum^n_i( y_i-\bar y)^2$
+- 残差平方和 residual sum of squares $\text{SS}_{\text{res}} = \sum^n_i(y_i-\hat y_i)^2 = \sum_i e_i^2$
+- 决定系数 coefficient of dtermination $R^2 = 1 - \dfrac{\text{SS}_{\text{res}}/n}{\text{SS}_{\text{tot}}/n} = 1 - \dfrac{\text{SS}_{\text{res}}}{\text{SS}_{\text{tot}}}$
+
+以上各项表示的含义
+
+- $\text{SS}_{\text{tot}}$ 表示数据样本的总变异
+- $\text{SS}_{\text{res}}$ 表示模型未能解释的因变量变异
+- $R^2$ 模型所能解释的因变量变异的比例
+
+$R^2$ 的取值范围在 $[0, 1]$
+
+- $R^2 = 1$ 模型完美拟合数据，即模型能够完全解释因变量的变异
+- $R^2 = 0$ 模型不能解释因变量的任何变异
+
+即便引入无关的估计参数，也能提升决定系数的值
+
+这不仅会导致模型复杂度上升，并使得模型对数据噪声过度敏感（过拟合），影响预测效果
+
+为了惩罚这一行为，需要在评分时考虑模型参数数量：参数越多，评分越低
+
+为此需要在调整系数中，引入两个自由度 degrees of freedom 的概念
+
+- **样本自由度:**  样本总数 n 减去 1
+- **残差自由度:**  样本总数 n 减去模型参数的数量 k 和截距项的数量 1
+
+引入自由度后得到调整决定系数
+
+$$\bar R^2 = 1 - \frac{\text{SS}_{\text{res}}/(n-k-1)}{\text{SS}_{\text{tot}}/(n-1)} =  1-\frac{(1-R^2)(n-1)}{n-k-1}$$
+
+### 信息准则
+
+在统计建模中，常常会面临多个候选模型，而信息准则是一类用于模型选择和比较的统计指标
+
+信息准则通过在拟合优度和模型复杂度之间进行权衡，帮助我们找到一个最佳的模型
+
+信息准则中的拟合优度通常使用对数似然度进行表示
+
+线性回归的似然度函数为 $\log(L) = -\tfrac{n}{2}\big(\log(2\pi)+\log(\tfrac{\text{SS}_{\text{res}}}{n}) + 1\big)$
+
+常用的 3 种信息准则：
+
+- 赤池信息准则 Akaike Information Criterion
+
+$$AIC = -2\log(L)+2k$$
+
+- 贝叶斯信息准则 Bayesian Information Criterion
+    
+    $$BIC = -2\log(L)+\log(n)k$$
+    
+- 校正赤池信息量准则 Corrected Akaike Information Criterion
+    
+    $$AIC_C = AIC + \frac{2k(k+1)}{n-k-1}$$
+    
+
+**AIC**：AIC 同时考虑了模型似然度 $L$ 与参数数量 $k$，
+
+在样本量较大时，AIC 是一个比较好的选择
+
+**BIC**：BIC 对模型复杂度的惩罚更大，倾向于选择参数较少的模型，
+
+如果更注重模型的简约性，或者担心过拟合，BIC 是一个更好的选择。
+
+**AICc**：当样本数量较小时易产生过拟合，导致 AIC 倾向于参数更多的模型
+
+在样本量较小的情况下，使用 AICc 是一个比较稳健的选择
+
+BIC 在计量经济学领域中比较受欢迎
+
+因为计量经济学通常假设数据来源于某个具体模型，BIC 能评估这一假设的准确性
+
+如果不关心数据是否符合模型，只关注模型预测效果，则通常使用 AIC 评价模型
+
+### 条件数
+
+https://www.cnblogs.com/daniel-D/p/3219802.html
+
+### 显著性检验
+
+得到估计参数后，还可以通过一些假设检验来判断模型的简洁性
+
+**t 检验**
+
+t 统计量主要用于检验某个自变量对因变量的影响是否显著
+
+- 提出假设
+    - $H_0 : \beta = 0$（即该自变量对因变量没有影响）
+    - $H_1 : \beta \ne 0$（即该自变量对因变量有影响）
+- 计算 t 统计量
+    
+   $t = \dfrac{\hat\beta - \beta_0}{SE(\hat\beta)}$
+    
+   - $\hat\beta$：估计的回归系数
+   - $\beta_0$：原假设中的系数值（通常为 0，即假设该自变量对因变量没有影响）
+   - $SE(\hat\beta)$：$\hat\beta$ 的标准误
+- 进行假设检验
+    - 根据样本数量与参数数量计算自由度 $n-k-1$
+    - 根据显著性水平与自由度查表获得临界值
+    - 使用临界值进行双尾检验，判断是否能够拒绝 $H_0$
+- 得出结论
+    - 如果拒绝 $H_0$，说明该自变量对因变量有显著影响
+    - 如果无法拒绝 $H_0$，说明该自变量对因变量的影响不显著
+
+**F 检验**
+
+F 统计量主要用于检验整个模型的显著性
+
+### 残差检验
+
+- **Durbin-Watson检验**：用于检测自相关，尤其是序列数据中的一阶自相关
+
+- **Shapiro-Wilk检验**：用于检验残差的正态性，判断残差是否符合正态分布
+
+- **Levene检验或Bartlett检验**：用于检验残差的方差齐性，判断不同组别的残差是否具有相同的方差

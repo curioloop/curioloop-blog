@@ -1,0 +1,1203 @@
+---
+title: State Space 模型
+cover: '/cover/Satellite-Tracking.jpg'
+date: 2025-11-12
+tags: ['统计','时间序列分析']
+---
+
+状态空间模型（SSM）通过状态方程描述不可见内部状态的演化，结合观测方程将状态映射为可见输出，是处理动态系统预测的核心数学框架。
+
+[comment]:summary
+
+# 背景介绍
+
+一个系统往往可以通过 3 部分进行描述
+
+- 可观测的系统输出 $y$
+- 不可观测的系统状态 $x$
+- 可选的系统输入 $u$
+
+下面是两个常见的例子
+
+- 将温度计看作是一个系统，热量是输入，气温是状态，液面高度是输出
+- 将千分尺看作是一个系统，物体长度是状态，千分尺读数是输出
+
+现实中的系统是有误差的，一类被称为系统误差 ，一类称为观测误差
+
+- 系统误差与系统建模精度有关，比如温度计中液体的热膨胀系数，只能取有有限的小数位近似
+- 观测误差与系统测量精度有关，比如使用千分尺进行测量时，只能无限逼近实际物体长度
+
+为了保证测量的准确性，往往需要重复进行观测，并根据多个观测值求平均来获得更准确的估计
+
+假设第 t 次的输入为 $u_t$，均值 $x_t$ 同时是系统的状态与输出 $y_t$
+
+真实值估计过程可以表示为一个迭代过程
+
+$$
+y_t = x_t = x_{t-1} + \frac{1}{t}(u_t - x_{t-1})
+$$
+
+每次迭代都能使得状态更为准确
+
+并且该过程有一个十分优良的性质：系统状态 $x_t$ 的变化仅与系统的当前状态 $x_{t-1}$ 相关，而与它的过去历史或未来状态 $x_{t-2},...,x_0$ 无关
+
+上述过程使用线性离散状态空间方程可以表示为
+
+$$
+\begin{array}{ll}
+x_t = A_tx_{t-1} + B_tu_{t-1}+ \varepsilon_t,  & \varepsilon_t\sim \mathcal N(0,\sigma_\varepsilon^2) \\
+y_t = C_tx_{t} + \eta_t,  & \eta_t\sim \mathcal N(0,\sigma_\eta^2)\end{array}
+$$
+
+状态方程：描述系统内部状态的变化过程
+
+- 转移矩阵 $A_t$ 根据当前状态 $x_{t-1}$ 估计下一个状态 $x_t$
+- 输入矩阵 $B_t$ 决定可选的输入 $u_{t-1}$ 如何影响状态跳转
+- 过程噪声 $\varepsilon_t$ 描述估计状态与真实状态间的误差
+
+观测方程：测量系统当前最新状态
+
+- 测量矩阵 $C_t$ 将内部状态 $x_t$ 映射为可观察值 $y_t$
+- 测量噪声 $\eta_t$ 描述映射过程中引入的误差
+
+基于空间状态模型，可以处理 3 类常见的问题
+
+- 预测：给定 $x_0,...,x_t$ 预测未来的状态 $x_{t+n|t}$
+- 滤波：给定 $x_0,...,x_t$ 重建当前的状态 $x_{t|t}$
+- 平滑：给定 $x_0,...,x_t$ 填充缺失的状态 $x_{t-n|t}$
+
+此前介绍的 $\text{ARMA}$ 模型存在下面 3 种空间状态方程形式
+
+**Hamilton 形式**
+
+- 状态维度： $r = \max(p,q+1)$
+- 状态向量： $\boldsymbol x_t=\begin{bmatrix}x_t&x_{t-1}&\cdots&x_{t-r}\end{bmatrix}$
+- 状态方程： $\boldsymbol x_t=\begin{bmatrix}\phi_1&\phi_2&\cdots&\phi_{r-1}&\phi_{r}\\
+1&0&\cdots&0&0\\
+0&1&\cdots&0&0\\
+\vdots&\vdots&\ddots&\vdots&\vdots\\
+0&0&\cdots&1&0\\
+\end{bmatrix}\boldsymbol x_{t-1} + \begin{bmatrix}\varepsilon_{t}\\0\\0\\\vdots\\0\end{bmatrix}$
+ - 观测方程： $y_t = \begin{bmatrix}1&\theta_1&\theta_2&\cdots\theta_{r-1}\end{bmatrix}\boldsymbol x_t$
+
+状态方程是一个 $\text{AR}$ 过程：$\phi(B)x_t=\varepsilon_t$
+
+观测方程是一个 $\text{ARMA}$ 过程：$y_t=\theta(B)x_t\ \Rightarrow\ \phi(B)y_t=\theta(B)\varepsilon_t$
+
+**Harvey 形式**
+
+- 状态维度： $r = \max(p,q+1)$
+- 状态向量： $\boldsymbol x_t=\begin{bmatrix}x_t&x_{t-1}&\cdots&x_{t-r}\end{bmatrix}$
+- 状态方程： $\boldsymbol x_t=\begin{bmatrix}\phi_1&1&0&\cdots&0\\
+\phi_2&0&1&\cdots&0\\
+\vdots&\vdots&\vdots&\ddots&\vdots\\
+\phi_{r-1}&0&0&\cdots&1\\
+\phi_r&0&0&\cdots&0\\
+\end{bmatrix}\boldsymbol x_{t-1} + \varepsilon_{t}\begin{bmatrix}1\\\theta_1\\\theta_2\\\vdots\\\theta_{r-1}\end{bmatrix}$
+ - 观测方程： $y_t = \begin{bmatrix}1&0&0&\cdots0\end{bmatrix}\boldsymbol x_t$
+
+展开状态方程可以得到 $\text{ARMA}$ 过程：
+
+- $x_{t,r}=\phi_rx_{t-1,1}+\theta_{r-1}\varepsilon_t$
+- $x_{t,r-1}=\phi_{r-1}x_{t-1,1}+x_{t-1,r}+\theta_{r-2}\varepsilon_t = \phi_{r-1}x_{t-1,1}+(\phi_rx_{t-2,1}+\theta_{r-1}\varepsilon_{t-1})+\theta_{r-2}\varepsilon_t $
+- ...
+
+**Canonical 形式**
+
+$\text{ARMA}$ 模型可以统一表示为格林函数
+
+$$
+y_t = \sum_{i=0}^\infty\psi_i\varepsilon_{t-i}
+$$
+
+用于描述 $\text{ARMA}$ 模型对白噪声冲击的反应
+
+其中 $\psi_i=
+\begin{cases}
+1,&i=0\\ 
+\theta_i+\sum_{j=1}^{\min(p,i)}\phi_j\psi_{i-j},&i\ge1
+\end{cases}$ 是脉冲响应函数的系数，表示白噪声对未来观测值的影响
+
+互补函数用于描述移除外部噪声的情况下 $\text{ARMA}$ 模型的固有行为，反映了模型的长期趋势和季节性等特征
+
+其定义为
+
+$$
+C_t(l)=y_{t+l}-\sum\nolimits_{j=0}^{l-1}\psi_j\varepsilon_{t+l-j}=C_{t-1}(l+1)+\psi_l\varepsilon_t
+$$
+
+互补函数可以作为预测方程的初始值，表示在 $t-1$ 时刻向前 $n$ 步的预测值 $\hat y_{t+n|t-1} = C_{t-1}(n)$，则可以得到以下的状态空间方程
+
+- 状态维度： $r = \max(p,q)$
+- 状态向量： $\boldsymbol x_t=\boldsymbol{\hat y_t} =\begin{bmatrix}C_t(0)&C_t(1)&\cdots&C_t(r-1)\end{bmatrix}$
+- 状态方程： $\boldsymbol x_t=\begin{bmatrix}0&1&0&\cdots&0\\
+0&0&1&\cdots&0\\
+\vdots&\vdots&\vdots&\ddots&\vdots\\
+0&0&0&\cdots&1\\
+\phi_r&\phi_{r-1}&\phi_{r-2}&\cdots&\phi_{1}\\
+\end{bmatrix}\boldsymbol x_{t-1} + \varepsilon_{t}\begin{bmatrix}1\\\psi_1\\\psi_2\\\vdots\\\psi_{r-1}\end{bmatrix}$
+ - 观测方程： $y_t = \begin{bmatrix}1&0&0&\cdots0\end{bmatrix}\boldsymbol x_t$
+
+这种表示方式可以简化预测过程表达：
+
+- $\hat x_{t|t-1} = \hat y_t = y_t - \varepsilon_t = \sum_{i=0}^\infty\psi_i\varepsilon_{t-i} - \varepsilon_t=\sum\nolimits_{i=1}^\infty\psi_i\varepsilon_{t-i}$
+- $x_{t+1} = \varepsilon_{t+1} + \psi_1\varepsilon_{t} + \psi_2\varepsilon_{t-1} + \psi_3\varepsilon_{t-2} + \cdots \\
+= \varepsilon_{t+1} +
+\psi_1\varepsilon_{t} + \phi(\psi_1\varepsilon_{t-1} + \psi_2\varepsilon_{t-2} + \psi_3\varepsilon_{t-3}+ \cdots)
+\\
+= \varepsilon_{t+1} +
+\psi_1\varepsilon_{t} + \phi\hat x_{t|t-1}$
+- $\hat x_{t+1|t}=\phi(\hat x_{t|t-1})+\psi_1\varepsilon_t$
+- $x_t = \hat x_{t|t-1} + \varepsilon_t$
+
+最后一种形式在书面表达时较为常用，在实际应用中还是以前面两者为准，主要区别在于：
+
+- Harvey 形式的截距项在状态方程中，Hamilton 形式的截距项在观测方程中
+- Harvey 形式支持差分，Hamilton 只能表达差分后的稳定过程
+
+目前大多数资料均以 Harvey 形式进行介绍，本文也将采用该形式
+
+# 卡尔曼滤波器
+
+## **线性投影定理**
+
+在概率论和统计学中，多元随机变量的线性投影 可以理解为将一个随机变量在另一个随机变量或随机向量所张成的空间上的“影子”，这个影子是最能代表原始随机变量在该空间中的信息的线性组合
+
+设随机向量 $x$ 和 $y$ 是两个高维空间中的点，且位于不同的向量空间中
+
+线性投影的目标是找到一个最优的线性组合 $E(x|y) ≈ \beta + \gamma y$
+
+可以将 $y$ 映射至 $x$ 所在的向量空间中，并使得 $E(x|y)$ 在某种距离度量下最接近 $x$
+
+线性组合 $E(x|y)$ 被称为原始变量 $y$ 的投影
+
+通过将高维随机向量投影到低维空间，可以实现
+
+- 回归分析**：**将样本数据映射至回归系数，利用投影后的数据建立预测模型
+- 特征提取：将高维特征映射至低维特征，从原始数据中提取出最能代表数据的特征
+- 信号处理：对信号进行降噪滤波或重建
+
+给定正态随机向量
+
+$$
+E\begin{pmatrix}x\\y\end{pmatrix}=\begin{pmatrix}\mu_x\\\mu_y\end{pmatrix}, \quad Var\begin{pmatrix}x\\y\end{pmatrix}=\begin{pmatrix}\Sigma_{xx}&\Sigma_{xy}\\\Sigma_{yx}&\Sigma_{yy}\end{pmatrix}
+$$
+
+其条件分布仍服从
+
+- $E(x|y) = \mu_x+ \Sigma_{xy}\Sigma_{yy}^{-1}(y-\mu_y)$
+- $Var(x|y) = \Sigma_{xx} -\Sigma_{xy}\Sigma_{yy}\Sigma_{xy}'$
+
+## 状态空间方程
+
+对于时间序列模型，常用以下线性高斯模型描述状态空间方程
+
+$$
+\begin{array}{llll}
+y_t & = Z_t \alpha_t + d_t + \varepsilon_t & \varepsilon_t\sim \mathcal N(0,H_t) \nonumber \\
+\alpha_t & = T_t \alpha_{t-1} + c_t + R_t \eta_t & \eta_t\sim \mathcal N(0,Q_t) \nonumber \\
+& & \alpha_1\sim \mathcal N(a_1,P_1) \nonumber \\
+\end{array}
+$$
+
+- 测量方程
+    - $y_t$ 观测变量 $p\times 1$
+    - $d_t$ 观测截距 $p\times 1$
+    - $\varepsilon_t$ 观测扰动 $p\times 1$
+    - $Z_t$ 设计矩阵 $p\times m$
+    - $H_t$ 观测协方差 $m \times r$
+- 状态方程
+    - $\alpha_t$ 状态向量 $m\times 1$
+    - $c_t$ 状态截距 $m\times 1$
+    - $\eta_t$ 状态扰动 $r\times 1$
+    - $T_t$ 转移矩阵 $m \times m$
+    - $R_t$ 选择矩阵 $m \times r$
+    - $Q_t$ 状态协方差 $m \times r$
+- 初始化
+    - $a_1$ 初始估计 $m\times 1$
+    - $P_1$ 初始估计误差 $m \times m$
+
+新增加的 $R_t$ 用于重定义扰动项 $\eta_t$，将 $\eta_t$ 看作是一个全集，则 $R_t\eta_t$ 是参与建模的子集
+
+为了保证协方差 $Var(R_t\eta_t) = R_tQ_tR_t'$ 非负，$R_t$ 必须是正定矩阵
+
+为了方便理解，可以认为初始估计 $a_1$ 与初始估计误差 $P_1$ 是已知量
+
+模型额外假设初始状态向量满足以下假设
+
+当 $y_t$ 可以通过 $\alpha_1,\varepsilon_t,\eta_t$ 的线性组合进行表示时，状态方程描述的系统是线性的
+
+为了保证空间状态方程在任意时刻都是线性的，必须保证系统矩阵 $Z_t,d_t,H_t,T_t,c_t,R_t,Q_t$ 的非随机
+
+即便这些矩阵会随时间发生变化，都必须按照预定义的方式进行变化
+
+当系统矩阵不随时间发生变化时，则称该系统为时不变系统，例如平稳 $\text{AR}$ 过程是一类特殊的时不变系统
+
+## 卡尔曼滤波
+
+KalmanFilter 是一种迭代算法，用于在给定当前所有可用信息的情况下计算状态向量的最佳估计量
+
+使用观测值集合 $Y_{t-1} = \{y_{t-1},...,y_1\}$ 表示 $t=2,3,...$ 时刻的的先验知识，在 $t=1$ 时 $Y_0=\emptyset$，表示此时系统没有任何先验知识
+
+KalmanFilter 使用正向递归过程构建随机变量$\alpha_t$与$y_t$的条件概率分布
+
+- 基于状态预测未来观测： $p(y_t|\alpha_t) = p(y_t|\alpha_1,...,\alpha_t,Y_{t-1})$
+- 基于预测误差更新状态： $p(\alpha_{t+1}|\alpha_t) = p(\alpha_{t+1}|\alpha_1,...,\alpha_t,Y_{t})$
+
+下面我们考虑：给定信息集 $Y_t$ ，如何计算出：
+
+- $\alpha_t$ 条件期望： $a_{t|t} = E(\alpha_t|Y_t)$
+- $\alpha_t$ 条件方差： $P_{t|t} = Var(\alpha_{t}|Y_t) = E[(\alpha_t-a_{t|t})(\alpha_t-a_{t|t})']$
+- $\alpha_{t+1}$ 条件期望： $a_{t+1} = E(\alpha_{t+1}|Y_t)$
+- $\alpha_{t+1}$ 条件方差： $P_{t+1} = Var(\alpha_{t+1}|Y_t) = E[(\alpha_{t+1}-a_{t+1})(\alpha_{t+1}-a_{t+1})']$
+
+当 $y_t$未知时，观测最优估计 $E(y_t|Y_{t-1})=E(Z_t\alpha_t+d_t+\varepsilon_t|Y_{t-1})=Z_ta_t+d_t$
+
+当 $y_t$已知时，观测预测误差 $v_t = y_t - E(y_t|Y_{t-1})=y_t-Z_ta_t-d_t$
+
+$v_t$ 称为给定 $Y_{t-1}$时 $y_t$的向前一步预测误差，并且满足以下性质
+
+- $E(v_t|Y_{t-1})=E(y_t-Z_ta_t-d_t|Y_{t-1})=E(Z_ta_t+d_t+\varepsilon_t-Z_ta_t-d_t|Y_{t-1})=0$
+- $Cov(y_j,v_t)=E[y_jE(v_t|Y_{t-1})']=0$
+- $E(v_t) = 0$
+
+根据线性投影定理，存在以下关系
+
+$$
+\begin{array}{llll}
+a_{t|t}&=&E(\alpha_t|Y_t) \\
+&=& E(\alpha_t|v_t,Y_{t-1}) \\
+&=& E(\alpha_t|Y_{t-1})+Cov(\alpha_t,v_t|Y_{t-1})Var(v_t|Y_{t-1})^{-1}(v_t-E(v_t|Y_{t-1}))
+\end{array}
+$$
+
+$$
+\begin{array}{llll}
+P_{t|t}
+&=&Var(\alpha_t|Y_t) \\
+&=&Var(\alpha_t|Y_{t-1})+Cov(\alpha_t,v_t|Y_{t-1})Var(v_t|Y_{t-1})^{-1}Cov(\alpha_t,v_t|Y_{t-1})'
+\end{array}
+$$
+
+定义
+
+- $Cov(\alpha_t,v_t|Y_{t-1})=E[\alpha_t(Z_t\alpha_t + d_t + \varepsilon_t-Z_ta_t-d_t)'|Y_{t-1}] = E[\alpha_t(\alpha_t-a_t)'Z_t'|Y_{t-1}]=P_tZ_t'$
+- $F_t = Var(v_t|Y_{t-1}) = Var(Z_t\alpha_t + d_t + \varepsilon_t-Z_ta_t-d_t|Y_{t-1})=Z_tP_tZ_t'+H_t$
+
+代入可得
+
+- $a_{t|t}=a_t + P_tZ_t'F_t^{-1}v_t$
+- $P_{t|t} = P_t-P_tZ_t'F_t^{-1}Z_tP_t$
+
+给定
+
+- $a_{t+1} = E(T_t\alpha_t + c_t +R_t\eta_t|Y_t)=T_tE(\alpha_t|Y_t)+ c_t$
+- $P_{t+1} = Var(T_t\alpha_t + c_t + R_t\eta_t|Y_t)=T_tVar(\alpha_t|Y_t)T_t'+R_tQ_tR_t'$
+
+分别代入 $E(\alpha_t|Y_t)=a_{t|t}$ 与 $Var(\alpha_{t}|Y_t)=P_{t|t}$ 可得到
+
+- $a_{t+1}=T_ta_{t|t}+c_t = T_ta_t+K_tv_t + c_t$
+- $P_{t+1}=T_tP_t(T_t-K_tZ_t)' + R_tQ_tR_t'$
+
+其中 $K_t=T_tP_tZ_t'F_t^{-1}$ 被称为卡尔曼增益
+
+至此我们得到了 KalmanFilter 中的核心递归公式
+
+- 计算误差
+    - $v_t=y_t-Z_ta_t-d_t$
+    - $F_t=Z_tP_tZ_t'+H_t$
+    - $K_t=P_tZ_t'F_t^{-1}$（可选）
+- 更新状态
+    - $a_{t|t}=a_t + P_tZ_t'F_t^{-1}v_t$
+    - $P_{t|t} = P_t-P_tZ_t'F_t^{-1}Z_tP_t$
+- 预测状态
+    - $a_{t+1}=T_ta_{t|t}+c_t $
+    - $P_{t+1}=T_tP_{t|t}T_t' + R_tQ_tR_t'$
+
+为了保证矩阵 $P$ 的数值稳定性，可以进行以下操作：
+
+- 修改 $P_{t|t}$ 更新逻辑 $P_{t|t}=(I-K_tZ_t)P_t(I-K_tZ_t)'+K_tH_tK_t'$
+- 计算完 $P_{t+1}$ 后进行对称化处理 $P_{t+1} = (P_{t+1} + P_{t+1}')/2$
+
+预测误差 $v_t$ 在更新中起到了重要作用：预测值 $E(y_t|Y_{t-1})$与 实际值 $y_t$ 的偏差越大，状态估计值 $a_t$ 的变化就越大
+
+KalmanFilter 目的与多元线性回归一致：求解线性最优估计
+
+对于样本数为 t 的线性回归，需要对 $pt\times pt$矩阵进行求逆
+
+而 KalmanFilter 只需要执行 t 次对 $p\times p$ 矩阵 $F_t$ 求逆，并且通常情况 $p=1$
+
+当系统矩阵  $Z_t,H_t, T_t,R_t,Q_t$ 是常量时， $P_{t+1}$收敛为一个常量 $\bar P$
+
+该矩阵可以通过求解以下方程得到，其中 $\bar F = Z\bar PZ'$
+
+$$
+\bar P = T\bar PZ'+-T\bar PZ'\bar F^{-1}Z\bar PT' + RQR'
+$$ 
+
+直接使用该结果能够大量减少计算开销
+
+状态预测误差 $x_t = \alpha_t - a_t$，其对应的方差为 $Var(x_t)=P_t$
+
+其与向前一步预测误差存在关系 
+
+$$
+v_t = Z_t\alpha_t+d_t+\varepsilon_t-(Z_ta_t+d_t) = Z_tx_t+\varepsilon_t
+$$
+
+并且其自身也存在递归关系 
+
+$$
+x_{t+1} = \alpha_{t+1}-a_{t+1}=L_tx_t+R_t\eta_t-K_t\varepsilon_t$，其中$L_t=T_t-K_tZ_t
+$$
+
+两者并称为状态空间模型的 innovation analogue，并且可以进一步推导出 
+
+$$
+P_{t+1}=T_tP_tL_t'+R_tQ_tR_t'
+$$
+
+观测向量的条件样本概率相互独立，满足 
+
+$$
+p(y_1,...,y_n)=p(y_1)\prod\nolimits_{t=2}^np(y_t|Y_{t-1})
+$$
+
+使用 $v_t=y_t-Z_ta_t$ 替换可以得到  
+
+$$
+p(v_1,...,v_n)=\prod\nolimits_{t=1}^np(v_t)
+$$
+
+这意味着 $v_1,...,v_n$相互独立，并且$v_t,...,v_n$独立于 $Y_{t-1}$
+
+## 状态平滑
+
+平滑问题可以分为 3 类
+
+- fix-interval 基于所有已知样本估计某个状态$E(\alpha_t|y_t,...y_s)$
+- fixed-point 使用当前与未来的样本更新当前状态 $\hat\alpha_{t|n}=E(\alpha_t|Y_n)\ \small{(n>t)}$
+- fixed-lag 使用当前与未来的样本更新过去状态$\hat\alpha_{n-j|n}=E(\alpha_{n-j}|Y_n)\ \small{(n>j)}$
+
+给定信息集 $Y_n\ (n\ge t)$ ，如何计算出：
+
+- $\alpha_t$ 条件期望 $\hat a_t = E(\alpha_t|Y_n)$
+- $\alpha_t$ 条件方差$V_t = Var(\alpha_{t}|Y_n) = E[(\alpha_t-\hat\alpha_t)(\alpha_t-\hat \alpha_t)']$
+
+使用 $r_{t-1}$表示在 $t-1$ 后的预测误差 $v_t,...,v_n$ 加权和，可以得到
+
+$$
+r_t=Z_{t+1}'F_{t+1}^{-1}v_{t+1}+L_{t+1}'Z_{t+2}'F_{t+2}^{-1}v_{t+2}+\cdots+L_{t+1}'\cdots L_{n-1}'Z_n'F_n^{-1}v_n
+$$
+
+给定 $Y_n$ 时 $Y_{t-1}$是固定的常量，$\hat \alpha_{t}$ 可以表示为在 $t-1$后的预测误差 $v_t,...,v_n$ 加权和
+
+$$
+\hat \alpha_t = a_t+P_tZ_t'F_t^{-1}v_t+P_tL_t'Z_{t+1}'F_{t+1}^{-1}v_{t+1}+\cdots+P_tL_t'\cdots L_{n-1}'Z_n'F_n^{-1}v_n
+$$
+
+$\alpha_t$ 条件期望可以用递归方程表示，其中 $r_n = 0$
+
+- $r_{t-1}=Z_t'F_t^{-1}v_t+L_t'r_t$
+- $\hat \alpha_t = a_t+P_tr_{t-1}$
+
+$\alpha_t$ 条件方差也可以用递归方程表示，其中 $N_n = 0$
+
+- $N_{t-1}=Z_t'F_t^{-1}Z_t+L_t'N_tL_t$
+- $V_t = P_t-P_tN_{t-1}P_t$
+
+以上四个公式合称为状态平滑递归，且其方向正好与此前的滤波递归相反
+
+为了提升平滑递归的效率，可以在滤波递归期间缓存 $v_t,\ F_t,\ K_t,\ a_t,\ P_t$ 的计算结果
+
+也可以只存储 $a_t,\ P_t$ 并使用这两者计算 $v_t,\ F_t,\ K_t$
+
+## 扰动平滑
+
+给定信息集 $Y_n\ (n\ge t)$ ，如何计算出：
+
+- $\varepsilon_t$ 条件期望： $\hat \varepsilon_t = E(\varepsilon_t|Y_{t-1},v_t,...,v_n)=
+\sum\nolimits_{j=t}^nE(\varepsilon_tv_j')F_j'v_j$
+- $\varepsilon_t$ 条件方差： $Var(\varepsilon_t|Y_n) = Var(\varepsilon_t|Y_{t-1},v_t,...,v_n)=H_t-
+\sum\nolimits_{j=t}^nCov(\varepsilon_tv_j')F_j^{-1}Cov(\varepsilon_tv_j')'$
+- $\eta_t$ 条件期望： $\hat\eta_t = E(\eta_t|Y_{t-1},v_t,...,v_n)=
+\sum\nolimits_{j=t}^nE(\eta_tv_j')F_j'v_j$
+- $\eta_t$ 条件方差： $Var(\eta_t|Y_n) = Var(\eta_t|Y_{t-1},v_t,...,v_n)=H_t-
+\sum\nolimits_{j=t}^nCov(\eta_tv_j')F_j^{-1}Cov(\eta_tv_j')'$
+
+其中
+
+$$
+E(\varepsilon_tv_j')=E(\varepsilon_tx_j')Z_j'+E(\varepsilon_t\varepsilon_j')\ \ \ \Longrightarrow \ \ \ E(\varepsilon_tv_j')=\begin{cases}
+H_t,&j=t\\
+E(\varepsilon_tx_j')Z_j'&j=t+1,...,n
+\end{cases} 
+$$
+
+$$
+E(\eta_tv_j')=
+E(\eta_tx_j')Z_j'+E(\eta_t\eta_j')\ \ \ \Longrightarrow \ \ \ 
+E(\eta_tv_j')=\begin{cases}
+Q_t'R_tZ_{t+1}',&j=t+1\\
+E(\eta_tx_j')Z_j'&j=t+2,...,n
+\end{cases} 
+$$
+
+给定平滑误差 $u_t = F_t^{-1}v_t-K_t'r_t$ 与 $D_t = F_t^{-1}+K_t'N_tK_t$
+
+- $\varepsilon_t$ 条件期望 $\hat \varepsilon_t = H_tu_t\ (t=n,...,1)$
+- $\varepsilon_t$ 条件方差$Var(\varepsilon_t|Y_n) = H_t-H_tD_tH_t$
+
+给定 $r_{t-1}=Z_t'u_t+T_t'r_t$ 与$N_{t-1}=Z_t'D_tZ_t+T_t'N_tT_t-Z_t'K_t'N_tT_t-T_t'N_tK_tZ_t$
+
+- $\eta_t$ 条件期望 $\hat \eta_t = Q_tR_t'r_t\ (t=n,...,1)$
+- $\eta_t$ 条件方差$Var(\eta_t|Y_n) = Q_t-Q_tR_t'N_tR_tQ_t$
+
+## 初始化
+
+https://github.com/statsmodels/statsmodels/blob/589f167fed77ebf6031d01ad3de1aa7b0040ced3/statsmodels/tsa/statespace/initialization.py
+
+下面考虑如何设置初始估计 $a_1$ 与初始估计误差 $P_1$ ，使用以下模型表示初始随机变量：
+
+$$
+\begin{array}{llll}
+\alpha_1 = a + A\delta+R_0\eta_0 & & & \eta_0\sim\mathcal N(0,Q_0) \nonumber 
+\end{array}
+$$
+
+- 常量部分 $a$
+- 非平稳部分 $A\delta$
+    - $\delta$是 $q\times1$向量
+    - $A$是$m\times q$ 选择矩阵
+- 平稳部分 $R_0\eta_0$
+    - $\eta_0$是 $(m-q)\times1$向量
+    - $R_0 $ 是$m\times(m-q)$ 选择矩阵
+
+通过该模型可以表示 4 种初始化方式
+
+- 已知
+
+如果用户知晓某些领域先验知识，可以通过常量部分将其引入，用于初始化模型
+
+如果不存在任何确定信息，则可以直接设置 $a=0$
+
+- 平稳
+
+如果$\alpha_t$是平稳的，则所有状态随机变量具有稳定的均值与方差
+
+因此可以通过已知的 $R_0,\eta_0,Q_0$ 描述模型的初始均值、方差、协方差
+
+- 扩散
+
+当不存在任何先验知识时，可以指定一个较大的初始状态误差，在迭代过程中逐步矫正
+
+将未知常量看作正态随机变量$\delta \sim \mathcal N(0, \kappa I_q)$ ，其对应的 KalmanFilter 初始参数为
+
+- $a_1 = E(\alpha_1)=a$
+- $P_1 = Var(\alpha_1) = Var(A\delta) + Var(R_0\eta_0) = \kappa P_{\infty,1}+P_{*,1} $
+
+当 $\kappa\to\infty$时，有 $P_{\infty,1}=AA',\ P_{*,1}=R_0Q_0R_0'$
+
+当迭代到某个时间点 $t>d$后 $P_{\infty,d}=0$，不确定部分不再影响 $P_d$的更新
+
+该过程称为扩散，其迭代次数 $d$ 通常与状态向量 $\alpha_1$的中的未知元素数量相同
+
+这种方式虽然易于实现，它可能导致较大的舍入误差
+
+并且当样本数量不足以完成扩散时，模型会发生退化
+
+- 混合
+
+为了减少扩散引入的不确定性，可以在初始化时将 $\alpha_1$划分为多个区间
+
+- 部分区间使用常量初始化
+- 部分区间使用平稳初始化
+- 剩余未知部分使用扩散初始化
+
+这里也体现了 Harvey 形式与 Hamilton 形式的一个重要区别
+
+- 一旦 Harvey 形式包含了差分过程，其状态向量是非平稳的，只能使用扩散初始化
+- 而 Hamilton 形式表示一个平稳过程 ，可以基于模型参数平稳初始化状态
+
+**精确扩散**
+
+使用$O(\kappa^{-j})$ 表示 $\kappa\to\infty$ 时，函数 $f(\kappa)$ 展开项 $\kappa^jf(\kappa)$的收敛于有限值，其中 $j=1,2$
+
+与 $P_1$ 类似，均方差矩阵 $P_t$ 可以分解为 $P_t =\kappa P_{\infty,t}+P_{*,t}+O(\kappa^{-1})$，其中 $t=2,...,n$
+
+通常情况下，当迭代进行到某个时刻 $d$后 $P_{\infty,t}=0\ (t>d)$，此时 $P_t = P_{*,t}\ (t=d+1,...,n)$
+
+如果所有初始状态变量为确定值，或者具有已知的联合分布时，有 $P_\infty = 0$，此时 $d=0$
+
+维度为 $q$ 的随机变量 $\delta$ 表示 $\alpha_1$ 中的扩散部分服从正态分布，当 $\kappa$ 非无穷时其对数概率密度为
+
+$\log p(\delta) = -\frac q2\log2\pi-\frac q2\log\kappa-\frac1{2\kappa}\delta\delta'$
+
+其与 $Y_t$的联合概率密度可以表示为 $\log p(\delta|Y_t) = \log p(\delta,Y_t)-\log p(Y_t)$
+
+令 $\kappa\to\infty$，对 $\delta$求导，求解导数为 0 得到一个 $\delta = \tilde \delta$，该解就是给定 $Y_t$时 $\delta$的条件期望
+
+由于 $p(\delta,Y_t) $是高斯函数， $\log p(\delta,Y_t) $是关于 $\delta$的二次函数
+
+其二阶导数为常量不依赖 $\delta$，且二阶导数的负倒数是 $\delta$给定 $Y_t$时的方差矩阵
+
+该方差矩阵仅在 $t>d$之后存在，此后可以代替近似估计 $\kappa I$，成为准确的扩散方差估计
+
+如果着样本中包含的信息不足以完成扩散过程，此时模型发生退化
+
+通过递归展开状态方程 $\alpha_{t+1}=T_t\alpha_t+R_t\eta_t $，可以将 $\alpha_{t+1}$表示为 $a_1$与 $\eta_1,...,\eta_t$的线性组合
+
+- $a_1$中除了 $\delta$之外的部分以及 $\eta_1,...,\eta_t$ 的无条件方差是有限的
+- $t \ge d$ 之后的 $\delta$部分的条件方差也是有限的
+
+这意味着 $Var(\alpha_{t+1}|Y_t)=P_{t+1}=\kappa P_{\infty,t+1}+P_{*,t+1}+O(\kappa^{-1})$也是有限的
+
+由于 $\kappa \to \infty$，因此在  $t \ge d$ 之后必有 $P_{\infty,t+1} = 0$
+
+而当 $t$ 时，$\delta$ 部分的方差 $Var(\delta,Y_t)$ 随着 $\kappa \to \infty$ 而趋近于无穷
+
+因此 $Var(\alpha_{t+1}|Y_t) \ge Var(\delta,Y_t)$ 必然也趋近于无穷
+
+由于 $P_{*,t+1}+O(\kappa^{-1})$是有限的，因此必有 $P_{\infty,t+1} \ne 0$
+
+对于非退化模型，存在 $t=d$ 值满足$\begin{cases}
+P_{\infty,t}\ne0,&t\le d\\
+P_{\infty,t}=0,&t > d
+\end{cases}$
+
+因此我们可以使用前 $d$个样本进行迭代，直到 $P_{\infty,t} = 0$
+
+得到的的 $a_{d+1}$与 $P_{d+1}=P_{*,d+1}$可以作为 KalmanFilter 的初始估计使用
+
+这种初始化方式被称为 exact diffuse init
+
+**平稳参数**
+
+如果状态由平稳过程产生，则卡尔曼滤波器的初始估计 $a_1$ 与初始估计误差 $P_1$ 由其无条件均值和方差给出
+
+对于一个平稳时不变的转移方程，其无条件均值与协方差由模型参数 $c,\ T,\ R,\ Q$方程给出
+
+- $a_1=Ta_1-c\ \to\ a_1 = (I-T)^{-1}c$
+- $P_1=TP_1T'+RQR'\ \to\ \text{vec}(P_1)=[I-T\otimes T]^{-1}\text{vec}(RQR')$
+
+第二个方程通过过向量化和Kronecker积推导而得：
+
+- $\text{vec}(AXB) = (B'\otimes A) \text{vec}(X)\ \Longrightarrow \ \text{vec}(TP_1T') = (T\otimes T) \text{vec}(P_1)$
+- $ \text{vec}(P_1)-(T\otimes T) \text{vec}(P_1)=\text{vec}(RQR')\ \Longrightarrow \text{vec}(P_1)=[I-T\otimes T]^{-1}\text{vec}(RQR')$
+
+其中$\text{vec}(X)$表示矩阵 *X*的向量化，它是把 *X* 的所有列堆起来所形成的列向量
+
+第一个方程是简单线性方程 $(I-T)a_1=c\ \Longrightarrow\ Ax=b$
+
+第二个方程是离散 Lyapunov 方程 $TP_1T'-P_1+RQR'=0\ \Longrightarrow\  A'XA - X + Q = 0$
+
+两者均可通过现成的数值算法进行求解
+
+# 具体实现
+
+## 回归估计
+
+通过扩展观测方程，可以将解释变量纳入模型 $y_t = Z_t\alpha_t + X_t\beta + \varepsilon_t$
+
+其中回归系数 $\beta$ 是 $k\times1$向量， 解释变量$X_t$是 $p\times k$ 矩阵
+
+一种常见的实现方式是将 $\beta$包含在状态向量中
+
+$$
+\begin{array}{llll}
+y_t &= \begin{bmatrix}Z_t &X_t\end{bmatrix}\begin{pmatrix}\alpha_t\\ \beta_t\end{pmatrix} + \varepsilon_t \nonumber \\
+\begin{pmatrix}\alpha_{t+1}\\ \beta_{t+1}\end{pmatrix} &= \begin{bmatrix}T_t & 0\\0 &I_k\end{bmatrix}\begin{pmatrix}\alpha_t\\ \beta_t\end{pmatrix}+\begin{bmatrix}R_t \\0\end{bmatrix}\eta_t \nonumber
+\end{array}
+$$
+
+如果使用扩散初始化，则初始状态向量可以表示为
+
+$$
+\begin{array}{llll}
+\begin{pmatrix}\alpha_1\\ \beta_1\end{pmatrix} \sim \mathcal N \bigg\{
+\begin{pmatrix}a\\0\end{pmatrix},\kappa
+\begin{bmatrix}P_\infty & 0\\0 &I_k\end{bmatrix}+
+\begin{bmatrix}P_* & 0\\0 &0\end{bmatrix}
+\bigg\}\nonumber
+\end{array}
+$$
+
+存在两种类型的残差计算方式
+
+- 递归残差 $v_t=y_t-Z_t\alpha_t-X_t\hat\beta_{t-1}\ \ (t=d+1,...n)$
+- 最小二乘残差 $v_t^+=y_t-Z_t\alpha_t-X_t\hat\beta\ \ (t=d+1,...n)$
+
+递归残差 $v_t$ 中的系数 $\hat\beta_{t-1}$是随着递归进行逐渐更新
+
+最小二乘残差$v_t^+$ 则是先用全量样本先估计系数 $\hat\beta=\hat\beta_n$
+
+$v_t$ 的本质是创新误差，天然存在序列不相关性，$v_t^+$ 则是考虑了所有样本的信息
+
+两者均可用于模型诊断
+
+## 顺序处理
+
+在此前的标准模型设定基础上，增加以下假设
+
+- 观测变量 $y_t$的维度 $p_t$ 可以随时间发生变化
+- 观测方差 $H_t$是对角矩阵
+- 预测误差方差 $F_t$可以是奇异矩阵
+
+$$
+\begin{array}{llll}
+y_t = \begin{pmatrix}y_{t,1}\\\vdots\\ y_{t,p_t}\end{pmatrix} && \varepsilon_t = \begin{pmatrix}\varepsilon_{t,1}\\\vdots\\ \varepsilon_{t,p_t} \end{pmatrix}
+&& Z_t = \begin{pmatrix}Z_{t,1}\\\vdots\\ Z_{t,p_t} \end{pmatrix}
+&& H_t = \begin{pmatrix}\sigma^2_{t,1}&0&0\\0&\ddots&0\\ 0&0&\sigma^2_{t,p_t} \end{pmatrix}
+\nonumber
+\end{array}
+$$
+
+得到单变量状态空间方程
+
+$$
+\begin{array}{llll}
+y_{t,i} &= Z_{t,i} \alpha_{t,i}  + \varepsilon_{t,i} & i&=1,...,p_t &t=1,...n \nonumber \\
+\alpha_{t,i+1} &=
+\alpha_{t,i} & i&=1,...,p_t-1 \nonumber \\
+\alpha_{t+1,1} &= T_t \alpha_{t,p_t}  + R_t \eta_t & t&=1,...n\nonumber \\
+
+\alpha_{1,1}&=\alpha_1\sim\mathcal N(a_1,P_1) \nonumber
+\end{array}
+$$
+
+定义
+
+$$
+\begin{array}{llll}
+a_{t,1}&=E(\alpha_{t,1}) \nonumber\\ P_{t,1}&=Var(\alpha_{t,1}|Y_{t-1})\nonumber\\
+a_{t,i}&=E(\alpha_{t,i}|Y_{t-1},y_{t,1},...,y_{t,i-1})\nonumber\\
+P_{t,i}&=Var(\alpha_{t,i}|Y_{t-1},y_{t,1},...,y_{t,i-1})
+\end{array}
+$$
+
+将变量序列 $y_1,...,y_n$ 转换为标量序列 $y_{1,1},...,y_{n,p_n}$，前向递归可以重写为
+
+- 计算误差
+    - $v_{t,i}=y_{t,i}-Z_{t,i}a_{t,i}$
+    - $F_{t,i}=Z_{t,i}P_{t,i}Z_{t,i}'+\sigma^2_{t,i}$
+    - $K_{t,i}=P_{t,i}Z_{t,i}'F_{t,i}^{-1}$
+- 更新状态
+    - $a_{t,i+1}=a_{t,i} + K_{t,i}v_{t,i}$
+    - $P_{t,i+1} = P_{t,i}-K_{t,i}F_{t,i}K_{t,i}$
+- 预测状态
+    - $a_{t+1,1}=T_ta_{t,p_t+1}+c_{t,i} $
+    - $P_{t+1,1}=T_tP_{t,p_t+1}T_t' + R_tQ_tR_t'$
+
+值得注意的是 $v_t$ 中的分量与 $v_{t,i}$并不完全相等，只有 $v_t$首个元素等于 $v_{t,1}$
+
+$F_t$ 中的对角线元素与 $F_{t,i}$也并不完全相等，只有 $F_t$首个对角线上的元素等于 $F_{t,1}$
+
+并且 $F_{t,i}$允许为 0，这意味着最新的观测量 $y_{t,i}$与信息集 $Y_{t-1},y_{t,1},...,y_{t,i-1}$线性相关
+
+对于存在多重共线性的情况，可以忽略该观测值，直接令 $a_{t,t+1}=a_{t,i}$，$P_{t,t+1}=P_{t,i}$
+
+后向递归可以重写为，其中 $r_{n,p_n} = 0,\ N_{n,p_n} = 0,\ L_{t,i}=I_m-K_{t.i}Z_{t.i}$
+
+- $r_{t,i-1}=Z_{t,i}'F_{t,i}^{-1}v_{t,i}+L_{t,i}'r_{t,i}$
+- $r_{t-1,p_t-1}=T_{t-1}'r_{t,0}$
+- $N_{t,i-1}=Z_{t,i}'F_{t,i}^{-1}Z_{t,i}+L_{t,i}'N_{t,i}L_{t,i}$
+- $N_{t-1,p_t-1}=T_{t-1}N_{t,0}'T_{t-1}$
+
+状态平滑重写为，其中 $a_t=a_{t,1},\ P_t=P_{t,1},\ r_{t-1}=r_{t,0},\ N_{t-1}=N_{t,0}$
+
+- $\hat \alpha_t = a_t+P_tr_{t-1}$
+- $V_t = P_t-P_tN_{t-1}P_t$
+
+观测扰动平滑重写为
+
+- $\hat \varepsilon_{t,i}=\sigma_{t,i}^2F_{t,i}^{-1}(v_{t,i}-K_{t,i}'r_{t,i})$
+- $Var(\hat \varepsilon_{t,i})=\sigma_{t,i}^4F_{t,i}^{-2}(F_{t,i}-K_{t,i}'N_{t,i}K_{t,i})$
+
+如果 $H_t$不是对角矩阵，意味着扰动项 $\varepsilon_{t,i}$存在相关性，单变量状态空间方程不再适用
+
+此时可以对$H_t$进行 Cholesky 分解 $H_t=C_tH_t^*C_t'$，得到对角矩阵 $H_t^*$与对角元素为 1 的下三角矩阵 $C_t$
+
+接着对观测方程进行线性变换 $y_t^*=Z_t^*\alpha_t +\varepsilon_t^*$，其中 $y_t^*=C_t^{-1}y_t$，$Z_t^*=C_t^{-1}Z_t$，$\varepsilon_t^*=C_t^{-1}\varepsilon_t\sim\mathcal N(0,H_t^*)$
+
+单变量状态空间方程的计算效率显著高于多变量形式，不仅避免了矩阵 $F_t$ 的求逆，还减少了矩阵相乘所需的额外空间分配，在处理高维观测变量时可以节省大量计算开销
+
+## 观测折叠
+
+如果观测项链维度过高，会导致 $p\times p$矩阵 $F_t$ 求逆的性能开销巨大
+
+当 $H_t$是非奇异对角矩阵、$P_t$ 非奇异且满足$m \ll q$  时，可以使用以下恒等式求逆
+
+$$
+F_t^{-1}=(Z_tP_tZ_t'+H_t)^{-1}=H_t^{-1}-H_t^{-1}Z_t(P_t^{-1}+Z_t'H_t^{-1}Z_t)^{-1}Z_t'H_t^{-1}
+$$
+
+将$p\times 1$的观测向量 $y_t$拆分为互不相关两部分
+
+- $y_t^*$ 是与 $\alpha_t$相关的 $m\times 1$向量，可以基于其构建新的观测方程
+- $y_t^+$ 是 与 $\alpha_t$不相关的$(p-m)\times 1$向量 ，可以将其整合进状态方程中
+
+给定投影矩阵 $A_t^*=(Z_tH_tZ_t')^{-1}Z_t'H_t^{-1}$，得到 $y_t^*=A_t^*y_t$，$y_t^*$ 可以看作是 $E(\alpha_t|y_t)$的最小二乘估计
+
+使用某个矩阵 $B_t $ 构造一个$(p-m)\times p$满秩矩阵 $A_t^+=B_t(I-Z_tA_t^*)$，满足 $A_t^*Z_t=I_p$ 与 $A_t^+Z_t=0$
+
+给定 $y_t^+=A_t^+y_t,\ \ \varepsilon_t^*=A_t^*\varepsilon_t, \ \ \varepsilon_t^+=A_t^+\varepsilon_t$，转换后的观测方程为
+
+$$
+\begin{array}{llll}
+\begin{pmatrix}y_t^*\\y_t^+\end{pmatrix} &= \begin{bmatrix}A_t^*\\A_t^+\end{bmatrix}y_t=\begin{pmatrix}\alpha_0 \\0\end{pmatrix}+ \begin{pmatrix}\varepsilon_t^* \\\\varepsilon_t^+\end{pmatrix}\nonumber
+\end{array}
+$$
+
+由于 $Cov(\varepsilon_t^+,\varepsilon_t^+)=
+E(\varepsilon_t^+\varepsilon_t^+)=A_t^*H_t(I_p-A_t^{*'}Z_t')B_t'=0$，观测方程可以简化为
+
+$$
+\begin{array}{llll}
+y_t^*&=\alpha_t+\varepsilon_t^*,&\varepsilon_t^*\sim\mathcal N(0,H_t^*)\nonumber\\
+y_t^+&=\varepsilon_t^+,&\varepsilon_t^+\sim\mathcal N(0,H_t^+)\nonumber
+\end{array}
+$$
+
+其中 $H_t^*=A_t^*H_tA_t^*,\ \ H_t^+=A_t^+H_tA_t^+$，忽略掉第二个与状态无关的方程后得到折叠状态空间方程
+
+$$
+\begin{array}{llll}
+y_t^*&=\alpha_t+\varepsilon_t^*,&\varepsilon_t^*\sim\mathcal N(0,H_t^*)\nonumber\\
+\alpha_{t+1}^+&=T_t\alpha_t+R_t\eta_t,&\eta_t\sim\mathcal N(0,Q_t)\nonumber
+\end{array}
+$$
+
+当 $m \ll q$  时，折叠状态空间方程可以节省大量的计算开销，对于时不变系统  $A_t^*$与 $H_t^*$ 只需计算一次
+
+引入矩阵 $C_t$满足 $C_t'C_t=(Z_tH_tZ_t')^{-1}$，折叠后的观测方程可以表示为
+
+$$
+\begin{array}{llll}
+\bar y_t^*&=Z_t^*\alpha_t+\bar\varepsilon_t^*,&\bar\varepsilon_t^*\sim\mathcal N(0,\bar H_t^*)\nonumber
+\end{array}
+$$
+
+- $\bar A_t^* = C_tZ_tH_t^{-1}$
+- $Z_t^* = \bar A_t^* Z_t = C_tZ_t'H_t^{-1}Z_t=C_t'^{-1}$
+- $\bar H_t^*=C_tZ_t'H_t^{-1}Z_tC_t'=I_p$
+
+## 似然函数
+
+如果未使用扩散初始化，似然函数为
+
+- $L(Y_n) = p(y_1,..,y_n)=p(y_1)\prod_{t=2}^np(y_t|Y_{t-1})$
+- $\log L(Y_n) = \sum_{t=1}^n\log p(y_t|Y_{t-1})=-\frac{np}2\log2\pi-\frac12\sum_{t=1}^n(\log|F_t|+v_t'F_t^{-1}v_t)$
+
+如果使用扩散初始化，需要考虑扩散对预测误差的影响，定义
+
+$$
+F_t =\kappa F_{\infty,t}+F_{*,t}+O(\kappa^{-1})
+$$ 
+
+其中 $F_{\infty,t}=Z_tP_{\infty,t}Z_t'$
+
+增加一项描述扩散过程中的似然度，得到
+
+$$
+\begin{array}{llll}
+\log L_d(Y_n) 
+&=& \lim_{\kappa\to\infty} \big[\log L(Y_n)+\frac q2\log\kappa\big]\\
+&=& -\frac{np}2\log2\pi-\frac12\sum_{t=1}^dw_t+\frac12\sum_{t=d+1}^n(\log|F_t|+v_t'F_t^{-1}v_t)
+\end{array}
+$$
+
+其中
+
+$$
+w_t=\begin{cases}
+\log|F_{\infty,t}|, & F_{\infty,t} \ \text{ is positive define }\\
+\log|F_{*,t}|+v_t^{(0)'}F_{*,t}^{-1}v_t^{(0)}, & F_{\infty,t} = 0
+\end{cases}
+$$
+
+如果将 $\delta$看作某个固定的未知值而不是随机变量，可以将其从似然函数中消除，得到集中似然度
+
+$$
+\log L_c(Y_n)=-\frac{np}2\log2\pi-\frac12\sum_{t=1}^d|F_{\delta,t}|+\frac12\sum_{t=d+1}^n(S_{a_n}-b_n'S_{A,n}^{-1}b_n)
+$$
+
+其中 $S_{a,n}=\sum\nolimits_{t=1}^nv_{a,t}'F_{\delta,t}^{-1}v_{a,t}$
+
+## 参数估计
+
+当给出似然度公式后，可以使用最大似然估计进行模型拟合，此时往往面临两个问题：
+
+- 如何约束模型参数：平稳性 ARIMA 模型，需要保证参数不存在单位根
+- 如何计算模型梯度：ARIMA 模型的复杂度较高，梯度函数没有解析解
+
+**参数约束**
+
+- 使用带约束的数值优化算法
+- 通过参数映射限制搜索空间
+
+**梯度估计**
+
+常用的数值优化算法都基于梯度下降法实现
+
+## 估计方差
+
+https://www.sherrytowers.com/mle_introduction.pdf
+
+对于参数向量 $\boldsymbol\theta$的对数似然函数 $\log L(\boldsymbol\theta)$，其负的二阶偏导矩阵期望被称为 Fisher 信息矩阵
+
+$$
+\mathcal{I}(\boldsymbol\theta) = -E\bigg[\frac{\partial^2\log L(\boldsymbol\theta)}{\partial\boldsymbol\theta\partial\boldsymbol\theta^T}\bigg]
+$$
+
+在使用最大似然估计进行参数估计时，参数的估计方差可以通过信息矩阵进行计算，信息矩矩阵反映了样本提供的信息量，当样本量较大时，MLE 的估计参数的协方差矩阵可以使用信息矩阵的逆来近似表示
+
+$$
+Var(\hat{\boldsymbol\theta}) \approx \mathcal{I}(\hat{\boldsymbol\theta})^{-1}
+$$
+
+由于信息矩阵涉及期望，实际计算中可能需要用样本信息近似，通常使用对数似然函数的负二阶导数（海森矩阵的负值）来近似信息矩阵
+
+$$
+\mathcal{I}(\hat{\boldsymbol\theta}) \approx -\frac{\partial^2\log L(\hat{\boldsymbol\theta})}{\partial\hat{\boldsymbol\theta}\partial\boldsymbol\theta^T} \approx -\frac1n\sum_{i=1}^n \frac{\partial^2\log f(x_i;\hat{\boldsymbol\theta})}{\partial\hat{\boldsymbol\theta}\partial\boldsymbol\theta^T}
+$$
+
+如果二阶导数不可得，可以基于观测数据的平均梯度外积近似估计信息矩阵
+
+$$
+\mathcal{I}(\hat{\boldsymbol\theta}) \approx -\frac1n\sum_{i=1}^n \bigg(\frac{\partial\log f(x_i;\boldsymbol\theta)}{\partial\boldsymbol\theta}\bigg)\bigg(\frac{\partial\log f(x_i;\boldsymbol\theta)}{\partial\boldsymbol\theta}\bigg)^T
+$$
+
+当目标函数（对数似然函数）没有解析解时，则可以通过通过有限差分法近似对数似然的二阶导数
+
+$$
+\frac{\partial^2\log L(\hat{\boldsymbol\theta})}{\partial\theta_i\partial\theta_j} \approx \frac{
+\frac{\partial\log L(\boldsymbol\theta +he_i)}{\partial\theta_j} - 
+\frac{\partial\log L(\boldsymbol\theta -he_i)}{\partial\theta_j} }{2h} 
+$$
+
+其中 $h$ 是探测步长， $e_i$ 表示第 $i$个方向的单位向量
+
+该表达式也被称为似然函数的预测误差分解形式
+
+对于一元模型，其参数向量 $\psi=(\psi_*',\sigma_*^2)'$ 由两部分组成
+
+- $\psi_*'$ 中包含 $n-1$个模型参数
+- $\sigma_*^2$ 是一个扰动项方差的缩放因子
+
+其测量方程可以表示为 
+
+$$
+y_t = z_t'x_t+d_t+\varepsilon_t, \ \ \ Var(\varepsilon_t)=\sigma_*^2h_t, \ \ \ t=1,...,T
+$$
+
+其中 $z_t$是一个 $m\times1$的向量， $h_t$是一个标量
+
+其转移方程无需改动，只需将扰动项 $\eta_t$的协方差重定义为 $\sigma_*^2Q_t$即可
+
+如果同时将状态的初始方差等比缩放为 $Var(\alpha_0)=\sigma_*^2P_0$，此时 KF 可以独立于 $\sigma_*^2$ 运行
+
+当该参数未知时，可以将其提出似然函数，简化计算过程
+
+忽略该项后预测误差不受影响，但预测误差方差需要重写为 $Var(v_t)=F_t=\sigma_*^2f_t$
+
+此时对数似然函数改写为
+
+$$
+\log L(\psi_*,\sigma_*^2) = -\frac T2\log2\pi-\frac T2\log\sigma_*^2-\frac12\sum_{t=1}^T\log f_t-\frac1{2\sigma_*^2}\sum_{t=1}^Tv_t^2/f_t
+$$
+
+由于 $v_t,\ f_t$不依赖于$\sigma_*^2$ ，对似然函数求偏导后只剩下 $\partial_*^2(\psi_*) =
+\frac1T\sum_{t=1}^Tv_t^2/f_t$
+
+再将其代入似然函数，得到  concentrated log-likelihood function
+
+$$
+\log L_*(\psi_*)=-\frac T2\log2(\pi+1)-\frac12\sum_{t=1}^T\log f_t-\frac T2\sum_{t=1}^T\log \partial_*^2(\psi_*)
+$$
+
+最大化该似然函数等价于最小化以下平方和函数
+
+$$
+S(\psi_*) = \bigg(\prod_{t=1}^Tf_t\bigg)\sum_{t=1}^T(v_t^2/f_t)
+$$
+
+以上公式提供了基于预测误差构造似然函数的方法
+
+但对于非平稳状态向量，还需要提供额外的先验知识
+
+从而保证 $\alpha_0$ 具有合适的均值 $a_0$ 与有界方差 $P_0 $
+
+一种常用的方法是使用扩散先验，从观测样本中构造初始值
+
+当状态向量中包含 d 个非平稳元素时，可以使用前 d 个样本为 $\alpha_0$ 构造一个合适的分布
+
+此时似然函数应该排除这些样本，从 d+1 个预测误差开始构造
+
+在高斯模型中，预测误差相互独立且服从高斯分布 $v_t\sim \text{NID}(0,F_t), \ \ \ \ \ t=1,...,T$
+
+因此标准化残差 $F_t^{-1/2}v_t$ 可用于模型诊断
+
+对于非平稳的一元模型，有 $\tilde v_t=v_t/\sqrt{f_t} \sim \text{NID}(0,\sigma_*^2)$
+
+状态空间模型天然具备处理观测值缺失的能力，只需简单地忽略更新方程即可
+
+# 常用状态空间模型
+
+## Regression
+
+给定回归模型 $y_t=X_t\beta+\varepsilon_t \ \ \ \varepsilon_t\sim\text{N}(0,H_t)$
+
+- $\beta$ 是 $k\times1$的回归系数
+- $X_t$ 是 $n\times k$ 自变量矩阵
+- 方差 $H_t$可能随时间发生变化
+
+当 $\beta$ 不随时间发生变化时，其空间状态模型可以表示为
+
+- 观测方程 $y_t = Z_t\alpha_t + \varepsilon_t$
+
+$$
+Z_t = X_t
+$$
+
+- 状态方程 $\alpha_{t+1} = \alpha_t = \beta$
+
+$$
+T_t = I_k
+\ \ \ \ \
+R_t = Q_t = 0
+$$
+
+当 $\beta$ 随时间发生变化时，其空间状态模型可以表示为
+
+- 观测方程 $y_t = Z_t\alpha_t + \varepsilon_t$
+
+$$
+Z_t = X_t
+$$
+
+- 状态方程 $\alpha_{t+1} = \alpha_t + \eta_t $
+
+$$
+T_t = R_t =I_k
+\ \ \ \ \
+Q_t = \sigma_\eta^2I_k
+$$
+
+## ARMA
+
+给定 $\text{ARMA}(p,q)$模型 $y_t = \phi_1y_{t-1}+\cdots+\phi_my_{t-m} + \zeta_t+\theta_1\zeta_{t-1}+\cdots+\theta_{m-1}\zeta_{t-m+1}$
+
+令 $r = \max(p,q+1)$，其状态向量可以表示为
+
+$$
+\alpha_t=\begin{pmatrix}y_t\\
+\phi_2y_{t-1}+\cdots+\phi_ry_{t-r+1}+\theta_1\zeta_t+\cdots+\theta_{r-1}\zeta_{t-r+2}\\
+\phi_3y_{t-1}+\cdots+\phi_ry_{t-r+2}+\theta_2\zeta_t+\cdots+\theta_{r-1}\zeta_{t-r+3}\\
+\vdots\\
+\phi_ry_{t-1}+\theta_{r-1}\zeta_t\\
+\end{pmatrix}
+$$
+
+令 $d_t=0,\ c_t=0,\ \varepsilon_t=0,\ H_t=0$，可以得到下面的状态空间方程
+
+- $\alpha_{t}=T_t\alpha_{t-1}+R_t\eta_t=\begin{bmatrix}\phi_1&1&0&\cdots&0\\
+\phi_2&0&1&\cdots&0\\
+\vdots&\vdots&\vdots&\ddots&\vdots\\
+\phi_{r-1}&0&0&\cdots&1\\
+\phi_r&0&0&\cdots&0\\
+\end{bmatrix}\alpha_{t-1} + \begin{pmatrix}1\\\theta_1\\\theta_2\\\vdots\\\theta_{r-1}\end{pmatrix}\zeta_{t}$
+- $y_t = Z_t\alpha_t =\begin{bmatrix}1&0&0&\cdots0\end{bmatrix}'\alpha_t$
+
+对于 $\text{ARMA}(1,1)$ 与 $\text{ARMA}(2,1)$，其状态空间方程可以表示为
+
+$$
+\begin{pmatrix}y_{t+1}\\\phi_2y_t+\theta_1\zeta_{t+1}\end{pmatrix}=
+\begin{bmatrix}\phi_1&1\\\phi_2&0\end{bmatrix}
+\begin{pmatrix}y_t\\\phi_2y_{t-1}+\theta_1\zeta_t\end{pmatrix}+
+\begin{pmatrix}1\\\theta_1\end{pmatrix}\zeta_{t+1}
+$$
+
+## ARIMA
+
+任意 d 阶差分均可以通过 d-1 阶差分进行表示
+
+- $\Delta y_t = y_t-y_{t-1}$
+- $\Delta^2 y_t =\Delta y_t-\Delta y_{t-1} \Longrightarrow \Delta y_t = \Delta^2 y_t +\Delta y_{t-1}$
+- $\Delta^3 y_t = \Delta^2 y_t-\Delta^2 y_{t-1} \Longrightarrow \Delta^2 y_t = \Delta^3 y_t +\Delta^2 y_{t-1}$
+- $\Delta^d y_t = \Delta^{d-1} y_t-\Delta^{d-1} y_{t-1} \Longrightarrow \Delta^{d-1} y_t = \Delta^d y_t +\Delta^{d-1} y_{t-1}$
+
+因此将其转换为 $y_t$的形式
+
+- $y_t = \Delta y_t +y_{t-1}$
+- $y_t = \Delta^2 y_t + \Delta y_{t-1}+ y_{t-1}$
+- $y_t = \Delta^3 y_t +\Delta^2 y_{t-1} + \Delta y_{t-1}+ y_{t-1}$
+- $y_t = \Delta^d y_t +\Delta^{d-1} y_{t-1} + \cdots + \Delta^2 y_{t-1} + \Delta y_{t-1}+ y_{t-1}$
+
+观测方程可以分为两部分
+
+- 1 个状态预测值 $\Delta^dy_t$
+- d 个历史观测值$\Delta^{d-1} y_{t-1} + \cdots + \Delta^2 y_{t-1} + \Delta y_{t-1}+ y_{t-1}$
+
+实现这一点仅需在方程中加入一个 d 阶的缓存部分即可
+
+- $y_t = \begin{bmatrix}1_d&1&0\end{bmatrix}'\alpha_t$
+
+令 $y_t^* = \Delta^dy_t$，对应 $\text{ARIMA}(p,d,q)$模型的状态向量可以表示为
+
+$$
+\alpha_t=\begin{pmatrix}
+y_{t-1}\\\Delta y_{t-1}\\\vdots\\\Delta^{d-1}y_{t-1}\\y^*_t\\
+\phi_2y^*_{t-1}+\cdots+\phi_ry^*_{t-r+1}+\theta_1\zeta_t+\cdots+\theta_{r-1}\zeta_{t-r+2}\\
+\vdots\\ \end{pmatrix}
+$$
+
+对应的状态空间方程为
+
+$$
+\alpha_{t}=T_t\alpha_{t-1}+R_t\eta_t=
+\left[
+\begin{array}{c|c}
+\begin{matrix}1&1&\cdots&1&1\\
+0&1&\cdots&1&1\\
+\vdots&\vdots&\ddots&\vdots&\vdots\\
+0&0&\cdots&1&1\\
+0&0&\cdots&0&1\\
+\end{matrix} &
+\begin{matrix}1&0&0&\cdots&0&0\\
+1&0&0&\cdots&0&0\\
+\vdots&\vdots&\vdots&\ddots&\vdots&\vdots\\
+1&0&0&\cdots&0&0\\
+1&0&0&\cdots&0&0\\
+\end{matrix}
+\\
+\hline 
+  0_{d\times d}& 
+\begin{matrix}\phi_1&1&0&\cdots&0\\
+\phi_2&0&1&\cdots&0\\
+\vdots&\vdots&\vdots&\ddots&\vdots\\
+\phi_{r-1}&0&0&\cdots&1\\
+\phi_r&0&0&\cdots&0\\
+\end{matrix}
+\end{array}
+\right]\alpha_{t-1} + \begin{pmatrix}\vdots\\0_d\\\vdots\\1\\\theta_1\\\theta_2\\\vdots\\\theta_{r-1}\end{pmatrix}\zeta_{t}
+$$
+
+对于 $\text{ARIMA}(1,2,1)$ 与 $\text{ARIMA}(2,2,1)$，其状态空间方程可以表示为
+
+$$
+y_t=\begin{bmatrix}1&1&1&0\end{bmatrix}'\alpha_t
+$$
+
+$$
+\begin{pmatrix}y_{t-1}+\Delta y_{t-1}+y_t^* \Rightarrow y_t\\\Delta y_{t-1}+y_t^* \Rightarrow \Delta y_t\\ 
+y_{t+1}^*\\\phi_2y_t^*+\theta_1\zeta_{t+1}\end{pmatrix}=
+\begin{bmatrix}
+1&1&1&0\\0&1&1&0\\
+0&0&\phi_1&1\\
+0&0&\phi_2&0\end{bmatrix}
+\begin{pmatrix}
+y_{t-1}\\\Delta y_{t-1} \\ y_t^* \\\phi_2y_{t-1}^*+\theta_1\zeta_t\end{pmatrix}+
+\begin{pmatrix}0\\0\\1\\\theta_1\end{pmatrix}\zeta_{t+1}
+$$
+
+## SARIMA
+
+给定 $\text{SARIMA}(p, d, q) \times (P, D, Q)_s$ 模型  
+
+$$
+\phi_p (L) \tilde \phi_P (L^s) \Delta^d \Delta_s^D y_t = 
+    \theta_q (L) \tilde \theta_Q (L^s) \zeta_t
+$$
+
+将两边模型参数分别进行合并，得到一个 $\text{ARMA}(p+sP,q+sQ)$模型 
+
+$$
+\Phi (L) \Delta^d \Delta_s^D y_t = 
+    \Theta (L) \zeta_t
+$$
+
+- $\Phi (L) \equiv \phi_p (L) \tilde \phi_P (L^s) $是一个 $p+sP$阶多项式
+- $\Theta (L) \equiv \theta_q (L) \tilde \theta_Q (L^s)$ 是一个 $q+sQ$阶多项式
+
+其状态方程为
+
+$$
+\alpha_{t}=T_t\alpha_{t-1}+R_t\eta_t=
+\left[
+\begin{array}{c|c}
+\begin{matrix}1&1&\cdots&1&1\\
+0&1&\cdots&1&1\\
+\vdots&\vdots&\ddots&\vdots&\vdots\\
+0&0&\cdots&1&1\\
+0&0&\cdots&0&1\\
+\end{matrix} &
+\begin{matrix}1&0&0&\cdots&0&0\\
+1&0&0&\cdots&0&0\\
+\vdots&\vdots&\vdots&\ddots&\vdots&\vdots\\
+1&0&0&\cdots&0&0\\
+1&0&0&\cdots&0&0\\
+\end{matrix}
+\\
+\hline 
+  0_{d\times d}& 
+\begin{matrix}\phi_1&1&0&\cdots&0\\
+\phi_2&0&1&\cdots&0\\
+\vdots&\vdots&\vdots&\ddots&\vdots\\
+\phi_{r-1}&0&0&\cdots&1\\
+\phi_r&0&0&\cdots&0\\
+\end{matrix}
+\end{array}
+\right]\alpha_{t-1} + \begin{pmatrix}\vdots\\0_d\\\vdots\\1\\\theta_1\\\theta_2\\\vdots\\\theta_{r-1}\end{pmatrix}\zeta_{t}
+$$
+
+
+## SARIMAX
+
+SARIMA 模型可以表示为 $(p, d, q) \times (P, D, Q)_s$
+
+$$
+\begin{array}{llll}
+\phi_p (L) \tilde \phi_P (L^s) \Delta^d \Delta_s^D y_t = A(t) +
+    	heta_q (L) \tilde \theta_Q (L^s) \zeta_t\nonumber
+\end{array}
+$$
+
+带 SARIMA 误差的回归可以很容易地表示为：
+
+$$
+\begin{array}{llll}
+y_t & = \beta_t x_t + u_t \nonumber\\
+\phi_p (L) \tilde \phi_P (L^s) \Delta^d \Delta_s^D u_t & = A(t) +
+   \theta_q (L) \tilde \theta_Q (L^s) \zeta_t\nonumber
+\end{array}
+$$
+
+## Regression
+
+考虑回归模型 $y_t=X_t\beta+\xi_t \ \ \ \xi_t\sim\text{ARMA}(p,q)$
+
+- 观测方程 $y_t = Z_t\alpha_t$
+
+$$
+Z_t = \begin{bmatrix}X_t&1&0&\cdots&0\end{bmatrix}
+$$
+
+$$
+\alpha_t = \begin{bmatrix}
+\beta_t\\
+\alpha_{t,\text{ARMA}}
+\end{bmatrix}
+$$
+
+- 状态方程 $\alpha_{t+1} = T_t\alpha_t + R_t\eta_t $
+
+$$
+T =\begin{bmatrix}
+I_k & 0 \\
+0 & T_{\text{ARMA}}
+\end{bmatrix}
+\ \ \ \ \
+R =\begin{bmatrix}
+0 \\ R_{\text{ARMA}}
+\end{bmatrix}
+$$

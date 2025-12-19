@@ -1,0 +1,1019 @@
+---
+title: STL 分解
+cover: '/cover/The-Science-of-Decomposition.jpg'
+date: 2025-09-12
+tags: ['统计','时间序列分析']
+---
+
+STL（Seasonal-Trend decomposition using Loess）是一种稳健的时间序列分解算法。它利用 Loess 平滑技术，将序列准确分解为趋势、季节性和残差三个部分，广泛用于异常检测和数据预测。
+
+[comment]:summary
+
+## 模型设定
+
+时间序列通常具有以下特性
+
+- 趋势 **`Trend` **：长期的增长或下跌
+- 季节 **`Seasonal` **：频率固定的波动，时间跨度通常在一年内，并且重复趋势明显（气温、旅游人数）
+- 周期 **`Cyclic` **：频率不固定的波动，时间跨度往往大于一年，并且周期的长度可能发生变化（宏观经济）
+
+分解时间序列助于理解时间序列，通常可以分为 3 部分
+
+- 趋势-周期部分 `trend-cycle`
+- 季节部分 `seasonal`
+- 剩余部分 `remainder`
+
+可选的分解方式有两种
+
+- 加性分解 $$y_t = S_t + T_t + R_t$$
+- 乘性分解 $$y_t = S_t \times T_t \times R_t$$
+
+季节性波动的幅度或趋势周期的变化，与时间序列水平变化不相关，使用加性分解
+
+季节性波动的幅度或趋势周期的变化，与时间序列水平变化成比例，使用乘性分解
+
+可以先通过对数变换将原始序列转换为稳定的时间序列，再对稳定的序列使用加法分解
+
+$$y_t = S_t \times T_t \times R_t \ \ \to\ \ \ \log y_t = \log S_t + \log T_t + \log R_t$$
+
+如果对季节性不感兴趣，可以从原始数据中去除季节性成分，得到 “季节性调整”数据
+
+比如，对每月失业数据进行季节性调整，可以突出经济基本状况的变化，而不是季节性变化
+
+## 经典分解法
+
+- 使用滑动均值获得趋势成分 $$\hat{T}_t$$
+- 去除趋势成分得到去趋势成分 $$y_t - \hat{T}_t $$ 或 $$y_t / \hat{T}_t$$
+- 基于去趋势成分计算季节成分 $$\hat{S}_t$$
+- 去除季节成分得到 $$\hat{R}_t$$
+
+**计算趋势成分**
+
+假设 $m$ 为季节性成分的周期长度，可以通过滑动均值消除数据的随机性，从而得到平滑的趋势成分
+
+- 当 $m$ 为奇数时，计算 $m\text{-MA}$
+
+$$\hat{T}_t = \frac{1}{m}\sum_{j=-k}^ky_{t+j}$$，其中 $k = \frac{m-1}{2}$
+
+- 当 $m$ 为偶数时，计算 $(2\times m)\text{-MA}$
+
+$$\hat{T}_t = \frac{1}{2m}\sum_{j=-k}^{k-1}y_{t+j} + \frac{1}{2m}\sum_{j=-(k-1)}^ky_{t+j}$$，其中 $k = \frac{m}{2}$
+    
+
+**计算季节成分**
+
+假设季节周期长度为 m，则可以对每个季节内的去趋势值求均值
+
+得到 m 个季节成分 $$S^{(1)}, ... , S^{(m)} $$，这些季节成分需满足以下约束
+
+- 加性周期 $$S^{(1)} + ... + S^{(m)} = 0 $$
+- 乘性周期 $$S^{(1)} + ... + S^{(m)} = m$$
+
+```go
+package main
+
+import "fmt"
+
+func main() {
+
+    trend := []float64{1, 2, 3, 4, 5, 6, 7, 8, 9}
+    seasonal := []float64{1, 3, 9, 1, 3, 9, 1, 3, 9}
+    remainder := []float64{0.47, 0.12, 0.33, 0.03, 0.18, 0.14, 0.1, 0.33, 0.45}
+
+    mulTs := make([]float64, 9)
+    addTs := make([]float64, 9)
+    for i := 0; i < 9; i++ {
+       mulTs[i] = trend[i] * seasonal[i] * remainder[i]
+       addTs[i] = trend[i] + seasonal[i] + remainder[i]
+    }
+
+    at, as, ar := decomposeClassic(addTs, 3, true)
+    fmt.Printf("%v\n", at)
+    fmt.Printf("%v\n", as)
+    fmt.Printf("%v\n", ar)
+    mt, ms, mr := decomposeClassic(mulTs, 3, false)
+    fmt.Printf("%v\n", mt)
+    fmt.Printf("%v\n", ms)
+    fmt.Printf("%v\n", mr)
+}
+
+func decomposeClassic(ts []float64, period int, additive bool) (trend, seasonal, residual []float64) {
+    trend = movingAvg(ts, period)
+    deTrended := make([]float64, len(trend))
+    k := (len(ts) - len(trend)) / 2
+    if additive {
+       for i, v := range ts[k : len(ts)-k] {
+          deTrended[i] = v - trend[i]
+       }
+    } else {
+       for i, v := range ts[k : len(ts)-k] {
+          deTrended[i] = v / trend[i]
+       }
+    }
+
+    summary := 0.
+    seasonal = make([]float64, period)
+    for i := 0; i < period; i++ {
+       n, m := 0., 0
+       for j := i; j < len(deTrended); j += period {
+          n += deTrended[j]
+          m++
+       }
+       seasonal[(i+k)%period] = n / float64(m)
+       summary += seasonal[(i+k)%period]
+    }
+
+    mean := summary / float64(period)
+    if additive {
+       for i := 0; i < period; i++ {
+          seasonal[i] -= mean
+       }
+    } else {
+       for i := 0; i < period; i++ {
+          seasonal[i] /= mean
+       }
+    }
+
+    residual = make([]float64, len(trend))
+    if additive {
+       for i := 0; i < len(residual); i++ {
+          residual[i] = deTrended[i] - seasonal[(i+k)%period]
+       }
+    } else {
+       for i := 0; i < len(residual); i++ {
+          residual[i] = ts[i+k] / trend[i] / seasonal[(i+k)%period]
+       }
+    }
+    return trend, seasonal, residual
+}
+
+func movingAvg(x []float64, m int) []float64 {
+    k := m / 2
+    y := make([]float64, len(x)-k*2)
+    if m%2 == 1 { // m-MA
+       for i := k; i < k+len(y); i++ {
+          n := 0.
+          for j := -k; j <= k; j++ {
+             n += x[i+j]
+          }
+          y[i-k] = n / float64(m)
+       }
+    } else { // (2 x m)-MA
+       for i := k; i < k+len(y); i++ {
+          n := (x[i-k] + x[i+k]) / 2
+          for j := 1 - k; j <= k-1; j++ {
+             n += x[i+j]
+          }
+          y[i-k] = n / float64(m)
+       }
+    }
+    return y
+}
+
+```
+
+## Loess
+
+当使用线性回归拟合非线性数据时，存在以下几种可选方式
+
+- 相关项 $$y = \beta_0 + \beta_1x_1+ \beta_2x_2+ \beta_3x_1x_2$$
+- 高阶项 $$y = \beta_0 + \beta_1x_1+ \beta_2x_1^2+ \beta_3 x_1^{-1}$$
+- 超越函数项 $$y = \beta_0 + \beta_1x_1+ \beta_2\log x_1 + \beta_3 \sin x_1$$
+
+但无论使用哪种方式，都需要人工构造、选择、组合特征，这带来了以下问题
+
+- 特征构造过程繁琐，无法实现自动化，当数据集非常多时效率很低
+- 无法自动适应数据变化，当数据分布发生变化时，此前构造的特征会失效
+
+为了解决以上问题，提出了局部权重回归 Locally Weighted Regression，其主要优点可以概括为：
+
+- 自动化：没有参数假设，无需人工构造特征
+- 稳定性：具有局部自适应能力，对数据分布变化不敏感，对异常值不敏感
+
+LWR 是一种用于处理非线性关系的非参数回归方法
+
+模型中不包含参数 $\boldsymbol \beta$，而是直接使用样本集合 $(\boldsymbol X,\boldsymbol y)$ 进行预测
+
+其核心思想是为每个样本点 $(x_i,y_i)$ 分配一个权重函数 $w_i(x)$，然后使用以下公式进行预测
+
+$$y = w_1(x)y_1 + \cdots + w_n(x)y_n = \sum_{i=1}^n w_i(x) y_i$$
+
+该模型能够更好地拟合局部的数据分布，从而提高模型的预测精度
+
+权重函数 $w_i(x)$ 的作用是计算输入向量 $x$ 与样本 $x_i$ 间的距离
+
+- $x$ 与 $x_i$ 的距离越近，$y_i$ 的权重越大
+- $x$ 与 $x_i$ 的距离越远，$y_i$ 的权重越小
+
+最常用的权重函数有
+
+- Gaussian $w_i(x) = \exp\bigg(-\frac{(x - x_i)^2}{2\tau^2}\bigg)$
+- Tri-cubic $w_i(x) = \begin{cases} \left[1 - \left(\frac{|x - x_i|}{h}\right)^3\right]^3, & \text{if } |x - x_i| \le h \\ 0, & \text{otherwise} \end{cases}$
+- Bi-square $w_i(x) = \begin{cases} \left[1 - \left(\frac{|x - x_i|}{h}\right)^2\right]^2, & \text{if } |x - x_i| \le h \\ 0, & \text{otherwise} \end{cases}$
+
+函数中的超参数（hyper-parameter）$\tau$ 与 $h$ 被称为带宽（bandwidth）
+
+- 带宽越大，权重衰减越慢，影响范围越广
+- 带宽越小，权重衰减越快，影响范围越窄
+
+带宽选择影响最终的拟合效果
+
+- 带宽越大，曲线越光滑，但过大可能导致欠拟合
+- 带宽越小，曲线越粗糙，但过小可能导致过拟合
+
+### 参数估计
+
+LWR 本身是无参的，但给定输入向量 $x$ 时，则可以基于 $x$ 计算出一系列的权重 $w_1(x), \cdots, w_n(x)$
+
+然后借助 OLS 或 MLE 进行参数估计，得到一组对应的估计参数 $\hat{\boldsymbol\beta}$
+
+每当输入向量 $x$ 发生变化时，都需要更新估计参数 $\hat{\boldsymbol\beta}$
+
+### OLS
+
+如果将 LWR 看作是在每个点 $(x_i,y_i)$ 处构建一个线性模型，其目标是最小化加权平方误差
+
+模型的拟合误差可以表示为加权残差和 $\sum_{i=1}^n w_i(x)e_i^2 = \sum_{i=1}^n w_i(x) (y_i - x_i^T \boldsymbol\beta)^2$
+
+改写为矩阵形式 $(\boldsymbol {y -X \beta})'\boldsymbol W(\boldsymbol {y -X \beta})$
+
+- $\boldsymbol y = (y_1, ..., y_n)$
+- $\boldsymbol \beta = (\beta_1, ..., \beta_k)$
+- $\boldsymbol X = \begin{bmatrix}
+1 & x_{1,1} & \cdots & x_{k,1} \\
+1 & x_{1,2} & \cdots & x_{k,2} \\
+\vdots & \vdots & \cdots & \vdots \\
+1 & x_{1,n} & \cdots & x_{k,n} \\
+\end{bmatrix}$
+- $\boldsymbol W = \begin{bmatrix}
+w_1(x) & 0 &\cdots & 0 \\
+0 & w_2(x) & \cdots & 0 \\
+\vdots & \vdots & \ddots & \vdots \\
+0 & 0 &\cdots & w_n(x) \\
+\end{bmatrix}$
+
+此时 LWR 问题转化为一个加权最小二乘问题，目标是找到一组参数 $\boldsymbol\beta$ 使得残差和最小，即
+
+$$\min_\beta\big[(\boldsymbol {y -X \beta})'\boldsymbol W(\boldsymbol {y -X \beta})\big]$$
+
+- 展开函数 $$(\boldsymbol {y -X \beta})'\boldsymbol W(\boldsymbol {y -X \beta}) = \boldsymbol{y}'\boldsymbol{W}\boldsymbol{y} - 2\boldsymbol{\beta}'\boldsymbol{X}'\boldsymbol{W}\boldsymbol{y} + \boldsymbol{\beta}'\boldsymbol{X}'\boldsymbol{W}\boldsymbol{X}\boldsymbol{\beta}$$
+- 系数求导 $$\frac{\partial}{\partial \boldsymbol{\beta}} (\boldsymbol {y -X \beta})'\boldsymbol W(\boldsymbol {y -X \beta}) = -2\boldsymbol{X}'\boldsymbol{W}\boldsymbol{y} + 2\boldsymbol{X}'\boldsymbol{W}\boldsymbol{X}\boldsymbol{\beta}$$
+- 求解系数 $\hat{\boldsymbol\beta} = (\boldsymbol{X'WX})^{-1}\boldsymbol{X'Wy}$
+
+### MLE
+
+假设样本 $\boldsymbol X$ 与 $\boldsymbol y$ 服从正态分布，即 $\boldsymbol y \sim \mathcal{N}(\boldsymbol X \boldsymbol\beta, \sigma^2I)$
+
+整个样本集的联合概率密度函数（即似然函数）可以表示为
+
+$$L(\beta,\sigma^2) = \prod_{i=1}^n P(x_i,y_i|\beta) = (\frac{1}{\sqrt{2\pi\sigma^2}})^n\exp\bigg(-\frac{1}{2\sigma^2}(\boldsymbol y -\boldsymbol X\boldsymbol\beta)'\boldsymbol W(\boldsymbol y -\boldsymbol X\boldsymbol\beta)\bigg)$$
+
+为了方便计算，将似然函数改写为对数似然函数
+
+$$\ell(\beta,\sigma^2) = \log L(\beta,\sigma^2) = −\frac{n}{2}\log(2\pi\sigma^2)−\frac{1}{2\sigma^2}(\boldsymbol y -\boldsymbol X\boldsymbol\beta)'\boldsymbol W(\boldsymbol y -\boldsymbol X\boldsymbol\beta)$$
+
+对 $\beta$ 与 $\sigma^2$ 分别进行求导
+
+- $$\frac{\partial \ell }{\partial \beta} = \frac{1}{\sigma^2}\boldsymbol{X'W}(\boldsymbol{y-X\beta})$$
+- $$\frac{\partial \ell }{\partial \sigma^2} = -\frac{n}{2\sigma^2} + \frac{1}{(2\sigma^2)^2}(\boldsymbol y -\boldsymbol X\boldsymbol\beta)'\boldsymbol W(\boldsymbol y -\boldsymbol X\boldsymbol\beta)$$
+
+求解得到
+
+- $\hat{\boldsymbol\beta} = (\boldsymbol{X'WX})^{-1}\boldsymbol{X'Wy}$
+- $\hat\sigma^2 = \frac{1}{n}(\boldsymbol y -\boldsymbol X\hat{\boldsymbol\beta})'\boldsymbol W(\boldsymbol y -\boldsymbol X\hat{\boldsymbol\beta}) = \frac{1}{n}\sum^n_i w_i(x)e_i^2$
+- $\log L = −\frac{n}{2}[\log(2\pi)+\log(\frac{\sum^n_i w_i(x)e_i^2}n) + 1]$
+
+### 样例代码
+
+```go
+package main
+
+import (
+    "fmt"
+    "gonum.org/v1/gonum/blas/blas64"
+    "gonum.org/v1/gonum/mat"
+    "math"
+)
+
+type Gaussian struct {
+    tau float64
+}
+
+func (g Gaussian) Weight(x blas64.General, x0 blas64.Vector) []float64 {
+    weight := make([]float64, x.Rows)
+    for i := 0; i < x.Rows; i++ {
+       sum, pos, end := 0., i*x.Stride, x0.Inc*x0.N
+       for j := 0; j < end; j += x0.Inc {
+          v := x.Data[pos] - x0.Data[j]
+          sum += v * v
+          pos++
+       }
+       weight[i] = math.Exp(-math.Sqrt(sum) / 2 * g.tau * g.tau)
+    }
+    return weight
+}
+
+func main() {
+
+    y := mat.NewVecDense(5, []float64{2, 3, 5, 7, 10})
+    X := mat.NewDense(5, 4, []float64{
+       1, 1, 10, 1,
+       1, 2, 8, 0,
+       1, 3, 9, 1,
+       1, 4, 7, 1,
+       1, 5, 6, 0,
+    })
+
+    x0 := mat.NewVecDense(4, []float64{1, 2, 1, 2})
+    w := Gaussian{1}.Weight(X.RawMatrix(), x0.RawVector())
+    W := mat.NewDiagDense(len(w), w)
+    fmt.Printf("%v\n", w)
+
+    n, k := X.Dims()
+    XW := mat.NewDense(k, n, make([]float64, k*n))
+    XW.Mul(X.T(), W)
+
+    XWY := mat.NewVecDense(k, make([]float64, k))
+    XWY.MulVec(XW, y)
+
+    XWX := mat.NewDense(k, k, make([]float64, k*k))
+    XWX.Mul(XW, X)
+
+    INV := mat.NewDense(k, k, make([]float64, k*k))
+    if err := INV.Inverse(XWX); err != nil {
+       panic(err)
+    }
+
+    beta := mat.NewVecDense(k, make([]float64, k))
+    beta.MulVec(INV, XWY)
+
+    fmt.Printf("%v\n", mat.Formatted(beta))
+
+    y0 := mat.Dot(beta, x0)
+    fmt.Printf("%v -> %v\n", mat.Formatted(x0.T()), y0)
+
+}
+
+```
+
+## STL 分解
+
+STL（Seasonal-Trend decomposition using LOESS）是一种使用局部加权回归（LOESS）进行趋势和季节性成分的估计分解算法，相较于经典分解方法，其具有几个显著的优势：
+
+- 能更好地适应数据中的非线性趋势和季节性变化
+- 支持非整数周期的季节性数据，提供更大的灵活性
+- 对异常值不敏感，可以有效地减少其对分解结果的影响
+
+### LOESS 平滑
+
+STL 中的一个重要改进，是使用 LOESS 替换了简单的滑动均值
+
+使其对数据的局部特征更为敏感，避免丢失重要的数据细节
+
+### q 邻近权重
+
+使用 $\lambda$ 表示数据点间距离，并将其按照从近到远的顺序 $\lambda_1(x), \cdots, \lambda_n(x)$ 进行排序
+
+q 邻近距离 $\lambda_q(x)$ 的定义如下
+
+- 当 $q \le n$ 时，$\lambda_q(x) = \lambda_n(x)$
+- 当 $q > n$ 时，$\lambda_q(x) = \lambda_n(x)\frac{q}{n}$
+
+使用 $\lambda_q(x)$ 作为三立方权重 tri-cubic 的带宽 $h$，得到 q 邻近权重 q-neighbourhood weight
+
+$$w_i(x) = \begin{cases} \left[1 - \left(\frac{|x - x_i|}{\lambda_q(x)}\right)^3\right]^3, & \text{if } |x - x_i| < \lambda_q(x) \\ 0, & \text{otherwise} \end{cases}$$
+
+- 当 $x_i$ 与 $x$ 距离 $|x_i - x|$ 大于等于 $\lambda_q(x)$ 时，其权重 $w_i(x) = 0$
+- 当 $x_i$ 与 $x$ 距离 $|x_i - x|$ 小于 $\lambda_q(x)$ 时，其权重 $w_i(x) > 0$
+
+### d 阶多项式拟合
+
+使用 q 计算出权重后，接下来需要使用权重拟合曲线
+
+根据数据的特性不同，可以选择不同阶数的多项式进行拟合
+
+- 当曲线较为平缓时，使用 1 阶多项式实现 局部线性 locally-linear 拟合
+- 当曲线较为显著时，使用 2 阶多项式实现 局部二次 locally-quadratic 拟合
+
+STL 通常使用 1 阶多项式拟合
+
+### 整体设计
+
+STL 分为两层循环
+
+- 内循环：使用 LOESS 平滑更新季节成分与趋势成分
+- 外循环：执行内循环 + 更新稳健权重 robustness weight
+
+稳健权重用于保证内循环的鲁棒性，减少瞬时异常值的对季节成分与趋势成分的影响
+
+此外，STL 是一种加性分解，但可以通过 Log 或 Box-Cox 对原数据进行转换，实现乘性分解
+
+### 算法参数
+
+- 周期长度
+    
+    时间序列会按照周期长度 $n_{(p)}$ 拆分为多个周期子序列 Cycle-subseries
+    
+- LOESS 平滑参数
+    
+  - $n_{(s)}$ 季节成分的平滑参数
+    
+  - $n_{(t)}$ 趋势成分的平滑参数
+    
+  - $n_{(\ell)}$ 低通滤波的平滑参数
+    
+- 迭代次数
+    
+  - $n_{(i)}$ 内循环次数
+    
+  - $n_{(o)}$ 外循环次数
+    
+
+### 内循环
+
+第一次执行内循环时，需要初始化趋势成分 $T^{(0)} = 0$
+
+执行完第 $k$ 次内循环时，对应的季节与趋势成分为 $S^{(k)}$ 与 $T^{(k)}$
+
+紧接着第 $k+1$ 次内循环开始：
+
+1. Detrending 去趋势
+    
+    计算去趋势序列 $Y-T^{(k)}$
+    
+2. Cycle-subseries smoothing 周期子序列平滑
+    
+    使用参数为 $q=n_{(s)}, d=1$ 的 loess 平滑去趋势序列 $Y-T^{(k)}$
+    
+    平滑后的周期子序列组成临时季节序列 $C^{(k+1)}$
+    
+3. Low-Pass filtering of smoothed Cycle-subseries 对平滑周期子序列进行低通滤波
+    
+    对 $C^{(k+1)}$ 进行低通滤波得到低频成分 $L^{(k+1)}$
+    
+    1. 2 次步长为 $n_{(p)}$ 的滑动平均
+    2. 1 次步长为 3 的滑动平均
+    3. 1 次参数为 $q=n_{(\ell)}, d=1$ 的 loess 平滑
+4. Detrending of smoothed Cycle-subseries 对平滑周期子序列去趋势
+    
+    减去的低频成分得到纯净的季节成分 $S^{(k+1)} = C^{(k+1)} - L^{(k+1)}$
+    
+5. Deseasonalizing 去季节性
+    
+    计算去季节序列 $Y-S^{(k+1)}$
+    
+6. Trend Smoothing 趋势平滑
+    
+    使用参数为 $q=n_{(t)}, d=1$ 的 loess 平滑去季节序列 $Y-S^{(k+1)}$
+    
+    得到趋势成分 $T^{(k+1)}$
+    
+
+### 外循环
+
+执行完内循环后，可以根据季节成分 $S$ 与趋势成分 $T$ 计算剩余成分 $R = Y - T - S$
+
+对于离群点，其剩余成分的绝对值 $|R|$ 必然很大
+
+设置 $h = 6 \text{median}(|R|)$ 为离群点阈值，并将其作为双平方权重的带宽
+
+可以得到稳定权重函数 robustness weight
+
+$$\rho_i = \begin{cases} \left[1 - \left(\frac{|R_i|}{h}\right)^2\right]^2, & \text{if } |R_i| < h \\ 0, & \text{otherwise} \end{cases}$$
+
+当 $x_i$ 的剩余成分 $|R_i|$ 大于等于 $h$ 时，将其作为离群值处理，设置其权重 $\rho_i$ 为 0
+
+### 算法实现
+
+https://github.com/statsmodels/statsmodels/blob/main/statsmodels/tsa/stl/_stl.pyx
+
+参考了原论文中 Fortran 的实现，没有实现全量 LOESS，而是通过 LOESS + 线性插值的方式提升计算效率
+
+```go
+package main
+
+import (
+    "errors"
+    "fmt"
+    "math"
+    "slices"
+)
+
+func main() {
+
+    co2 := []float64{315.58, 316.39, 316.79, 317.82, 318.39, 318.22, 316.68, 315.01, 314.02, 313.55, 315.02, 315.75, 316.52, 317.1, 317.79, 319.22, 320.08, 319.7, 318.27, 315.99, 314.24, 314.05, 315.05, 316.23, 316.92, 317.76, 318.54, 319.49, 320.64, 319.85, 318.7, 316.96, 315.17, 315.47, 316.19, 317.17, 318.12, 318.72, 319.79, 320.68, 321.28, 320.89, 319.79, 317.56, 316.46, 315.59, 316.85, 317.87, 318.87, 319.25, 320.13, 321.49, 322.34, 321.62, 319.85, 317.87, 316.36, 316.24, 317.13, 318.46, 319.57, 320.23, 320.89, 321.54, 322.2, 321.9, 320.42, 318.6, 316.73, 317.15, 317.94, 318.91, 319.73, 320.78, 321.23, 322.49, 322.59, 322.35, 321.61, 319.24, 318.23, 317.76, 319.36, 319.5, 320.35, 321.4, 322.22, 323.45, 323.8, 323.5, 322.16, 320.09, 318.26, 317.66, 319.47, 320.7, 322.06, 322.23, 322.78, 324.1, 324.63, 323.79, 322.34, 320.73, 319, 318.99, 320.41, 321.68, 322.3, 322.89, 323.59, 324.65, 325.3, 325.15, 323.88, 321.8, 319.99, 319.86, 320.88, 322.36, 323.59, 324.23, 325.34, 326.33, 327.03, 326.24, 325.39, 323.16, 321.87, 321.31, 322.34, 323.74, 324.61, 325.58, 326.55, 327.81, 327.82, 327.53, 326.29, 324.66, 323.12, 323.09, 324.01, 325.1, 326.12, 326.62, 327.16, 327.94, 329.15, 328.79, 327.53, 325.65, 323.6, 323.78, 325.13, 326.26, 326.93, 327.84, 327.96, 329.93, 330.25, 329.24, 328.13, 326.42, 324.97, 325.29, 326.56, 327.73, 328.73, 329.7, 330.46, 331.7, 332.66, 332.22, 331.02, 329.39, 327.58, 327.27, 328.3, 328.81, 329.44, 330.89, 331.62, 332.85, 333.29, 332.44, 331.35, 329.58, 327.58, 327.55, 328.56, 329.73, 330.45, 330.98, 331.63, 332.88, 333.63, 333.53, 331.9, 330.08, 328.59, 328.31, 329.44, 330.64, 331.62, 332.45, 333.36, 334.46, 334.84, 334.29, 333.04, 330.88, 329.23, 328.83, 330.18, 331.5, 332.8, 333.22, 334.54, 335.82, 336.45, 335.97, 334.65, 332.4, 331.28, 330.73, 332.05, 333.54, 334.65, 335.06, 336.32, 337.39, 337.66, 337.56, 336.24, 334.39, 332.43, 332.22, 333.61, 334.78, 335.88, 336.43, 337.61, 338.53, 339.06, 338.92, 337.39, 335.72, 333.64, 333.65, 335.07, 336.53, 337.82, 338.19, 339.89, 340.56, 341.22, 340.92, 339.26, 337.27, 335.66, 335.54, 336.71, 337.79, 338.79, 340.06, 340.93, 342.02, 342.65, 341.8, 340.01, 337.94, 336.17, 336.28, 337.76, 339.05, 340.18, 341.04, 342.16, 343.01, 343.64, 342.91, 341.72, 339.52, 337.75, 337.68, 339.14, 340.37, 341.32, 342.45, 343.05, 344.91, 345.77, 345.3, 343.98, 342.41, 339.89, 340.03, 341.19, 342.87, 343.74, 344.55, 345.28, 347, 347.37, 346.74, 345.36, 343.19, 340.97, 341.2, 342.76, 343.96, 344.82, 345.82, 347.24, 348.09, 348.66, 347.9, 346.27, 344.21, 342.88, 342.58, 343.99, 345.31, 345.98, 346.72, 347.63, 349.24, 349.83, 349.1, 347.52, 345.43, 344.48, 343.89, 345.29, 346.54, 347.66, 348.07, 349.12, 350.55, 351.34, 350.8, 349.1, 347.54, 346.2, 346.2, 347.44, 348.67}
+
+    stl, err := NewSTL(12, true, nil, nil, nil)
+    if err != nil {
+       panic(err)
+    }
+
+    season, trend, residual, weight := stl.Fit(co2)
+    fmt.Printf("%v\n\n", season)
+    fmt.Printf("%v\n\n", trend)
+    fmt.Printf("%v\n\n", residual)
+    fmt.Printf("%v\n\n", weight)
+
+}
+
+type stlSmooth struct {
+    len, deg, jmp int
+}
+
+type stlCtx struct {
+    useRW                        bool
+    value, season, trend, robust []float64
+    work                         [5][]float64
+}
+
+type STL struct {
+    period                   int
+    robust                   bool
+    seasonal, trend, lowPass stlSmooth
+}
+
+func NewSTL(
+    period int, robust bool,
+    seasonal, trend, lowPass *stlSmooth) (*STL, error) {
+
+    if period < 2 {
+       return nil, errors.New("period must be at least 2")
+    }
+    if seasonal == nil {
+       seasonal = &stlSmooth{7, 1, 1}
+    }
+    if seasonal.len < 3 || seasonal.len%2 == 0 {
+       return nil, errors.New("seasonal.len must be an odd number greater than 3")
+    } else if seasonal.jmp < 0 {
+       return nil, errors.New("seasonal.jmp must be a positive number")
+    }
+    if trend == nil {
+       t := int(math.Ceil(1.5 * float64(period) / (1 - 1.5/float64(seasonal.len))))
+       trend = &stlSmooth{t + (1 - t%2), 1, 1}
+    }
+    if trend.len < 3 || trend.len%2 == 0 || trend.len <= period {
+       return nil, errors.New("trend.len must be an odd number greater than 3 and period")
+    } else if seasonal.jmp < 0 {
+       return nil, errors.New("trend.jmp must be a positive number")
+    }
+    if lowPass == nil {
+       l := period + 1
+       lowPass = &stlSmooth{l + (1 - l%2), 1, 1}
+    }
+    if lowPass.len < 3 || lowPass.len%2 == 0 || lowPass.len <= period {
+       return nil, errors.New("lowPass.len must be an odd number greater than 3 and period")
+    } else if seasonal.jmp < 0 {
+       return nil, errors.New("lowPass.jmp must be a positive number")
+    }
+    return &STL{
+       period, robust, *seasonal, *trend, *lowPass,
+    }, nil
+}
+
+func (stl *STL) Fit(y []float64) (
+    season, trend, residual, weight []float64) {
+
+    var innerIter, outerIter int
+    if stl.robust {
+       innerIter, outerIter = 2, 15
+    } else {
+       innerIter, outerIter = 5, 0
+    }
+
+    n := len(y)
+    var work [5][]float64
+    for i := 0; i < len(work); i++ {
+       // reserve 2 x p space
+       // temporary seasonal series C range [-p+1, n+p]
+       work[i] = make([]float64, n+2*stl.period)
+    }
+    ctx := &stlCtx{
+       false, y, make([]float64, n), make([]float64, n), make([]float64, n), work,
+    }
+    for i := 0; i < n; i++ {
+       ctx.robust[i] = 1
+    }
+    for k := 0; ; k++ {
+       stl.decompose(ctx, innerIter)
+       if k+1 > outerIter {
+          break
+       }
+       stl.robustWeight(ctx)
+       ctx.useRW = true
+    }
+    residual = make([]float64, n)
+    for i := 0; i < n; i++ {
+       residual[i] = ctx.value[i] - ctx.season[i] - ctx.trend[i]
+    }
+    return ctx.season, ctx.trend, residual, ctx.robust
+}
+
+// _onestp
+func (stl *STL) decompose(ctx *stlCtx, innerIter int) {
+    y, trend, season, work := ctx.value, ctx.trend, ctx.season, ctx.work
+    for n, j := len(ctx.value), 0; j < innerIter; j++ {
+       for i := 0; i < n; i++ {
+          work[0][i] = y[i] - trend[i] // step-1 detrending: work[0] = Y - T
+       }
+       stl.cycleSubSeries(ctx) // step-2 smoothing cycle-sub-series : work[1] = C = CycleSubSeries(work[0])
+       stl.lowPassFilter(ctx)  // step-3 low-pass filtering cycle-sub-series: work[0] = L = LowPassFilter(work[1])
+       for i := 0; i < n; i++ {
+          // step-4 detrending cycle-sub-series : S = C - L = work[1] - work[0]
+          season[i] = work[1][stl.period+i] - work[0][i]
+          // step-5 deseasonalizing : work[0] = Y - S
+          work[0][i] = y[i] - season[i]
+       }
+       // step-6 trend smoothing : T = smooth(work[0])
+       stl.trend.smooth(work[0], n, ctx.useRW, ctx.robust, trend, work[2])
+    }
+}
+
+// _ss
+func (stl *STL) cycleSubSeries(ctx *stlCtx) {
+    n, period, work, weight := len(ctx.value), stl.period, ctx.work, ctx.robust
+    deTrend, cycle, work1, work2, work3, work4 := work[0], work[1], work[2], work[3], work[4], ctx.season
+    for j := 0; j < period; j++ {
+       k := (n-(j+1))/period + 1
+       for i := 0; i < k; i++ {
+          work1[i] = deTrend[i*period+j]
+       }
+       if ctx.useRW {
+          for i := 0; i < k; i++ {
+             work3[i] = weight[i*period+j]
+          }
+       }
+       stl.seasonal.smooth(work1, k, ctx.useRW, work3, work2[1:], work4)
+
+       right := min(stl.seasonal.len, k)
+       work2[0] = stl.seasonal.loess(work1, k, 0, 1, right, work4, ctx.useRW, work3)
+       if math.IsNaN(work2[0]) {
+          work2[0] = work2[1]
+       }
+
+       left := max(1, k-stl.seasonal.len+1)
+       work2[k+1] = stl.seasonal.loess(work1, k, k+1, left, k, work4, ctx.useRW, work3)
+       if math.IsNaN(work2[k+1]) {
+          work2[k+1] = work2[k]
+       }
+
+       for m := 0; m < k+2; m++ {
+          cycle[m*period+j] = work2[m]
+       }
+    }
+}
+
+// _fts
+func (stl *STL) lowPassFilter(ctx *stlCtx) {
+    n, period, work := len(ctx.value)+2*stl.period, stl.period, ctx.work
+    movingAvg(work[1], n, period, work[2])
+    movingAvg(work[2], n-period+1, period, work[0])
+    movingAvg(work[0], n-2*period+2, 3, work[2])
+    stl.lowPass.smooth(work[2], len(ctx.value), false, work[3], work[0], work[4])
+}
+
+// _rwts
+func (stl *STL) robustWeight(ctx *stlCtx) {
+
+    y, n, trend, season, weight := ctx.value, len(ctx.value), ctx.trend, ctx.season, ctx.robust
+
+    for i := 0; i < n; i++ {
+       weight[i] = math.Abs(y[i] - trend[i] - season[i])
+    }
+
+    sorted := ctx.work[0][:n]
+    copy(sorted, weight)
+
+    slices.Sort(sorted)
+    a, b := sorted[n/2], sorted[n-(n/2)-1]
+    c := 3.0 * (a + b) // outlier threshold = 6 * median
+
+    if c == 0 {
+       for i := 0; i < n; i++ {
+          weight[i] = 1
+       }
+    } else {
+       c1, c9 := .001*c, .999*c
+       for i, w := range weight {
+          if w <= c1 {
+             weight[i] = 1
+          } else if w <= c9 {
+             w /= c
+             w2 := 1 - (w * w)
+             weight[i] = w2 * w2
+          } else {
+             weight[i] = 0 // outlier
+          }
+       }
+    }
+
+}
+
+func movingAvg(x []float64, n, step int, avg []float64) {
+    v, s := 0.0, float64(step)
+    for i := 0; i < step; i++ {
+       v += x[i]
+    }
+    avg[0] = v / s
+    for j, k, m := 1, step, 0; j < n-step+1; j++ {
+       v += x[k] - x[m]
+       avg[j] = v / s
+       k, m = k+1, m+1
+    }
+}
+
+// _ess
+func (smooth *stlSmooth) smooth(y []float64, n int, useRW bool, robust, ys, tmp []float64) {
+
+    if n < 2 {
+       ys[0] = y[0]
+       return
+    }
+
+    // smooth below positions with LOESS:
+    // 1, 1+1*jmp, 1+2*jmp, 1+3*jmp ..., N
+    jmp := min(smooth.jmp, n-1)
+
+    var left, right int
+    if smooth.len >= n {
+       left, right = 1, n
+       for i := 0; i < n; i += jmp {
+          ys[i] = smooth.loess(y, n, i+1, left, right, tmp, useRW, robust)
+          if math.IsNaN(ys[i]) {
+             ys[i] = y[i]
+          }
+       }
+    } else if jmp == 1 {
+       nsh := (smooth.len + 2) / 2
+       left, right = 1, smooth.len
+       for i := 0; i < n; i++ {
+          if (i+1) > nsh && right != n {
+             left, right = left+1, right+1
+          }
+          ys[i] = smooth.loess(y, n, i+1, left, right, tmp, useRW, robust)
+          if math.IsNaN(ys[i]) {
+             ys[i] = y[i]
+          }
+       }
+    } else {
+       nsh := (smooth.len + 1) / 2
+       for i := 0; i < n; i += jmp {
+          if (i + 1) < nsh {
+             left, right = 1, smooth.len
+          } else if (i + 1) >= (n - nsh + 1) {
+             left, right = n-smooth.len+1, n
+          } else {
+             left, right = i+1-nsh+1, smooth.len+i+1-nsh
+          }
+          ys[i] = smooth.loess(y, n, i+1, left, right, tmp, useRW, robust)
+          if math.IsNaN(ys[i]) {
+             ys[i] = y[i]
+          }
+       }
+    }
+
+    if jmp == 1 {
+       return // all positions are smoothed by LOESS
+    }
+
+    // other position is smoothed by linear interpolation
+    for i := 0; i < (n - jmp); i += jmp {
+       delta := (ys[i+jmp] - ys[i]) / float64(jmp)
+       for j := i; j < i+jmp; j++ {
+          ys[j] = ys[i] + delta*float64((j+1)-(i+1))
+       }
+    }
+
+    // make sure position N is smoothed by LOESS
+    k := ((n-1)/jmp)*jmp + 1
+    if k != n {
+       ys[n-1] = smooth.loess(y, n, n, left, right, tmp, useRW, robust)
+       if math.IsNaN(ys[n-1]) {
+          ys[n-1] = y[n-1]
+       }
+       if k != (n - 1) {
+          delta := (ys[n-1] - ys[k-1]) / float64(n-k)
+          for j := k; j < n; j++ {
+             ys[j] = ys[k-1] + delta*float64((j+1)-k)
+          }
+       }
+    }
+}
+
+// _est
+func (smooth *stlSmooth) loess(y []float64, n int, x0, left, right int, w []float64, useWeight bool, weight []float64) float64 {
+
+    // calculate q-neighbourhood weight for point x0
+    h := max(x0-left, right-x0)
+    if smooth.len > n {
+       h += (smooth.len - n) / 2
+    }
+
+    ws := 0.0
+    h1, h9 := .001*float64(h), .999*float64(h)
+    for j := left - 1; j < right; j++ {
+       w[j] = 0
+       r := math.Abs(float64(j + 1 - x0))
+       if r <= h9 { // distance < q-neighbourhood
+          if r <= h1 {
+             w[j] = 1
+          } else {
+             u := r / float64(h)
+             u3 := 1 - (u * u * u)
+             w[j] = u3 * u3 * u3
+          }
+          if useWeight {
+             w[j] *= weight[j] // apply robust weight to ignore outlier
+          }
+          ws += w[j]
+       }
+    }
+    if ws <= 0 { // loess weight sum <= 0, can't smooth position x0, ignore...
+       return math.NaN()
+    }
+    for j := left - 1; j < right; j++ {
+       w[j] /= ws // normalize loess weight
+    }
+
+    // deg=0 : constant only
+    // deg=1 : constant & trend
+    if h > 0 && smooth.deg > 0 {
+       a := 0.0 // weighted distance
+       for j := left - 1; j < right; j++ {
+          a += w[j] * float64(j+1)
+       }
+       b := float64(x0) - a
+       c := 0.0
+       for j := left - 1; j < right; j++ {
+          v := float64(j+1) - a
+          c += w[j] * v * v
+       }
+       rng := .001 * float64(n-1)
+       if math.Sqrt(c) > rng {
+          b /= c
+          for j := left - 1; j < right; j++ {
+             w[j] *= b*(float64(j+1)-a) + 1.0
+          }
+       }
+    }
+    ys := 0.0
+    for j := left - 1; j < right; j++ {
+       ys += w[j] * y[j]
+    }
+    return ys
+}
+
+```
+
+## MSTL 分解
+
+MSTL 是一种稳健、准确的季节性趋势分解算法，用于处理具有多个季节性周期的时间序列
+
+与其他替代方案相比，MSTL 具有更高的计算效率，可以处理海量的时间序列数据
+
+### 算法参数
+
+- periods 指定季节成分的数量
+- windows 每个季节成分的粒度，粒度越小季节成分变化越快，粒度越大季节成分变化越快
+- lambda 可选的 BoxCox 系数
+
+算法流程如下
+
+- 填充缺失数据
+- 对数据进行 boxcox 转换（可选）
+- 重复执行 STL 分解，从数据中提取季节成分
+- 返回季节成分与最后一次分解得到的趋势成分
+
+```go
+package main
+
+import (
+    "errors"
+    "fmt"
+    "golang.org/x/exp/rand"
+    "gonum.org/v1/gonum/stat/distuv"
+    "math"
+    "sort"
+)
+
+func main() {
+
+    t := make([]float64, 1000)
+    norm := distuv.Normal{Mu: 0, Sigma: 1, Src: rand.NewSource(0)}
+    for i := range t {
+       v := float64(i + 1)
+       trend := 0.0001*v*v + 100.
+       dailySeason := 5 * math.Sin(2*math.Pi*v/24)
+       weeklySeason := 10 * math.Sin(2*math.Pi*v/(24*7))
+       noise := norm.Rand()
+       t[i] = trend + dailySeason + weeklySeason + noise
+    }
+
+    stl, err1 := NewSTL(2, false, nil, nil, nil)
+    if err1 != nil {
+       panic(err1)
+    }
+
+    mstl, err2 := NewMSTL([]int{24, 24 * 7}, nil, math.NaN(), 0, stl)
+    if err2 != nil {
+       panic(err2)
+    }
+
+    season, trend, residual, weight := mstl.Fit(t)
+    fmt.Printf("%v\n\n", season)
+    fmt.Printf("%v\n\n", trend)
+    fmt.Printf("%v\n\n", residual)
+    fmt.Printf("%v\n\n", weight)
+
+}
+
+type MSTL struct {
+    stl     STL
+    season  [][2]int
+    iterate int
+    lambda  float64
+}
+
+func NewMSTL(
+    periods, windows []int,
+    lambda float64,
+    iterate int,
+    stl *STL) (*MSTL, error) {
+
+    if periods == nil {
+       return nil, errors.New("periods is required")
+    }
+
+    if windows == nil {
+       windows = make([]int, len(periods))
+       for i := 0; i < len(windows); i++ {
+          windows[i] = 7 + 4*(i+1)
+       }
+    }
+
+    if len(periods) != len(windows) {
+       return nil, errors.New("periods and windows must have same length")
+    }
+
+    var season [][2]int
+    for i := 0; i < len(periods); i++ {
+       season = append(season, [2]int{periods[i], windows[i]})
+    }
+
+    sort.SliceStable(season, func(i, j int) bool {
+       a, b := season[i], season[j]
+       if a[0] == b[0] {
+          return a[1] < b[1]
+       } else {
+          return a[0] < b[0]
+       }
+    })
+    if iterate <= 0 {
+       iterate = 2
+    }
+    return &MSTL{*stl, season, iterate, lambda}, nil
+}
+
+func (mstl *MSTL) Fit(y []float64) (
+    season [][]float64, trend, residual, weight []float64) {
+
+    for i, half := 0, len(y)/2; i < len(mstl.season); i++ {
+       period := mstl.season[i][0]
+       if period >= half {
+          panic("a period(s) is larger than half the length of time series")
+       }
+    }
+
+    deSeason := make([]float64, len(mstl.season))
+    copy(deSeason, y)
+
+    if math.IsNaN(mstl.lambda) {
+       //TODO: BoxCox}
+
+    n := len(y)
+    season = make([][]float64, len(mstl.season))
+    for it := 0; it < mstl.iterate; it++ {
+       for i := range mstl.season {
+          if s := season[i]; s != nil {
+             for j := 0; j < n; j++ {
+                deSeason[j] += s[j]
+             }
+          }
+          period, window := mstl.season[i][0], mstl.season[i][1]
+          seasonSmooth := stlSmooth{window, mstl.stl.seasonal.deg, mstl.stl.seasonal.jmp}
+          stl, err := NewSTL(period, mstl.stl.robust, &seasonSmooth, &mstl.stl.trend, &mstl.stl.lowPass)
+          if err != nil {
+             panic(err)
+          }
+          season[i], trend, residual, weight = stl.Fit(deSeason)
+          for j, s := 0, season[i]; j < n; j++ {
+             deSeason[j] += s[j]
+          }
+       }
+    }
+    for i := 0; i < n; i++ {
+       residual[i] = deSeason[i] - trend[i]
+    }
+    return season, trend, residual, weight
+}
+
+```

@@ -1,0 +1,1647 @@
+---
+title: ARIMA 模型
+cover: '/cover/ARIMA-Ex.png'
+date: 2025-10-12
+tags: ['统计','时间序列分析']
+---
+
+ARIMA（Autoregressive Integrated Moving Average）是将自回归、差分平稳化与移动平均结合，用于预测平稳或非平稳时间序列的经典统计模型。
+
+[comment]:summary
+
+## 基本概念
+
+### 平稳性
+
+如果将时间序列 $\{y_t,y_{t-1},...,y_0\}$ 看作是一组随机变量的观测值，每个时刻 $t$ 对应一个随机变量 $y_t$
+
+- 均值 $\mu_t = E(y_t)$
+- 方差 $\sigma_t^2 = E(y_t-\mu_t)^2$
+- 自协方差 $\gamma(t,k) = Cov(y_t,y_k) = E[(y_t-\mu_t)(y_k-\mu_k)]$
+- 自相关系数 $\rho(t,k) = \frac{\gamma(t,k)}{\sqrt{\sigma_t^2\times \sigma_k^2}} = \frac{\gamma(t,k)}{\sigma_t\times \sigma_k}$
+
+预测模型成立的前提是：未来数据与历史样本的概率分布一致
+
+在时间序列中，这一特性被称为平稳性，平稳性分为两类
+
+- 强平稳
+    
+    序列所有统计性质都不会随着时间 $t$ 推移发生变化
+    
+    任意时刻的随机变量都来源于完全一致的概率分布
+    
+- 弱平稳
+    
+    保证序列的低阶矩为常量（与时间无关）即可
+    
+    - 均值与方差不随时间 $t$ 发生变化
+        - $E(y_t) = E(y_{t-j}) = \mu$
+        - $Var(y_t) = Var(y_{t-j}) = \sigma^2$
+    - 自协方差只与时间间隔 $s$ 有关，与起始位置 $t$ 无关
+        - $Cov(y_t,y_{t-s}) = Cov(y_{t-j},y_{t-j-s}) = \gamma_s$
+
+只要时间序列满足弱平稳性，即可用历史观测值估计其统计量，并用于预测
+
+- 均值的估计值 $\hat{\mu} = \bar{y} = \frac{1}{T}\sum^{T}_{t=1}{y_t}$
+- 方差的估计值 $\hat{\sigma}^2 = \frac{1}{T-1}\sum^{T-1}_{t=1}{(y_t -\bar{y})^2}$
+- 协方差估计值 $\hat{\gamma_s} = \hat{\gamma_{-s}} = \frac{1}{T-s}\sum^{T-s}_{t=1}{(y_t -\bar{y})(y_{t+s} -\bar{y})}$
+- 自相关系数估计值 $\hat{\rho_s} = \hat{\rho_{-s}} =\frac{\hat{\gamma_s}}{\hat{\gamma_0}}$
+
+平稳序列的一个特例是白噪声 (WN) 过程 $\{\varepsilon_t \} \sim \text{WN}(0,\sigma_{\varepsilon}^2)$ ，其统计值满足
+
+- 零均值：$E(\varepsilon_t) = 0$
+- 同方差：$Var(\varepsilon_t) = \sigma_{\varepsilon}^2$
+- 非自相关：$Cov(\varepsilon_t,\varepsilon_{t-s}) = 0$
+
+特别地，如果 $\{\varepsilon_t \}$服从正态分布，则称其为高斯白噪声过程
+
+虽然白噪声过程满足平稳性条件，但高度随机（各时刻随机变量间互不相关），因此没有建模研究的价值
+
+### 随机游走
+
+随机游走是非平稳过程的典型代表，在金融与经济领域被广泛应用，该模型常用于刻画市场行为：
+
+资产下一时刻的价格 $y_t$，只与上一时刻的价格 $y_{t-1}$ 相关，价格变化 $\varepsilon_t = y_t - y_{t-1}$ 取决于市场中的不确定因素
+
+随机游走模型产生的非平稳序列中，主要包含两种趋势成分
+
+- 随机趋势：突然且不可预测的方向变化
+- 确定性趋势：长期明显的上升或下降趋势
+
+为了方便理解，可以观察以下随机游走模型
+
+- 零均值随机游走 (RW)
+    
+$$
+y_t = y_{t-1} + \varepsilon_t = (y_{t-2} + \varepsilon_{t-1}) + \varepsilon_t = ... = y_0 + \sum\nolimits^t_{i=1}\varepsilon_i
+$$
+    
+    - 随机趋势：初始值 $y_0$ 与历史扰动 $\varepsilon_i$ 对 $y_t$ 的影响永不衰减
+    - 确定性趋势：无
+
+- 带漂移随机游走 (RWD)
+    
+$$
+y_t = c +y_{t-1} + \varepsilon_t 
+    = c + (c + y_{t-2} + \varepsilon_{t-1})+ \varepsilon_t
+    = ...
+    = y_0 + c\times t + \sum\nolimits^t_{i=1}\varepsilon_i
+$$
+
+    - 随机趋势：同上
+    - 确定性趋势：随着时间增长，趋势以速度 c 发生线性漂移
+
+- 包含确定趋势带漂移随机游走 (RWD+DT)
+    
+$$
+y_t = c_1 + c_2t + y_{t-1} + \varepsilon_t = y_0 + c_1t + c_2\frac{t(t+1)}{2} + \sum\nolimits^t_{i=1}\varepsilon_i = y_0 + (c_1 + \frac{c_2}{2})t + \frac{c_2}{2}t^2 + \sum\nolimits^t_{i=1}\varepsilon_i
+$$
+    
+    - 随机趋势：同上
+    - 确定性趋势：线性趋势 + 二次方趋势
+
+时间序列中存在随机趋势，意味着其未来的观测值是发散的，无法收敛至特定的范围
+
+因此在建模前，需要检验时间序列进行检验，判断其中是否存在随机趋势，这类检验被称为单位根检验
+
+同理，确定性趋势也会导致观测值发散，因此在建模前需要将两者去除，保证时间序列的平稳性
+
+**差分法**
+
+对于随机趋势与线性的确定性趋势，可以通过差分的方式去除，得到平稳白噪声序列
+
+- RW : $y_t - y_{t-1} = \varepsilon_t$
+- RWD : $y_t - y_{t-1} = c + \varepsilon_t$
+
+但对于非线性的确定性趋势，无法简单通过差分去除
+
+- RWD+DT : $y_t - y_{t-1} = c_1 + c_2t + \varepsilon_t$
+
+**回归法**
+
+对于非线性的确定性趋势，可以利用线性回归提取出平稳的残差项，再对残差进行建模
+
+以 RWD+DT 为例：
+
+- 对时间 $t$ 线性回归，得到 $y_t = a + bt + e_t$
+- 并通过接着计算残差 $e_t = y_t - a - bt$ 消除趋势
+- 对平稳的残差序列 $\{e_t, e_{t-1},...,e_1\}$ 进行建模
+
+通过数据变换与增加非线性项，理论上回归法能处理任意非线性趋势
+
+可以通过 t 检验或 F 检验判断回归系数的显著性，来确定回归模型的阶数
+
+### 差分变换
+
+将非平稳时间序列转换为平稳时间序列，需要进行以下两项操作
+
+- 平稳方差：通过 Log 或 Box-Cox 对数据进行变换
+- 平稳均值：通过差分消除数据趋势与季节性
+
+差分可以消除随机趋势与线性确定性趋势，避免数据发散，从而起到稳定均值的作用
+
+- 一阶差分 $y'_t = y_t - y_{t-1}$
+- 二阶差分 $y''_t = y'_t - y'_{t-1} = y_t - 2y_{t-1} + y_{t-2}$
+
+除了消除趋势成分外，差分还可以用于消除季节成分（m 为季节成分的长度）
+
+- 季节差分 $y'_t = y_t - y_{t-m}$
+- 季节差分 + 一阶差分 $y^*_t = y'_t - y'_{t-1} = y_t - y_{t-1} - y_{t-m} + y_{t-m-1}$
+
+对于具有很强的季节性的时间序列，建议优先进行季节差分
+
+如果得到的差分序列平稳，则无需进一步差分
+
+过度差分会引入不必要的噪声，以 RWD 为例：
+
+- 一阶差分 $y'_t = y_t - y_{t-1} = c + \varepsilon_t$
+- 二阶差分 $y''_t = y'_t - y'_{t-1} = \varepsilon_t - \varepsilon_{t-1}$
+
+计算发现二次差分后方差明显变大：
+
+- 一阶差分 $Var(y'_t) = Var(c) + Var(\varepsilon_t) =\sigma_{\varepsilon}^2$
+- 二阶差分 $Var(y''_t) = Var(\varepsilon_t) +Var(\varepsilon_{t-1}) =2\sigma_{\varepsilon}^2$
+
+此外，每次差分都会减少一个可用数据点，差分次数过多影响样本质量
+
+### 后移运算
+
+后移符号 *backshift* *notation* 表示将观测值向后移动一个时间周期
+
+- 一阶后移 $By_t = y_{t-1}$
+- 二阶后移 $B^2y_t = y_{t-2}$
+- 季节性后移 $B^my_t = y_{t-m}$
+
+使用后移运算表示差分
+
+- 1 阶差分 $y'_t = y_t - y_{t-1} = (1-B)y_t$
+- 2 阶差分 $y''_t = y'_t - y'_{t-1} = y_t - 2y_{t-1} + y_{t-2} = (1-B)^2y_t$
+- d 阶差分 $y^d_t = (1-B)^dy_t$
+- 季节差分 $y'_t = y_t - y_{t-m} = (1-B^m)y_t$
+- 季节差分 + 一阶差分 $y^*_t = y'_t - y'_{t-1} = (1-B)(1-B^m)y_t$
+
+后移符号可以相乘，方便观察不同差分组合的实际效果
+
+$$
+(1-B)(1-B^m)y_t = (1-B-B^m+B^{m+1})y_t
+$$
+
+该特性也可以用于判断模型是否存在冗余项
+
+假设存在某个 ARMA 模型 $y_t = 0.5 × y_{t-1} + 0.24 × y_{t-2} + e_t + 0.6 × e_{t-1} + 0.09 × e_{t-2}$
+
+使用后移符号简化模型后得到 $(1 + 0.3B)(1 - 0.8B) y_{t} = (1 + 0.3B)(1 + 0.3B) e_t$
+
+消去共同项可以将其简化为低阶模型 $(1 - 0.8B) y_{t} = (1 + 0.3B) e_t$
+
+## AR 模型
+
+自回归模型 Autogregressive Model 是一类基于滞后值 lagged value 的多元回归模型
+
+滞后项的数量被称为 AR 模型的阶数，一个 p 阶 AR 模型可以表示为
+
+$$
+    ext{AR}(p)\ :\ y_t = c + \phi_1y_{t-1} + \phi_2y_{t-2} + \cdots + \phi_py_{t-p} + \varepsilon_t
+$$
+
+- $\phi_i$ 是自回归系数
+- $\varepsilon_t$ 是白噪声
+
+其中最为简单是 $\text{AR}(1)\ :\ y_t = c + \phi_1y_{t-1} + \varepsilon_t$
+
+- $\phi_1 = 0, c = 0\ \to\ y_t = \varepsilon_t$
+    
+    $\text{AR}(1)$ 过程等价于 WN
+    
+- $\phi_1 = 1, c = 0\ \to\ y_t =\phi_1y_{t-1} + \varepsilon_t$
+    
+    $\text{AR}(1)$ 过程等价于 RW
+    
+- $\phi_1 = 1, c \ne 0\ \to\ y_t =c + \phi_1y_{t-1} + \varepsilon_t$，
+    
+    $\text{AR}(1)$ 过程等价于 RWD
+    
+- $|\phi_1|<1$
+    
+    $\text{AR}(1)$ 过程是平稳的
+    
+- $\phi_1<1$
+    
+    $\text{AR}(1)$ 过程是在正值与负值之间震荡
+    
+
+从上面的例子中可以看出，只有当自回归系数满足一定条件时，$\text{AR}(p)$ 过程才是平稳的
+
+### 平稳性
+
+对于 $\text{AR}(p)$ 过程可以构造一个 p 阶系数矩阵 A
+
+- **第一行**：包含了模型的参数 $\phi_i$，这些参数表示各个滞后值对当前值的影响
+- **后续行**：形成一个单位矩阵的下半部分，表示滞后变量 $Y_{t-1},\cdots,Y_{t-p}$ 相对于当前状态的影响
+
+$$
+A=\begin{bmatrix}
+\phi_1 & \phi_2 & \cdots & \phi_p\\
+1 & 0 & \cdots & 0 \\
+0 & 1 & \cdots & 0 \\
+\vdots & \vdots & \ddots & \vdots \\  0 & 0 & \cdots & 1
+\end{bmatrix}
+$$
+
+使用特征值为 $\lambda$ 构造特征方程  $\det(A-\lambda I) = 0$ 得到 $\lambda^p - \phi_1\lambda^{p-1} - \phi_2\lambda^{p-2} - ... - \phi_p = 0$
+
+令 $z = 1/\lambda$ 简化特征方程得到 $1 - \phi_1z - \phi_2z^2 - ... - \phi_pz^p = 0$
+
+求解该方程可以得到特征根 $\lambda_1,\lambda_2,...,\lambda_p$，其绝对值表示了过去观测值对当前观测值的影响强度：
+
+- $|\lambda| < 1$：影响逐渐减弱，序列回归均值
+- $|\lambda| = 1$：影响不变，可能导致趋势
+- $|\lambda| > 1$：影响增强，序列会发散
+
+由于特征根通常复数，因此通常使用复平面中半径为 1、中心在原点的单位圆来表示
+
+- $|\lambda| < 1$：特征值位于单位圆内
+- $|\lambda| \ge 1$：特征值在单位圆上或外部
+
+$\text{AR}(p)$ 模型的平稳性可以使用单位根表示
+
+- 平稳模型不存在单位根 $\forall |\lambda_i| < 1$
+- 非平稳模型存在单位根 $\exists |\lambda_i| = 1$
+
+$\text{AR}(1)$ 模型对应的特征方程为  $\lambda^1 - \phi_1\lambda^{0} = \lambda - \phi_1 = 0$
+
+特征根  $\lambda = \phi_1$，只要满足 $|\phi_1| < 1$ 模型就是平稳的
+
+$\text{AR}(2)$ 模型对应的特征方程为 $\lambda^2 - \phi_1\lambda^{1} - \phi_2\lambda^{0} = \lambda^2 - \phi_1\lambda - \phi_2 = 0$
+
+根据一元二次求根公式，当判别式 $\Delta = b^2-4ac = (-\phi_1)^2 + 4\phi_2 \ge 0$
+
+存在两个实数特征根 $\lambda = \frac{\phi_1 ± \sqrt{\phi_1^2 + 4\phi_2}}{2}$
+
+只要同时满足 $|\phi_2| < 1$ 与  $\phi_2\pm\phi_1 < 1$ 模型就是平稳的
+
+### 统计量
+
+平稳 $\text{AR}(p)$ 过程的均值 $E(y_t) = E(c) + \phi_1 E(y_{t-1})+ \phi_1 E(y_{t-1}) + \cdots + E(\varepsilon_t)$
+
+对于平稳过程，有 $E(y_t) = E(y_{t-1}) = \cdots = \mu$
+
+代入后可得 $\mu = E(c) + \phi_1 \mu+ \phi_2 \mu + \cdots + E(\varepsilon_t)$
+
+求解可得 $\mu = \frac{c}{1-\phi_1-\phi_2-\cdots-\phi_p}$
+
+平稳 $\text{AR}(p)$ 过程的方差 $Var(y_t) = Var(c) + \phi_1 Var(y_{t-1})+ \phi_1 Var(y_{t-1}) + \cdots + Var(\varepsilon_t)$
+
+对于平稳过程，有 $Var(y_t) = Var(y_{t-1}) = \cdots = \sigma_y$
+
+求解可得 $\sigma_y = \frac{\sigma_{\varepsilon}}{1-\phi_1-\phi_2-\cdots-\phi_p}$
+
+平稳 $\text{AR}(p)$ 过程协方差可以递归计算得到
+
+- $Cov(y_t,y_{t-1}) = \phi_1\sigma_y$
+- $Cov(y_t,y_{t-s}) = \sum\nolimits_{i=1}^p\phi_iCov(y_{t-i},y_{t-s})$
+
+### 预测误差
+
+${\hat{y}_{t+l|t}}$ 表示根据时间序列 $\{y_t\}$ 的 $t$ 时刻之前全部样本观测值，做出的 $l$ 步预测
+
+给定信息信息集 $I_t$，$\hat{y}_{t+l|t}$ 的预测误差可以表示为 $MES(\hat{y}_{t+l}|I_t) = E[(y_{t+l}-\hat{y}_{t+l})^2|I_t]$
+
+给定信息集 $I_t$，$y_{t+l}$ 的条件期望 $E[y_{t+l}|I_t]$ 就是最小均方误差预测
+
+因此 $l$ 步预测误差可以表示为 $e_t(l) = y_{t+l} - \hat{y}_{t+l|t} =  y_{t+l} - E[y_{t+l}|I_t]$
+
+$\text{AR}(p)$ **模型向前 1 步预测**
+
+预测公式：$y_{t+1} = c + \phi_1y_{t} + \phi_2y_{t-1} ... + \phi_py_{t-p+1} + \varepsilon_{t+1}$
+
+条件期望：$\hat{y}_{t+1|t} = E(y_{t+1}|I_t) = E(c + \phi_1y_{t} + \phi_2y_{t-1} ... + \phi_py_{t-p+1} + \varepsilon_{t+1}|I_t)$
+
+在给定信息集 $I_t = \{y_{t},y_{t-1},...,y_{t-p}\}$ 的情况下，$y_i\ (i=t,t-1,...,t-p+1)$ 均为常数
+
+$y_{t+1}$ 的预测条件期望 $\hat{y}_{t+1|t} = E(y_{t+1}|I_t) = E(c + \phi_1y_{t} + \phi_2y_{t-1} ... + \phi_py_{t-p+1}) + E(\varepsilon_{t+1}) = c + \phi_1y_{t} + \phi_2y_{t-1} ... + \phi_py_{t-p+1})$
+
+- 向前 1 步预测误差：$e_t(1) = y_{t+1} - \hat{y}_{t+1|t} = y_{t+l} - E(y_{t+1}|I_t) = \varepsilon_{t+1}$
+- 向前 1 步预测误差的方差：$Var(e_t(1)) = Var(\varepsilon_{t+1}) = \sigma_\varepsilon^2$
+- 如果 $\varepsilon_{t}$ 服从正态分布，$y_{t+1}$ 的 95% 向前 1 步区间预测为 ：$\hat{y}_{t+1|t}\pm1.96\sigma_\epsilon$
+
+$\text{AR}(p)$ **模型向前 2 步预测**
+
+**预测公式：**$y_{t+2} = c + \phi_1y_{t+1} + \phi_2y_{t} ... + \phi_py_{t-p+2} + \varepsilon_{t+2}$
+
+**条件期望：**$\hat{y}_{t+2|t} = E(y_{t+2}|I_t) = E(c+\phi_1y_{t+1} + \phi_2y_{t} ... + \phi_py_{t-p+2} + \varepsilon_{t+2}|I_t)$
+
+在给定信息集 $I_t = \{y_{t},y_{t-1},...,y_{t-p}\}$ 的情况下，$y_i\ (i=t,t-1,...,t-p+2)$ 均为常数
+
+但是此时 $y_{t+1}$ 是未知的，因此需要用预测值 $\hat{y}_{t+1|t}$ 替代
+
+$y_{t+2}$ 的预测条件期望：$\hat{y}_{t+2|t} = E(c + \phi_1\hat{y}_{t+1|t} + \phi_2y_{t} ... + \phi_py_{t-p+2}) + E( \varepsilon_{t+2}) = c + \phi_1\hat{y}_{t+1|t} + \phi_2y_{t} ... + \phi_py_{t-p+2}$
+
+- 向前 2 步预测误差：$e_t(2) = y_{t+2} - \hat{y}_{t+2|t} = y_{t+2} - E(y_{t+2}|I_t) = \alpha_1(y_{t+1}-\hat{y}_{t+1|t}) + \epsilon_{t+2}= \alpha_1\epsilon_{t+1} + \epsilon_{t+2}$
+- 向前 2 步预测误差的方差：$Var(e_t(2)) = Var(\phi_1\varepsilon_{t+1} + \epsilon_{t+2}) = \phi_1^2Var(\varepsilon_{t+1}) +Var( \varepsilon_{t+2}) = (\phi_1^2+1)\sigma_\varepsilon^2$
+- 如果 $\varepsilon_{t}$ 服从正态分布，$y_{t+2}$ 的 95% 向前 2 步区间预测为 ：$\hat{y}_{t+1|t}\pm1.96\sqrt{(\phi_1^2+1)\sigma_\varepsilon^2}$
+
+$\text{AR}(p)$ **模型向前** $l$ **步预测**
+
+**预测公式：**$y_{t+l} = c + \phi_1y_{t+l-1} + \phi_2y_{t+l-2} ... + \phi_py_{t-p+l} + \varepsilon_{t+l}$
+
+**条件期望：**$\hat{y}_{t+l|t} = E(y_{t+l}|I_t)$
+
+在给定信息集 $I_t = \{y_{t},y_{t-1},...,y_{t-p}\}$ 的情况下，$y_{t+l}$ 的预测条件期望：
+
+$\hat{y}_{t+l|t} = c + \sum_{i=1}^{p}\phi_i\hat{y}_{t+l-i|t}$
+
+当 $l \to \infty$，$\hat{y}_{t+l|t}$ 收敛于 $E(y_t)$，即长期预测收敛于无条件均值 $\mu$
+
+- 向前 $l$ 步预测误差
+
+$$
+e_t(l) = y_{t+l} - \hat{y}_{t+l|t} \\\ \hphantom{--}= \sum\nolimits_{i=1}^{p}\phi_iy_{t+l-i|t}-\sum\nolimits_{i=1}^{p}\phi_i\hat{y}_{t+l-i|t}+\varepsilon_{t+l}
+
+\\\ \hphantom{--}= \phi_1(y_{t+l-1}-\hat{y}_{t+l-1|t})+ \phi_2(y_{t+l-2}-\hat{y}_{t+l-2|t}) + \cdots + \varepsilon_{t+l}
+
+\\\ \hphantom{--}=\sum\nolimits_{i=1}^{p}\phi_i\varepsilon_{t+l-i} + \varepsilon_{t+l}
+$$
+
+- 向前 $l$ 步预测误差的方差
+
+$$
+Var(e_t(l)) = Var(\sum\nolimits_{i=1}^{p}\phi_i\varepsilon_{t+l-i} + \varepsilon_{t+l}) 
+
+\\\ \ \ \ \hphantom{----}= \phi_1^2Var(\varepsilon_{t+l-1})+
+\phi_2^2Var(\varepsilon_{t+l-2})+
+\cdots + Var( \varepsilon_{t+l}) 
+
+\\\ \ \ \ \hphantom{----}= (\phi_1^2+\phi_2^2+\cdots+\phi_p^2+1)\sigma_\varepsilon^2
+$$
+
+### 自相关函数
+
+自相关函数 ACF 刻画的是间接相关性
+
+间隔 s 内所有随机变量 $y_{t-1},...,y_{t-s}$ 对随机变量 $y_t$ 的累积影响
+
+偏相关函数 PACF 刻画直接相关性
+
+间隔 s 内所有随机变量 $y_{t-1},...,y_{t-s}$ 对随机变量 $y_t$ 的纯相关关系
+
+$\text{AR}(p)$ 模型自协方差：
+
+$$
+\gamma_s = Cov(y_t, y_{t-s}) = E[(y_t-c)(y_{t-s}-c)]\\
+= E[(\phi_1y_{t-1} + \phi_2y_{t-2} ... + \phi_py_{t-p} + \varepsilon_t)(y_{t-s}-c)]\\
+= \phi_1E(y_{t-1}y_{t-s})+ \phi_2E(y_{t-2}y_{t-s})+ ... + \phi_pE(y_{t-p}y_{t-s})+ E(\epsilon_t y_{t-s})\\
+= \phi_1\gamma_{s-1} + \phi_2\gamma_{s-2} + \phi_p\gamma_{s-p}+ E(\varepsilon_t y_{t-s})
+$$
+
+$\text{AR}(p)$ 模型自相关函数：$\rho_s = \frac{\gamma_s}{\gamma_0} =\phi_1\rho_{s-1} + \phi_2\rho_{s-2} + \phi_p\rho_{s-p}+\frac{ E(\varepsilon_t y_{t-s})}{\gamma_0}$
+
+其中 $\gamma_0 = Var(y_t)$ 就是序列本身的方差
+
+当 s = 0 时，$1 =\rho_0 = \phi_1\rho_{-1} + \phi_2\rho_{-2} + \phi_p\rho_{-p}+\frac{ E(\varepsilon_t y_{t})}{\gamma_0} $
+
+自相关函数满足对称性：$\rho_0 = \phi_1\rho_{1} + \phi_2\rho_{2} + \phi_p\rho_{p}+\frac{ E(\varepsilon_t y_{t})}{\gamma_0} $
+
+由于 $\varepsilon_t$ 与 $ y_{t-1}, y_{t-2}, ...$ 不相关，但与 $ y_t$ 是相关的，因此 $E(\varepsilon_t y_t) \ne E(\varepsilon_t)E(y_t)$，展开计算：
+
+$$
+\begin{aligned}
+E(\varepsilon_t y_t)
+&= E\big[\varepsilon_t\big(c + \phi_1y_{t-1} + \phi_2y_{t-2} + \cdots + \phi_py_{t-p}\big)+\varepsilon_t^2\big] \\
+&= E\big[\varepsilon_t\big(c + \phi_1y_{t-1} + \phi_2y_{t-2} + \cdots + \phi_py_{t-p}\big)\big]+E(\varepsilon_t^2) \\
+&= E(\varepsilon_t)E\big(c + \phi_1y_{t-1} + \phi_2y_{t-2} + \cdots + \phi_py_{t-p}\big)+E(\varepsilon_t^2) \\
+&= 0\times E\big(c + \phi_1y_{t-1} + \phi_2y_{t-2} + \cdots + \phi_py_{t-p}\big)+\sigma_\varepsilon^2
+\end{aligned}
+$$
+
+最终得到：$\rho_0 = \phi_1\rho_{1} + \phi_2\rho_{2} + \phi_p\rho_{p}+\frac{\sigma_\epsilon^2}{\gamma_0} $
+
+当 s > 0 时，此时 $y_{t-s}$ 不可能为 $y_{t}$，因此保证了 $\varepsilon_t$ 与 $ y_{t-1}, y_{t-2}, ...$ 是不相关的 $E(\varepsilon_t y_{t-s}) = E(\varepsilon_t )E(y_{t-s}) = 0 \times E(y_{t-s}) = 0$
+
+最终得到：$\rho_s = \phi_1\rho_{s-1} + \phi_2\rho_{s-2} + \phi_p\rho_{s-p}$
+
+使用系数 $\alpha_i$ 表示间隔为 $i$ 的随机变量  $y_{t-i}$ 与 $y_t$ 间的直接关系
+
+基于自相关函数 $\rho_s = \phi_1\rho_{s-1} + \phi_2\rho_{s-2} + \phi_p\rho_{s-p}$ ，可得到以下方程组
+
+$$
+\begin{cases}
+\rho_1=\alpha_1\rho_0+...+\alpha_p\rho_{p-1}\\
+\rho_2=\alpha_1\rho_1+...+\alpha_p\rho_{p-2}\\
+\hphantom{-----} \vdots\\
+\rho_s=\alpha_1\rho_{s-1}+...+\alpha_p\rho_{s-p}\\
+\end{cases}
+\to
+\begin{bmatrix}
+\rho_0 & \rho_1 & ... & \rho_{p-1}\\
+\rho_1 & \rho_0 & ... & \rho_{p-2}\\
+&& \vdots & \\
+\rho_{s-1} & \rho_{s-2} & ... & \rho_{s-p}
+\end{bmatrix}
+\begin{bmatrix}
+\alpha_1\\\alpha_2\\\vdots\\\alpha_q
+\end{bmatrix}=
+\begin{bmatrix}
+\rho_1\\\rho_2\\\vdots\\\rho_s
+\end{bmatrix}
+\to Р \boldsymbol\alpha = \boldsymbol\rho
+$$
+
+求解 $ \boldsymbol\alpha = Р^{-1}\boldsymbol\rho$ 即可得到偏自相关系数 $\alpha_1,...,\alpha_p$
+
+当 $s > p$ 时， $y_{t-s}$ 对应的自回归系数为 0，因此 $y_t$ 与 $y_{t-s}$ 不存在直接相关性
+
+$\text{AR}(p)$ 模型偏相关函数：
+
+$$
+\alpha_s = \begin{cases}
+1, & s = 0 \\
+\alpha_s, & 1 \le s \le p\\
+0, & s > p
+\end{cases}
+$$
+
+### 参数估计
+
+### Yule–Walker
+
+对零均值 $\text{AR}(p)$ 移项并在两边同时乘以 $y_{t-h}\ (h\ge0)$ 得到
+
+$$
+y_{t-h}(y_t - \phi_1y_{t-1} + \phi_2y_{t-2} + \cdots + \phi_py_{t-p}) = y_{t-h}\varepsilon_t
+$$
+
+然后求期望并使用自协方差 $\gamma_i=E(y_ty_{t-i})$ 表示
+
+$$
+E(y_ty_{t-h})-\sum_{i=1}^p\phi_iE(y_{t-i}y_{t-h})=
+\gamma_h-\sum_{i=1}^p\phi\gamma_{h-i}
+=
+E(y_{t-h}\varepsilon_t)=\begin{cases}
+\sigma_\varepsilon^2, & h=0\\
+0,& h\ge1
+\end{cases}
+$$
+
+根据 $\gamma_h-\sum\nolimits_{i=1}^p\phi\gamma_{h-i} = 0 \  \ (h=1,...,p)$ 可以得到以下方程
+
+$$
+\begin{bmatrix}
+\gamma_0 & \gamma_1 & \cdots & \gamma_{p-1}\\
+\gamma_1 & \gamma_0 & \cdots & \gamma_{p-2}\\
+\vdots&\vdots& \ddots & \vdots\\
+\gamma_{p-1} & \gamma_{p-2} & \cdots & \gamma_0\\
+\end{bmatrix}
+\begin{bmatrix}
+\phi_1\\\phi_2\\\vdots\\\phi_p
+\end{bmatrix}=
+\begin{bmatrix}
+\gamma_1 \\ \gamma_2 \\ \vdots \\\gamma_p
+\end{bmatrix}
+	o \boldsymbol{\Gamma \phi = \gamma}
+$$
+
+代入自协方差的估计值 $\hat\gamma_h = (\sum\nolimits_{t=1}^{n-|h|}y_ty_{t+|h|})/n$ 即可求解 $\boldsymbol{\hat \phi =\Gamma^{-1} \hat\gamma}$
+
+根据 $\gamma_h-\sum\nolimits_{i=1}^p\phi\gamma_{h-i} = \sigma_\varepsilon^2 \  \ (h=0)$ 可以求解 $\hat\sigma_\varepsilon^2 = \gamma_0-\sum\nolimits_{i=0}^p\phi_ir_i$
+
+### Burg
+
+如果矩阵 $\boldsymbol \Gamma$ 是病态的，Yule–Walker 方法将对异常样本十分敏感，导致参数 $\boldsymbol{\hat\phi}$ 的估计结果会很不稳定
+
+为了保证参数估计的稳定性，通常使用 Burg 算法估计 $\text{AR}(p)$ 参数
+
+Burg 算法是一种自回归模型参数估计方法，在处理短数据序列时具有更好的稳定性
+
+考虑两个方向的 $\text{AR}(k)$ 模型
+
+- 正向模型基于过去值估计当前观测值 $y_t^+ = \phi_1y_{t-1}+\cdots+\phi_ky_{t-k}+\varepsilon_t^+ \ \ (t\in[k,n])$
+    
+    该模型的误差被称为前向误差，反映参数对未来数据预测能力，其中
+    
+- 反向模型基于未来值估计当前观测值 $y_t^- = \phi_1y_{t+1}+\cdots+\phi_ky_{t+k}+\varepsilon_t^- \ \ (t\in[0,n-k])$
+    
+    该模型的误差被称为后向误差，反映参数对过去数据的拟合情况
+    
+
+Burg 的优化目标是同时以下两个目标函数
+
+- 前向误差 $F_k=\sum\nolimits_{t=k}^n(y_t-y_t^+)^2=\sum\nolimits_{t=k}^n(y_t-
+\sum\nolimits_{i=1}^k\phi_iy_{n-i})^2$
+- 后向误差 $B_k=\sum\nolimits_{t=k}^n(y_t-y_t^-)^2=\sum\nolimits_{t=0}^{n-k}(y_t-
+\sum\nolimits_{i=1}^k\phi_iy_{n+i})^2$
+
+令 $\phi_0=1$，以上两个函数可以简化为
+
+- $F_k=\sum\nolimits_{t=k}^n(f_k(i))^2$，其中 $f_k(i)=\sum\nolimits_{i=0}^k\phi_iy_{n-i}$
+- $B_k=\sum\nolimits_{t=0}^{n-k}(b_k(i))^2$，其中 $b_k(i)=\sum\nolimits_{i=0}^k\phi_iy_{n+i}$
+
+Burg 的使用递归方程 $A_{k+1} = A_k + \mu V_k$ 更新参数
+
+- $A_k = \begin{bmatrix}1&\phi_1&\cdots&\phi_k\end{bmatrix}$
+- $V_k = \begin{bmatrix}0&\phi_k&\cdots&\phi_2&\phi_1& 1\end{bmatrix}$
+
+令 $\phi_{k+1}=1$，递归更新过程可以表示为 $\phi_i' = \phi_i+\mu\phi_{a+1-i}$
+
+为了保证 $A_{k+1}$ 优于 $A_{k}$，可以通过最小化 $F_{k+1}+B_{k+1}$ 求解 $\mu$
+
+展开 $F_{k+1}+B_{k+1} = \sum\nolimits_{t=k+1}^n(f_{k+1}(i))^2 + \sum\nolimits_{t=0}^{n-k-1}(b_{k+1}(i))^2$ 得到
+
+- $f_{k+1}(i)=\sum\nolimits_{i=0}^{k+1}\phi_i'y_{n-i} = \sum\nolimits_{i=0}^{k+1}\phi_iy_{n-i} + \mu \sum\nolimits_{i=0}^{k+1}\phi_{k+1-i}y_{n-i} = f_k(i)+ \mu b_k(i-k-1)$
+- $b_{k+1}(i)=\sum\nolimits_{i=0}^{k+1}\phi_i'y_{n+i} = \sum\nolimits_{i=0}^{k+1}\phi_iy_{n+i} + \mu \sum\nolimits_{i=0}^{k+1}\phi_{k+1-i}y_{n+i} = b_k(i)+ \mu f_k(i+k+1)$
+
+求解 $\partial(F_{k+1}+B_{k+1})/\partial \mu = 0$ 最终得到 $\mu = \frac{-2\sum_{i=0}^{n-k-1}f_k(i+k+1)b_k(n)}{\sum_{i=k+1}^{n}f_k(i)^2+\sum_{i=0}^{n-k-1}b_k(i)^2}$
+
+最终得到 Burg 算法的流程如下：
+
+- 选择阶数 p
+- 初始化 $A_0 = [1]$
+- 初始化 $f_0(n) = b_0(n) = y_n$
+- 递归更新 $k = 0,..,p-1$
+    - 计算 $\mu$ 并更新 $A_{k+1}$
+    - 更新 $f_{k+1}(i)$，其中 $i \in [k+1,n]$
+    - 更新 $b_{k+1}(i)$，其中 $i \in [0,n-k-1]$
+
+https://c.mql5.com/3/133/Tutorial_on_Burg_smethod_algorithm_recursion.pdf
+
+## MA 模型
+
+移动平均模型 Moving Average Model 是一类基于往期误差 past errors 的多元回归模型
+
+误差项的数量被称为 MA 模型的阶数，一个 q 阶 MA 模型可以表示为
+
+$$
+    ext{MA}(q)\ :\ y_t = c + \varepsilon_t + \theta_1\varepsilon_{t-1} + \theta_2\varepsilon_{t-2} +...+\theta_q\varepsilon_{t-q}
+$$
+
+- $\theta_i$ 是误差权重
+- $\varepsilon_t$ 是白噪声
+
+### 统计量
+
+$\text{MA}(q)$ 过程的均值 $E(y_t) = c$
+
+$\text{MA}(q)$ 过程的方差 $Var(y_t) = (1+\theta_1^2+\theta_2^2+\cdots+\theta_q^2)\sigma_{\varepsilon}$
+
+$\text{MA}(q)$ 过程协方差 $Cov(y_t,y_{t-s}) = E[(y_t-c)(y_{t-s}-c)]=\begin{cases}(-\beta_s+\beta_1\beta_{s+1}+\cdots+\beta_{q-s}\beta_{q})\sigma_{\varepsilon}&1\le s\le q\\
+0&s>q
+\end{cases}$
+
+有限阶的 $\text{MA}(q)$ 模型一定是平稳的，无需对参数 $\theta$ 施加任何约束条件
+
+### 可逆性
+
+一个平稳的 $\text{AR}(p)$ 过程可以改写为  $\text{MA}(\infty)$ 形式
+
+$$
+y_t = \phi_1y_{t-1}+\varepsilon_t =\phi_1(\phi_1y_{t-2}+\varepsilon_{t-1})+\varepsilon_t \\ \hphantom{-}=\phi_1^2y_{t-2}+\phi_1\varepsilon_{t-1}+\varepsilon_t
+\\ \hphantom{-}=\phi_1^3y_{t-3}+\phi_1^2\varepsilon_{t-2} + \phi_1\varepsilon_{t-1}+\varepsilon_t
+\\ \hphantom{-}=\cdots
+$$
+
+其中 $|\phi_1| < 1\ \to\  \phi_1^{\infty}y_{t-\infty}=0$
+
+一个可逆的 $\text{MA}(q)$ 可以表示为收敛的 $\text{AR}(\infty)$ 形式
+
+$$
+y_t = \varepsilon_t + \theta_1\varepsilon_{t-1}=\varepsilon_t+\theta_1(y_{t-1}-\theta_1\varepsilon_{t-2}) \\ 
+\hphantom{-}=\varepsilon_t+\theta_1y_{t-1}+\theta_1^2\varepsilon_{t-2}
+\\ \hphantom{-}=\varepsilon_t+\theta_1y_{t-1}+\theta_1^2y_{t-2}
++\theta_1^3\varepsilon_{t-3}
+\\ \hphantom{-}=\cdots
+\\ \hphantom{-}=\theta_1y_{t-1}+\theta_1^2y_{t-2}
++\theta_1^3y_{t-3} + \cdots +\varepsilon_t
+$$
+
+$\text{MA}(q)$ 的可逆性也能通过特征方程 $1 - \theta_1z - \theta_2z^2 - ... - \theta_pz^p = 0$ 的根表示
+
+$\text{MA}(q)$ 模型的可逆性可以使用单位根表示
+
+- 可逆模型不存在单位根 $\forall |\lambda_i| < 1$
+- 不可逆模型存在单位根 $\exists |\lambda_i| = 1$
+
+$\text{MA}(1)$ 模型对应的特征方程为  $\lambda^1 - \theta_1\lambda^{0} = \lambda - \theta_1 = 0$
+
+只要满足 $|\theta_1| < 1$ 模型就是可逆的
+
+$\text{MA}(2)$ 模型对应的特征方程为 $\lambda^2 - \theta_1\lambda^{1} - \theta_2\lambda^{0} = \lambda^2 - \theta_1\lambda - \theta_2 = 0$
+
+只要同时满足 $|\theta_1| < 1$ 与  $\theta_1\pm\theta_1 < 1$ 模型就是可逆的
+
+可逆 $\text{MA}(q)$ 模型与不可逆 $\text{MA}(q)$ 模型均能生成相同的一阶矩与二阶矩
+
+- 对于一个可逆 $\text{MA}(1)$ 模型：$y_t = c + \varepsilon_t + \theta_1\varepsilon_{t-1}$，其中 $\varepsilon_t \sim D(0,\sigma_\epsilon^2)$
+    - 期望 $E(y_t) = E(c) + E(\varepsilon_t) + \theta_1E( \varepsilon_{t-1}) = c$
+    - 方差 $Var(y_t) =
+    Var(c) + Var(\varepsilon) + \theta_1^2Var(\varepsilon_{t-1}) = \sigma_\varepsilon^2 + \theta_1^2\sigma_\varepsilon^2$
+- 对应的不可逆 $\text{MA}(1)$ 模型：$y_t^* = c + \varepsilon_t^* + \frac{1}{\theta_1}\varepsilon_{t-1}^*$，其中 $\varepsilon_t^* \sim D(0,\theta_1^2\sigma_\epsilon^2)$
+    - 期望 $E(y_t^*) = E(c) + E(\varepsilon_t^*) + \theta_1E( \varepsilon_{t-1}^*) = c$
+    - 方差 $Var(y_t^*) = Var(c) + Var(\varepsilon_t^*) + \frac{1}{\theta_1^2}Var(\varepsilon_{t-1}^*) =
+    	heta_1^2\sigma_\varepsilon^2 + \sigma_\varepsilon^2$
+
+但在计算 $\varepsilon_t$ 时，两者存在本质的区别：
+
+- 不可逆模型使用时间序列未来值进行估计 $\varepsilon_t = f(y_{t+1}, y_{t+2} ,...)$
+- 可逆模型使用时间序列当前值与过去值进行估计 $\varepsilon_t = f(y_t, y_{t-1} ,...)$
+
+当进行预测或使用 MLE 估计模型参数时，都涉及到计算 $\varepsilon_t$
+
+此时一个可逆的 $\text{MA}(q)$ 模型会带来极大的方便
+
+换句话说，只有可逆的 $\text{MA}(q)$ 模型才具备预测能力
+
+### 预测误差
+
+$\text{MA}(1)$ **模型**
+
+**向前 1  步预测：**$y_{t+1} = c + \varepsilon_{t+1} + \theta_1\varepsilon_{t}$
+
+**向前 1  步预测的期望**：$\hat{y}_{t+1|t} = c + E(\epsilon_{t+1}|I_t) +\beta_1E(\epsilon_{t}|I_t)$
+
+假设这里使用的是可逆模型，在给定信息集 $I_t = \{y_{t},y_{t-1},...,y_{t-p}\}$ 的情况下
+
+此时 $c, \beta_1, y_i$ 均为常量，因此有可以通过以下递推公式，根据数据算出残差 $\epsilon_t$ ：
+
+- $y_1 = c + \varepsilon_1\ \ \to\ \ \varepsilon_1 = y_1 - c$
+- $y_2 = c + \varepsilon_2 + \theta_1\varepsilon_1\ \ \to\ \ \varepsilon_2 = y_2 - c - \theta_1(y_1 - c)$
+- ...
+- $y_t = c + \varepsilon_t + \theta_1\varepsilon_{t-1}\ \ \to\ \ \varepsilon_t = y_t - c - \theta_1\varepsilon_{t-1}$
+
+正常情况下无条件期望 $E(\varepsilon_{t}) = 0$，但在信息集 $I_t = \{y_{t},y_{t-1},...,y_{t-p}\}$ 的情况下，$\epsilon_i(i=1,..,t)$ 是常量，其对应的条件期望 $E(\varepsilon_{t}|I_t) = \varepsilon_{t}$，因此有：
+
+$$
+E(\varepsilon_{t+i}|I_t) = \begin{cases}
+0, & i > 0\\
+\varepsilon,& i\le 0
+\end{cases}
+$$
+
+$y_{t+1}$ 的预测条件期望：$\hat{y}_{t+1|t} = c + E(\varepsilon_{t+1}|I_t) +\theta_1E(\varepsilon_{t}|I_t) = c + \theta_1\varepsilon_{t}$
+
+向前 1 步预测误差：$e_t(1) = y_{t+1} - \hat{y}_{t+1|t} =  y_{t+l} - E(y_{t+1}|I_t) = \varepsilon_{t+1}$
+
+向前 1 步预测误差的方差：$Var(e_t(1)) = Var(\varepsilon_{t+1}) = \sigma_\varepsilon^2$
+
+**向前 2  步预测的期望**：$\hat{y}_{t+2|t} = c + E(\varepsilon_{t+2}|I_t) +\theta_1E(\varepsilon_{t+1}|I_t) = c$
+
+**向前** $l$ **步预测的期望：**$\hat{y}_{t+l|t} = c + E(\varepsilon_{t+l}|I_t) +\theta_1E(\varepsilon_{t+l-1}|I_t) = c$
+
+$\text{MA}(2)$ **模型**
+
+**向前 1  步预测：**$y_{t+1} = c + \varepsilon_{t+1} + \theta_1\varepsilon_{t}+ \theta_2\varepsilon_{t-1}$
+
+**向前 1  步预测的期望**：$\hat{y}_{t+1|t} = c + E(\varepsilon_{t+1}|I_t) +\theta_1E(\varepsilon_{t}|I_t)+\theta_2E(\varepsilon_{t-1}|I_t) = c + \theta_1\varepsilon_{t}+ \theta_2\varepsilon_{t-1}$
+
+向前 1 步预测误差：$e_t(1) = y_{t+1} - \hat{y}_{t+1|t} =  y_{t+1} - E(y_{t+1}|I_t) = \varepsilon_{t+1}$
+
+向前 1 步预测误差的方差：$Var(e_t(1)) = Var(\varepsilon_{t+1}) = \sigma_\varepsilon^2$
+
+**向前 2  步预测：**$y_{t+2} = c + \varepsilon_{t+2} + \theta_1\varepsilon_{t+1}+ \theta_2\varepsilon_{t}$
+
+**向前 2  步预测的期望** $\hat{y}_{t+2|t} = c + E(\varepsilon_{t+2}|I_t) +\theta_1E(\varepsilon_{t+1}|I_t)+\theta_2E(\varepsilon_{t}|I_t) = c + \theta_2\varepsilon_{t}$
+
+向前 2 步预测误差：$e_t(2) = y_{t+2} - \hat{y}_{t+2|t} =  y_{t+2} - E(y_{t+2}|I_t) = \varepsilon_{t+2} +\theta_1\varepsilon_{t+1}$
+
+向前 2 步预测误差的方差：$Var(e_t(2)) = Var(\varepsilon_{t+2}) +Var(\theta_1\varepsilon_{t+1}) = (1+\theta_1^2)\sigma_\varepsilon^2$
+
+**向前 3  步预测的期望**：$\hat{y}_{t+3|t} = c + E(\varepsilon_{t+3}|I_t) +\theta_1E(\varepsilon_{t+1}|I_t)+\theta_2E(\varepsilon_{t+2}|I_t) = c$
+
+**向前** $l$ **步预测的期望：**$\hat{y}_{t+l|t} = c + E(\varepsilon_{t+l}|I_t) +\theta_1E(\varepsilon_{t+l-1}|I_t) +\theta_1E(\varepsilon_{t+l-2}|I_t) = c$
+
+$\text{MA}(q)$ **模型**
+
+**向前** $l$ **步预预测：**$y_{t+l} = c + \varepsilon_{t+l} + \theta_1\varepsilon_{t+l-1} + \theta_2\varepsilon_{t+l-2} +...+ \theta_q\varepsilon_{t+l-q}$
+
+在均方损失函数下，给定信息集 $I_t = \{y_{t},y_{t-1},...,y_{t-p}\}$
+
+$$
+\hat{y}_{t+l|t} = E(y_{t+l}|I_t) = E(c + \varepsilon_{t+l} + \theta_1\varepsilon_{t+l-1} + \theta_2\varepsilon_{t+l-2} +...+ \theta_q\varepsilon_{t+l-q}|I_t)
+
+\\ \hphantom{--}=E(c) + E(\varepsilon_{t+l} + \theta_1\varepsilon_{t+l-1} + \theta_2\varepsilon_{t+l-2} +...+ \theta_q\varepsilon_{t+l-q}|I_t)
+
+\\ \hphantom{--}=c + E(\varepsilon_{t+l}|I_t) + \theta_1E(\varepsilon_{t+l-1}|I_t) + \theta_2E(\varepsilon_{t+l-2}|I_t) +...+ \theta_qE(\varepsilon_{t+l-q}|I_t)
+$$
+
+条件期望： $\hat{y}_{t+l|t} = \begin{cases} (c +\theta_l\varepsilon_t+\theta_{l+1}\varepsilon_{t-1}+...+\theta_{q}\varepsilon_{t+l-q}), & l \le q  \\ c, & l > q \end{cases}$
+
+预测误差：$e_t(l) = y_{t+l} - \hat{y}_{t+l|t} = \varepsilon_{t+l} +\theta_1\varepsilon_{t+l-1}+\theta_2\varepsilon_{t+l-2}+...+\theta_{q}\varepsilon_{t+l-q}$
+
+预测误差方差：$Var(e_t(l)) = (1 + \theta_1^2 + \theta_2^2 + ... + \theta_{l-1}^2)\sigma_\varepsilon^2$
+
+如果 $\varepsilon_{t}$ 服从正态分布，$y_{t+l}$ 的 95% 向前 $l$ 步区间预测为 ：$\hat{y}_{t+1|t}\pm1.96\sqrt{Var(e_t(l))}$
+
+### 自相关函数
+
+$\text{MA}(q)$ 模型自协方差：
+
+$$
+\gamma_s = Cov(y_t, y_{t-s}) = E[(y_t-c)(y_{t-s}-c)] = \begin{cases} (1 +\theta_1^2+\theta_2^2+...+\theta_{q}^2)\sigma_\varepsilon^2, & s = 0 \\ (\theta_s+\theta_1\theta_{s+1}+...+\theta_{q-s}\theta_{q})\sigma_\varepsilon^2, & 1 \le s \le q \\ 0, & s > q\end{cases}
+$$
+
+$\text{MA}(q)$ 自相关函数：
+
+$$
+\rho_s = \begin{cases} 1, & s = 0 \\ \frac{(\theta_s+\theta_1\theta_{s+1}+...+\theta_{q-s}\theta_{q})}{(1+\theta_1^2+\theta_2^2+...+\theta_{q}^2)}, & 1 \le s \le q \\ 0, & s > q \end{cases}
+$$
+
+由于可逆 $\text{MA}(q)$ 可以表示为 $\text{AR}(\infty)$
+
+$\text{MA}(q)$ 模型的偏自相关函数是一个无穷项的拖尾函数，这里不实际展开
+
+### 参数估计
+
+### Innovations
+
+对于零均值 $\text{AR}(t)$ 过程
+
+- 一步预测 $\hat y_{t+1} = \sum\nolimits_{i=0}^t\phi_{t,j}y_t=\boldsymbol{\phi_ty_t}$
+- 一步预测误差 $u_{t+1} = y_{t+1} - \hat y_{t+1}$
+- 一步预测方差 $v_t = Var(u_{t+1}) = E[(y_{t+1}-\hat y_{t+1})^2]=\gamma_0-\boldsymbol{\phi_t\gamma_t}$
+
+预测方差 $v_t$ 可以看作一个均方差函数
+
+只要保证 $v_{t+1} < v_t$，即可保证参数估计值 $\boldsymbol{\hat \phi_{t+1}}$ 优于 $\boldsymbol{\hat \phi_t}$
+
+一步预测误差可以理解为未来真实值 $y_{t+1}$ 与当前预测值 $\hat y_{t+1}$ 的未知信息差
+
+该信息差无法从当前已知的信息集 $I_t =\{y_t,...,y_1\}$ 中获取
+
+可以认为 $u_{t+1}$ 与 $I_t$ 不存在相关性，$u_{t+1}$ 代表的未知误差被称为创新
+
+这也意味着 $u_t = y_t-\hat y_t$ 与 $u_s = y_s-\hat y_s$ 之间也不存在相关性
+
+给定 $t$ 时刻的观测值 $\{y_t,...,y_1\}$ 与预测值 $\{\hat y_t,...\hat y_1\}$，并令最优估计 $\hat y_1 = 0$
+
+预测值可以表示为两者的线性组合 $y_{t+1}=\sum_{i=1}^t\theta_{t,i}(y_{t+1-i}-\hat y_{t+1-i})$
+
+以上过程被称为 Innovations 创新算法，其系数可以通过迭代的方式更新
+
+- 线性预测模型的系数 $\theta_{t,t-k}=(\gamma_{t-k}-\sum_{j=0}^{k-1}\theta_{k,k-j}\theta_{t,t-j}v_{j})/v_{k}$
+- 预测方差可以表示为 $v_{t} = \gamma_0-\sum_{i=0}^{t-1}\theta_{t,t-i}^2v_{i+1}$
+
+为了方便理解，这里展示前 3 次迭代的细节（其中 $v_0=\gamma_0$）
+
+第 1 次迭代：
+
+- $\theta_{1,1} = \frac{\gamma_{1-0}-\sum_{j=0}^{0-1}\theta_{0,0-j}\theta_{1,1-j}v_j}{v_0}= \frac{\gamma_{1}-0}{v_0}$
+- $v_{1}=\gamma_0-\sum\nolimits_{j=0}^{1-1}\theta_{1,1-j}^2v_j=\gamma_0-\theta_{1,1}^2v_0$
+
+第 2 次迭代：
+
+- $\theta_{2,2} = \frac{\gamma_{2-0}-\sum_{j=0}^{0-1}\theta_{0,0-j}\theta_{2,2-j}v_j}{v_0} = \frac{\gamma_{2}-0}{v_0}$
+- $\theta_{2,1} = \frac{\gamma_{2-1}-\sum_{j=0}^{1-1}\theta_{1,1-j}\theta_{2,2-j}v_j}{v_1} = \frac{\gamma_{1}-\theta_{1,1}\theta_{2,2}v_0}{v_1}$
+- $v_{2}=\gamma_0-\sum\nolimits_{j=0}^{2-1}\theta_{2,2-j}^2v_j=\gamma_0-\theta_{2,2}^2v_0-\theta_{2,1}^2v_1$
+
+第 3 次迭代：
+
+- $\theta_{3,3} = \frac{\gamma_{3-0}-\sum_{j=1}^{0-1}\theta_{0,0-j}\theta_{3,3-j}v_j}{v_0} = \frac{\gamma_{3}-0}{v_0}$
+- $\theta_{3,2} = \frac{\gamma_{3-1}-\sum_{j=0}^{1-1}\theta_{1,1-j}\theta_{3,3-j}v_j}{v_1} = \frac{\gamma_{2}-\theta_{1,1}\theta_{3,3}v_0}{v_1}$
+- $\theta_{3,1} = \frac{\gamma_{3-2}-\sum_{j=0}^{2-1}\theta_{2,2-j}\theta_{3,3-j}v_j}{v_2} = \frac{\gamma_{1}-(\theta_{2,2}\theta_{3,3}v_0 + \theta_{2,1}\theta_{3,2}v_1)}{v_2}$
+- $v_{3}=\gamma_0-\sum\nolimits_{j=0}^{3-1}\theta_{3,3-j}^2v_j=\gamma_0-\theta_{3,3}^2v_0-\theta_{3,2}^2v_1-\theta_{3,1}^2v_2$
+
+Innovations 算法经常被用于估计 $\text{MA}(q)$ 模型的参数，其步骤如下
+
+- 选择阶数 q
+- 计算自协方差 $\gamma_0,...,\gamma_q$
+- 递归更新 $m = 1,..,q$
+    - 初始化 $v_0=\gamma_0$，$\theta_{0,0} = 1$
+    - 迭代计算 $\theta_{m,1},...,\theta_{m,m},v_{m}$
+
+### Hannan-Rissanen
+
+一种估计 $\text{AR}(p)$ 参数的方法是利用最小二乘法求解下面的线性回归：
+
+$$
+\begin{bmatrix}
+y_{p} & y_{p-1} & \cdots & y_{1}\\
+y_{p+1} & y_{p} & \cdots & y_{2}\\
+\vdots&\vdots& \ddots & \vdots\\
+y_{n-1} & y_{n-2} & \cdots & y_{n-p}\\\end{bmatrix}
+\begin{bmatrix}
+\phi_1\\\phi_2\\\vdots\\\phi_p
+\end{bmatrix}=
+\begin{bmatrix}
+y_{p+1} \\ y_{p+2} \\ \vdots \\ y_n
+\end{bmatrix}
+	\to \boldsymbol{Y\phi = y}
+$$
+
+但该方法并不适用于 $\text{MA}(q)$ ，因为随机变量$y_t$是可观测的，而$\varepsilon_t$是不可观测的
+
+Hannan-Rissanen 是一种建模 $\text{ARMA}(p,q)$ 过程的算法，核心思想是使用残差 $e_t$ 替代误差项$\varepsilon_t$并进行线性回归，算法流程如下
+
+第 1 步：估计往期误差
+
+使用 Yule–Walker 估计一个高阶 $\text{AR}(m)$模型，其中 $m > \max(p,q)$
+
+得到模型参数的估计值 $\hat\phi_i,...,\hat\phi_m$
+
+并计算 $\text{AR}(m)$ 残差序列 $e_t = y_t - \hat\phi_1y_{t-1}+...+\hat\phi_my_{t-m}$
+
+第 2 步：构建联合回归
+
+基于 $y_t$ 与 $e_t$ 构建数据集合
+
+$$
+\boldsymbol{A} = \begin{bmatrix}
+y_{m+q} & y_{m+q-1} & \cdots & y_{m+q+1-p} & e_{m+q} & e_{m+q-1} & \cdots & e_{m+1}\\
+y_{m+q+1} & y_{m+q} & \cdots & y_{m+q+2-p} & e_{m+q+1} & e_{m+q} & \cdots & e_{m+2}\\
+\vdots&\vdots& \ddots&\vdots&\vdots&\vdots&\ddots & \vdots\\
+y_{n-1} & y_{n-2} & \cdots & y_{n-p} & e_{n-1} & e_{n-2} & \cdots & e_{n-q}\\
+\end{bmatrix}
+$$
+
+扩展系数向量 $\boldsymbol{\beta =(\phi,\theta)} = \begin{bmatrix}\phi_1,\phi_2,...\phi_p,\theta_1,\theta_2,...,\theta_q\end{bmatrix}$
+
+求解线性回归 $\boldsymbol{A\beta = y}$ 得到系数估计值 $\boldsymbol{\hat\beta}=\begin{bmatrix}\hat\phi_1,\hat\phi_2,...\hat\phi_p,\hat\theta_1,\hat\theta_2,...,\hat\theta_q\end{bmatrix}$
+
+基于 $\boldsymbol{\hat\beta}$ 计算  $\text{ARMA}(p,q)$ 残差序列
+
+$$
+	ilde e_t = \begin{cases}
+0,& t \le \max(p,q)\\
+y_t-\sum\nolimits_{j=1}^p\hat\phi_jy_{t-j}-\sum\nolimits_{j=1}^p\hat\theta_j\tilde e_{t-j},& t > \max(p,q)
+\end{cases}
+$$
+
+第 3 步：更新模型参数
+
+基于 $\tilde e_t$ 构建数据集合，其中 $t = \max(p,q) + 1$
+
+$$
+\boldsymbol{\tilde A} = \begin{bmatrix}
+v_{t-1} & v_{t-2} & \cdots & v_{t-p} & w_{t-1} & w_{w-2} & \cdots & w_{t-q}\\
+v_{t-2} & v_{t-3} & \cdots & v_{t-p-1} & w_{t-2} & w_{w-3} & \cdots & w_{t-q-1}\\
+\vdots&\vdots& \ddots&\vdots&\vdots&\vdots&\ddots & \vdots\\
+v_{n-1} & v_{n-2} & \cdots & v_{n-p} & w_{n-1} & w_{n-2} & \cdots & w_{n-q}\\
+\end{bmatrix}
+$$
+
+其中 
+- $v_t = \sum\nolimits^{p}_{j=1}\hat\phi_jv_{t-j} + \tilde e_t$
+- $w_t = \sum\nolimits^{p}_{j=1}-\hat\theta_jw_{t-j} + \tilde e_t$
+
+求解线性回归 $\boldsymbol{\tilde A\beta^\dagger = \tilde e}$ 得到系数估计值 $\boldsymbol{\hat\beta^\dagger}$，并更新模型参数 $\boldsymbol{\tilde \beta = \hat\beta^\dagger + \hat \beta}$
+
+其中第 3 步也被称为偏差校正，仅当第 2 步中求出的参数 满足 $\text{AR}(p)$ 平稳且 $\text{MA}(q)$ 可逆时才会执行
+
+## 单位根检验
+
+对时间序列进行分析建模前，需要判断其中是否存在趋势
+
+与线性趋势不同，随机趋势无法直接用肉眼进行分辨
+
+当确定需要差分变换时，我们需要选择一个合适的阶数
+
+在消除趋势的同时，避免过度过度差分增大模型误差
+
+对于上述两个问题，单位根是一个良好的判断依据
+
+- $\text{AR}(p)$ 过程的单位根接近 1，表明数据需要差分
+- $\text{MA}(q)$过程的单位根接近 1，表明数据差分过度
+
+对于不存在单位根但包含趋势的时间序列，将其称之为趋势平稳过程
+
+此类序列可以通过回归法消除趋势，避免引入不必要的差分，导致模型误差变大
+
+对于存在单位根的时间序列，称其为单位根过程，或差分平稳过程
+
+对单位根过程使用 OLS 会得到有偏估计，无法使用 t 检验判断系数显著性
+
+因此无法通过回归法消除趋势，只能进行差分
+
+为了判断时间序列是否存在单位根，需要用到一类被称为单位根检验的统计工具
+
+单位根检验的一个重要场景是选择差分阶数：对数据重复执行差分，直到无法显著检测到单位根
+
+### ADF
+
+令  $\phi_1 = 1$ 可以得到 3 种常见的非平稳 $\text{AR}(1)$ 过程
+
+- $y_t =\phi_1y_{t-1} + \varepsilon_t$ (RW)
+- $y_t = c + \phi_1y_{t-1} + \varepsilon_t$ (RWD)
+- $y_t = c_1 + c_2t + \phi_1y_{t-1} + \varepsilon_t$ (RWD+DT)
+
+如果使用传统的回归 t 检验判断，流程如下：
+
+- 构建命题 $H_0: \phi_1 = 1$
+- 使用 OLS 估计 $\hat\phi_1$
+- 计算 $\phi_1$的 t 统计量 $t = (\hat\phi_1-1)/\text{SE}(\hat\phi_1)$
+- 查表进行假设检验，判断命题是否成立
+
+问题在于$\phi_1 = 1$时 ，误差项 $\varepsilon_t$不满足常方差条件
+
+此时 OLS 会得到有偏估计，故无法应用 t 检验进行判断
+
+为了解决这一问题，需要用到  DF 检验 / Dickey-Fuller Test
+
+$$
+y_t =\phi_1y_{t-1} + (\phi_1y_{t-1}-\phi_1y_{t-1}) + \varepsilon_t
+$$
+
+$$
+y_t - y_{t-1} =\phi_1y_{t-1} + (\phi_1y_{t-1}-\phi_1y_{t-1}) + \varepsilon_t
+$$
+
+首先将以上$\text{AR}(1)$ 两边同时减去 $y_{t-1}$ 得到
+
+- $\Delta y_t =\gamma y_{t-1} + \varepsilon_t$
+- $\Delta y_t = c + \gamma y_{t-1} + \varepsilon_t$
+- $\Delta y_t = c_1 + c_2t + \gamma y_{t-1} + \varepsilon_t$
+
+其中  $\Delta y_t = y_t - y_{t-1}$，$\gamma=\phi_1 - 1$
+
+DF 检验以下假设
+
+- $H_0: \gamma = 0$（存在单位根）
+- $H_1: \gamma < 0$（不存在单位根）
+
+接着使用 OLS 估计 $\hat \gamma$ 并计算 DF 统计量  $\tau = \frac{\hat{\gamma}}{\text{SE}(\hat{\gamma})}$
+
+该统计量的概率分布没有解析解，Dickey & Fuller 使用蒙特卡洛模拟计算出了 DF 统计量分位数表
+
+需要注意的是，以上 3 种形式的 $\text{AR}(1)$ 过程对应不同的分位数表，检验时需要指定具体形式
+
+最后根据显著性水平查表获得临界值，并进行单侧检验
+
+当 DF 值小于临界值时，拒绝原假设，此时序列中不存在单位根
+
+DF 检验的是$\text{AR}(1)$ 过程并且要求扰动项 $\varepsilon_t$ 不存在自相关性
+
+对于高阶的 $\text{AR}(p)$模型进行回归，未被参数描述的趋势必然包含在扰动项中
+
+为了能够检验高阶的模型，需要使用 ADF 检验 / augmented Dickey-Fuller Test
+
+首先对 $\text{AR}(p)$ 过程进行以下变换：
+
+- 同时加减一项 $\phi_{p}y_{t-p+1}$
+
+$$
+y_t = c + \phi_1y_{t-1} + \phi_2y_{t-2} ... + (\phi_{p-1} + \phi_p)y_{t-p+1} - \phi_p\Delta y_{t-p+1} + \varepsilon_t
+$$
+
+- 同时加减一项 $(\phi_{p-1}+\phi_p)y_{t-p+2}$
+
+$$
+y_t = c + \phi_1y_{t-1} + \phi_2y_{t-2} ... + (\phi_{p-2}+\phi_{p-1}+\phi_p)y_{t-p+2} - (\phi_{p-1} + \phi_p)\Delta y_{t-p+2} - \phi_p\Delta y_{t-p+1} + \varepsilon_t
+$$
+
+- 同时加减一项 $(\phi_{p-2}+\phi_{p-1}+\phi_p)y_{t-p+3}$
+
+$$
+y_t = c + \phi_1y_{t-1} + \phi_2y_{t-2} ... - (\phi_{p-2}+\phi_{p-1}+\phi_p)\Delta y_{t-p+3} - (\phi_{p-1} + \phi_p)\Delta y_{t-p+2} - \phi_p\Delta y_{t-p+1} + \varepsilon_t
+$$
+
+以此类推，最终得到 $y_t = c + (\sum^p_{i=1}\phi_i)y_{t-1}-\sum^p_{i=2}(\sum^p_{j=i}\phi_j)\Delta y_{t-i+1} + \varepsilon_t$
+
+将其转换为差分形式 $\Delta y_t = y_t - y_{t-1} = c + \gamma y_{t-1} + \sum^p_{i=2}\beta_i\Delta y_{t-i+1} + \varepsilon_t$
+
+其中 $\gamma = - (1-\sum^p_{i=1}\phi_i)$，$\beta_i = \sum^p_{j=i}\phi_j$
+
+ADF 也支持以下 3 种形式 $\text{AR}(p)$过程，
+
+- $\Delta y_t = \gamma y_{t-1} + \sum^p_{i=2}\beta_i\Delta y_{t-i+1} + \varepsilon_t$
+- $\Delta y_t = c + \gamma y_{t-1} + \sum^p_{i=2}\beta_i\Delta y_{t-i+1} + \varepsilon_t$
+- $\Delta y_t = c_1 + c_2t + \gamma y_{t-1} + \sum^p_{i=2}\beta_i\Delta y_{t-i+1} + \varepsilon_t$
+
+这 3 种 $\text{AR}(p)$ 过程对应不同的分位数表，检验时需要指定具体形式
+
+$\text{AR}(p)$平稳的必要条件是 $\sum^p_{i=1}\phi_i < 1$，因此 DF 检验以下假设
+
+- $H_0: \gamma = 0$（存在单位根）
+- $H_1: \gamma < 0$（不存在单位根）
+
+使用 ADF 检验时需要指定以下参数
+
+- 滞后阶数 p
+- $\text{AR}(p)$ 的检验形式
+
+进行 ADF 检验时，需要指定合适的滞后期 $p$，可用策略有两种：
+
+- 从一个比较大的滞后期 p 开始，逐渐减小，直到显著为止（都不显著说明存在单位根）
+- 根据信息准则进行选择
+
+一个未知的 $\text{ARIMA}(p,q,q)$过程能够被一个阶数为 $n=T^{1/3}$的 $\text{ARIMA}(n,1,0)$过程表示
+
+因此 ADF 检验能够处理数据生成过程中包含未知阶数 $\text{MA}(q)$成分的情况
+
+但 ADF 存在检验功效偏低的情况，在小样本且数据生成过程高度自相关的场景下，ADF 检验效果不理想
+
+### KPSS
+
+ADF 检验存在的问题：单位根是要检验的零假设，但由于 ADF 检验功效低下，经常将非单位根过程误判为单位根过程，为了解决这一问题，四位研究人员提出了 KPSS 检验 Kwiatkowski-Phillips-Schmidt-Shin Test
+
+**LBI 检验**
+
+以下状态空间方程表示动态系统中的随机行为
+
+- 观测方程：$y_t = x_t\beta_t + z_t'\gamma + \varepsilon_t$
+- 状态转移：$\beta_t = \beta_{t-1}+u_t$
+
+观测方程由两部分组成
+
+- $z_t'\gamma$ 是时不变部分，系数 $\gamma$ 与时间无关
+- $x_t\beta_t$ 是时变部分，其系数 $\beta_t$ 与时间有关
+
+方程中包含两个误差
+
+- $\varepsilon_t \sim N(0,\sigma_\varepsilon^2)$ 是测量误差，其中 $\sigma^2_\varepsilon > 0$
+    
+    测量误差来源于系统内部，概率分布通常是稳定的
+    
+- $u_t\sim N(0,\sigma_u^2) $ 是动态噪声，其中 $\sigma^2_u \ge 0$
+
+动态噪声来源于系统外部，其概率分布可能随时间动态发生改变
+
+该方程可以看作是一类 变系数回归模型  varying coefficient regression model
+
+- $y_t \in R$ 是因变量
+- $x_t,\ z_t \in R^n$ 是自变量
+- $\beta_t,\ \gamma \in R^n$ 是回归系数
+- $\sigma_\varepsilon^2$ 是误差项方差
+- $\sigma_u^2$ 是自回归项方差
+
+当 $\sigma^2_u > 0$时，该模型的时变回归系数 $\beta_t$ 服从随机游走过程
+
+当 $y_t$服从正态分布时，可以使用 LBI（Locally Best Invariant Test）检验 $\beta_t$ 的恒常性（是否随时间发生变异）
+
+- $H_0: \rho =\sigma_\varepsilon^2/\sigma_u^2 = 0$（模型误差与回归项误差无关）
+- $H_1: \rho > 0$（模型误差与回归项误差有关）
+
+KPSS 检验是 $x_t = 1,\ \beta_t = r_t,\ z_t = t,\ \gamma = \xi$ 时的特例
+
+$$
+y_t = \xi t + r_t + \varepsilon_t
+$$
+
+- 确定性趋势 $\xi t$
+- 随机游走 $r_t = r_{t-1}+u_t$，其初始值为 $r_0$ 且 $u_t\sim N(0,\sigma_u^2)$
+- 平稳误差 $\varepsilon_t \sim N(0,\sigma_\varepsilon^2)$
+
+KPSS 检验以下假设
+
+- $H_0: \sigma_u^2 = 0$（时间序列是平稳的）
+- $H_1: \sigma_u^2 \ne 0$（时间序列是非平稳的）
+
+KPSS 支持两种检验形式
+
+- 当$\xi \ne 0$时，$H_0$假定时间序列趋势平稳 trend stationary
+- 当$\xi = 0$时，$H_0$假定时间序列水平平稳 level stationary
+
+当 $\varepsilon_t \sim N(0,\sigma_\varepsilon^2)$ 时，KPSS 是标准的 LM 检验（LBI 检验是其特例）
+
+- 计算残差序列 $e_i$
+    - 当 $\xi \ne 0$时，通过 OLS 拟合 $y_t = r_0 + \xi t$ 模型获得
+    - 当 $\xi = 0$时，通过计算 $e_i = y_i - \bar y$ 获得
+- 计算 LM 统计量
+    - 计算累积残差和 $S_t = \sum\nolimits_{i=1}^te_i$
+    - 计算残差方差估计值 $\hat \sigma_\varepsilon^2 = Var(e_i)$
+    - 计算 LM 统计量 $LM = \sum\nolimits_{t=1}^TS_t^2/\hat \sigma_\varepsilon^2$
+- 进行卡方检验
+    - 指定显著水平，并根据自由度查表获得临界值
+    - 比较 LM 统计量与临界值，得出结论
+
+但通常情况下，非平稳序列与时间高度相关，因此无法满足假设 $\varepsilon_t \sim N(0,\sigma_\varepsilon^2)$
+
+为此 KPSS 检验需要使用了一个弱假设的渐进分布
+
+- 定义长期方差为 $\sigma^2 = \lim_{T\to\infty}E(S_T^2)/T$
+- 计算其近似值 $s^2(l)=T^{-1}\sum\nolimits_{t=1}^Te_t^2 + 2T^{-1}\sum\nolimits_{t=1}^lw(s,l)\sum\nolimits_{t=s+1}^Te_te_{t-s}$
+    - 为了保证 $s^2(l)$ 非负，选择 $w(s,l)=1-s/(l+1)$ 作为权重函数
+    - 为了保证 $s^2(l)$ 一致，选择 $l =\text{o}(T^{1/2})$ 作为滞后截断参数
+- 使用 $s^2(l)$ 作为 LM 检验量的分母部分 $\hat \sigma_\varepsilon^2$
+- 使用 $T^{-2}$对 LM 检验量的分子归一化 $\eta = T^{-2}\sum S_t^2$
+    - 当$\xi = 0$时，使用 $\eta_\mu$ 表示水平平稳的统计量
+    - 当$\xi \ne 0$时，使用 $\eta_\tau$ 表示趋势平稳的统计量
+- 最终得到统计量估计值
+    - $\hat\eta_\mu = \eta_\mu/s^2(l) = T^{-2}\sum S_t^2/s^2(l)$
+    - $\hat\eta_\tau = \eta_\tau/s^2(l) = T^{-2}\sum S_t^2/s^2(l)$
+
+统计量 $\eta_\mu$ 与 $\eta_\tau$ 分别服从渐进分布  $\eta_\mu \to \sigma^2\smallint\nolimits_0^1V(r)dr$ 与 $\eta_\tau \to \sigma^2\smallint\nolimits_0^1V_2^2(r)dr$
+
+其中 $V(r)=W(r)-rW(1)$是布朗桥，其在区间 $[0,1]$内服从正态分布 $V(r)\sim N(0,t(1-t))$
+
+通过大量模拟计算 $\smallint\nolimits_0^1V(r)dr$ 与 $\smallint\nolimits_0^1V_2^2(r)dr$，最终得到$\hat\eta_\mu$与$\hat\eta_\tau$的上尾临界值
+
+| 统计量与分布描述 | 0.10 | 0.05 | 0.025 | 0.01 |
+| :--- | :---: | :---: | :---: | :---: |
+| **$\eta_\mu$**: $\int_0^1 V(r)^2 dr$ | 0.347 | 0.463 | 0.574 | 0.739 |
+| **$\eta_\tau$**: $\int_0^1 V_2(r)^2 dr$ | 0.119 | 0.146 | 0.176 | 0.216 |
+
+查表即可获得 KPSS 检验的 p-value，并决定是否拒绝零假设
+
+### CH
+
+Canova-Hansen 检验是一种用于检验时间序列季节性稳定性的统计方法
+
+其本质上是一类用于检验季节性单位根的 LM 检验
+
+CH 检验形式 $y_t = \mu + x_t' \beta  + S_t + \varepsilon_t$
+
+- $x_t,\ \beta \in R^k$ 是解释性自变量与回归系数
+- 误差项 $\varepsilon_t \sim N(0,\sigma^2)$可能存在异方差现象
+- 周期长度 $s$ 为奇数的确定性季节成分 $S_t$
+
+季节成分存在两种建模方法
+
+- 使用 $s$ 个虚拟变量表示 $S_t = d_t'\alpha$
+    - $d_t\in R^s$ 是季节性虚拟变量
+    - $\alpha\in R^s$ 是权重系数
+- 使用 $2q+1$ 个频率分量表示 $S_t = f_t'\gamma =\sum\nolimits_{j=1}^{q=s/2}f_{jt}'\gamma_j$
+    - $\gamma\in R^q$ 是权重系数
+    - 三角函数项 $f_{jt} =\begin{cases}
+\cos(\frac{2\pi j}st)+\sin(\frac{2\pi j}st) & j<q\\
+\cos(\pi t) & j=q\\
+\end{cases}$
+
+此外，为了保证检验功效，需要满足两个条件
+
+- 被检验序列 $y_t$中不应该包含非季节单位根，否则会影响检验效果
+    
+    可以在检验前通过差分或对数转换消除 $y_t$中的含单位根
+    
+    研究表明这些转换不会影响 $S_t$中的单位根
+    
+- 当自变量 $x_t$被设置为滞后值 $y_{t-1},y_{t-2},...$ 时
+    
+    需要保证自回归系数 $\beta$中未捕获任何季节性模型
+    
+    否则 $S_t$中的单位根可能被回归项 $x_t' \beta$所吸收
+    
+    将滞后阶数限制为 1 阶可以避免这一问题
+    
+
+以上两种形式的回归可以重写为
+
+- 虚拟变量季节模型：$y_t = x_t' \beta + d_t'\alpha + e_t\ \ (\beta, \alpha)$
+- 三角函数季节模型：$y_t = \mu + x_t' \beta + f_t'\gamma + e_t\ \ (\mu, \beta, \gamma)$
+
+对两者进行辅助回归后，得到的残差序列 $\hat{e}_i$ 应该是一致的，区别在于
+
+- 虚拟变量季节成分 $d_t'\alpha$起到了截距项的作用，因此不需要引入独立截距项
+- 当样本数 $n$是 s 的整数幂时 $\small\sum\nolimits_{i=1}^nf_i=0$，因此三角函数季节模型需要独立引入截距项
+
+两种形式分别对应两种检验
+
+- 检验截距系数$\alpha$ 的平稳性，可以判断季节性成分是否平稳
+- 检验频率系数 $\gamma$的平稳性，可以判断季节成分是否存在单位根
+
+**稳健协方差估计**
+
+季节性成分 $d_t$ 与误差项的 $e_t$ 协方差矩阵 $\Omega = \lim_{n\to\infty}\frac{1}nE(D_nD_n')\ \ (D_n = \begin{bmatrix}d_1e_1&\cdots&d_ne_n\end{bmatrix})$
+
+频率成分$f_t$ 与误差项的 $e_t$ 协方差矩阵 $\Omega^f = \lim_{n\to\infty}\frac{1}nE(F_nF_n')\ \ (F_n = \begin{bmatrix}f_1e_1&\cdots&f_ne_n\end{bmatrix})$
+
+由于季节性的存在，残差序列 $\hat{e}_t$ 通常是异方差的且存在相关性，通常使用以下稳健估计替代
+
+- $\hat\Omega = \sum_{k=-m}^mw(\frac km)\frac1n\sum_id_{i+k}\hat e_{i+k}d_i'\hat e_i$
+- $\hat\Omega^f = \sum_{k=-m}^mw(\frac km)\frac1n\sum_if_{i+k}\hat e_{i+k}f_i'\hat e_i$
+
+其中 $w(\cdot)$是一个保证矩阵半正定的窗函数
+
+**季节性单位根检验**
+
+为了保证建模的合理性，需要假设三角函数季节模型中季节成分系数会随时间发生变化
+
+假设频率分量系数变化是一个随机游走过程 $\gamma_t = \gamma_{t-1} + u_t$
+
+当 $u_t$的协方差矩阵满秩时，$y_t$的所有频率成分都存在单位根
+
+可以建立一个满秩的选择矩阵 $A\in R^{(s-1)\times a}$ 选择其中的 a 个频率进行检测
+
+- 令 $A=I_{s-1}$ 可以检验整个 $\gamma$的稳定性，
+- 令 $A=(\tilde0,1)$ 可以检验最后一个频率 $\pi$对应的系数 $\gamma_q$ 是否存在单位根
+- 令 $A=(\tilde0,I_2,\tilde0)$ 可以检验特定频率 $(j/q)\pi$ 对应的系数 $\gamma_j$是否存在单位根
+
+随机游走过程可以重写为随机过程 $A'\gamma_t = A'\gamma_{t-1} + u_t$
+
+此时 $u_t$的协方差矩阵 $E(u_tu_t')=\tau^2 G$，其中 $\tau^2 \ge 0$是实数，$G = (A'\Omega^fA)^{-1}\in R^{a\times a}$是满秩矩阵
+
+- 当 $\tau^2 = 0$时，系数向量恒定不变 $\gamma_t = \gamma_0$
+- 当 $\tau^2 > 0$时，选择矩阵对应的频率分量存在单位根
+
+CH 检验以下假设
+
+- $H_0: \tau^2 = 0$（季节成分不存在单位根）
+- $H_1: \tau^2 > 0$（季节成分存在单位根）
+
+对应的 LM 统计量为 
+
+$$
+L = \frac{1}{n^2}\big((A'\hat\Omega^fA)^{-1}A'\small\sum\nolimits_{i=1}^n\hat F_i\hat F_iA\big)
+$$
+
+在零假设的前提下，该统计量渐进服从冯·密斯分布 von mises distribution $L \to \text{VM}(a)\ \ (a=\text{rank}(A))$
+
+**非恒定季节模式检验**
+
+为了保证建模的合理性，需要假设虚拟变量季节模型中季节成分系数会随时间发生变化
+
+引入一个满秩的选择矩阵 $A\in R^{s\times a}$ 用于构造关于 $\alpha_t$的随机过程 $A'\alpha_t = A'\alpha_{t-1} + u_t$
+
+此时 $u_t$的协方差矩阵 $E(u_tu_t')=\tau^2 G$，其中 $\tau^2 \ge 0$是实数，$G = (A'\Omega^fA)^{-1}\in R^{a\times a}$是满秩矩阵
+
+- 当 $\tau^2 = 0$时，系数向量恒定不变 $\alpha_t = \alpha_0$
+- 当 $\tau^2 \ne 0$时，系数向量存在不稳定性，下面是两个特例
+    - 高斯随机游走过程：$\alpha_t$随时间缓慢发生变化
+    - 罕见创新过程：$\alpha_t$在某个未知时刻发生突变
+
+CH 检验以下假设
+
+- $H_0: \tau^2 = 0$（季节模式是恒定的）
+- $H_1: \tau^2 \ne 0$（季节模式是非是恒定的）
+
+对应的 LM 统计量为 $L = \frac{1}{n^2}\big((A'\hat\Omega^fA)^{-1}A'\small\sum\nolimits_{i=1}^n\hat D_i\hat D_iA\big)$
+
+在零假设的前提下，该统计量渐进服从冯·密斯分布 von mises distribution $L \to \text{VM}(a)\ \ (a=\text{rank}(A))$
+
+**冯·密斯分布**
+
+自由度为 $p$的 $\text{VM}(p)$ 分布临界值如表所示
+
+| p | 1% | 2.5% | 5% | 7.5% | 10% | 20% |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| 1 | .748 | .593 | .470 | .398 | .353 | .243 |
+| 2 | 1.070 | .898 | .749 | .670 | .610 | .469 |
+| 3 | 1.350 | 1.160 | 1.010 | .913 | .846 | .679 |
+| 4 | 1.600 | 1.390 | 1.240 | 1.140 | 1.070 | .883 |
+| 5 | 1.880 | 1.630 | 1.470 | 1.360 | 1.280 | 1.080 |
+| 6 | 2.120 | 1.890 | 1.680 | 1.580 | 1.490 | 1.280 |
+| 7 | 2.350 | 2.100 | 1.900 | 1.780 | 1.690 | 1.460 |
+| 8 | 2.590 | 2.330 | 2.110 | 1.990 | 1.890 | 1.660 |
+| 9 | 2.820 | 2.550 | 2.320 | 2.190 | 2.100 | 1.850 |
+| 10 | 3.050 | 2.760 | 2.540 | 2.400 | 2.290 | 2.030 |
+| 11 | 3.270 | 2.990 | 2.750 | 2.600 | 2.490 | 2.220 |
+| 12 | 3.510 | 3.180 | 2.960 | 2.810 | 2.690 | 2.410 |
+
+一项研究指出可以通过 response surface regressions 获得任意样本尺寸与季节周期对应的 p-value
+
+https://github.com/GeoBosh/uroot/blob/master/R/ch-rs-pvalue.
+
+## ARMA 模型
+
+自回归移动平均模型 Autoregressive Moving Average 同时基于滞后值与过往误差进行预测
+
+$$
+\text{ARMA}(p,q)\ :\ y_t = c + \phi_1y_{t-1} + \cdots + \phi_py_{t-p} + \theta_1\varepsilon_{t-1} + \cdots-+\theta_q\varepsilon_{t-q}+ \varepsilon_t
+$$
+
+- $\phi_i$是自回归系数
+- $\theta_i$是误差权重
+- $\varepsilon_t$ 是白噪声
+
+$\text{ARMA}(p,q)$ 的系数$\phi_i$与$\theta_i$必须保证  $\text{AR}(p)$平稳以及 $\text{MA}(q)$ 可逆
+
+$\text{ARMA}(p,q)$ 的可解释性较差，但可以有效捕获时间序列中的模式
+
+在拟合 $\text{ARMA}(p,q)$ 模型前，通常会对时间序列进行差分，消除其中的趋势
+
+如果将该操作整合进  $\text{ARMA}(p,q)$模型，可以得到差分自回归移动平均模型 $\text{ARIMA}(p,d,q)$ Autoregressive Integrated Moving Average 模型，其中 d 用于表示差分阶数
+
+- $\text{ARIMA}(0,0,0), c=0 \ \to \ \text{WN}$
+- $\text{ARIMA}(0,1,0), c=0 \ \to \ \text{RW}$
+- $\text{ARIMA}(0,1,0), c\ne0 \ \to \ \text{RWD}$
+- $\text{ARIMA}(p,0,q) \ \to \ \text{ARMA}(p,q)$
+
+常数项 c 与差分阶数 d 对长期预测值的影响
+
+- $c = 0,\ d =0$ 预测结果收敛于 0
+- $c = 0,\ d =1$ 预测结果收敛于非零常量
+- $c = 0,\ d =2$ 预测结果呈现线性趋势
+- $c \ne 0,\ d =0$ 预测结果收敛于均值
+- $c \ne 0,\ d =1$ 预测结果呈现线性趋势
+- $c \ne 0,\ d =2$ 预测结果呈现二次趋势
+
+差分阶数 d 越大，预测区间增长的越快
+
+- d = 0 时，预测标准差等于历史数据的标准差
+- d = 1 时，预测标准差会随着预测步长线性增长
+- d = 2 时，预测标准差会随着预测步长快速增长
+
+使用后移运算表示 $\text{ARMA}(p,q)$  $y_t = c + \phi_1By_t + \cdots + \phi_pB^py_t + \theta_1B\varepsilon_t + \cdots-+\theta_qB^p\varepsilon_t+ \varepsilon_t$
+
+简化后得到 $(1-\phi_1B - \cdots - \phi_pB^p)y_t = c +(1+\theta_1B+\cdots+\theta_qB^q)\varepsilon_t$
+
+进一步简化得到 $\phi(B)y_t = c +\theta(B)\varepsilon_t$
+
+$\text{ARIMA}(p,d,q)$在 $\text{ARMA}(p,q)$ 基础上增加了差分项 $y_t'=(1-B)^dy_t$
+
+$$
+(1-\phi_1B - \cdots - \phi_pB^p)(1-B)^dy_t = c +(1+\theta_1B+\cdots+\theta_qB^q)\varepsilon_t
+$$
+
+进一步简化得到 $\phi(B)(1-B)^dy_t = c +\theta(B)\varepsilon_t$，通常情况下$d\le 2$
+
+在对季节性数据拟合 $\text{ARIMA}(p,d,q)$模型时，需要先去除其中的季节性成分
+
+此前介绍过的一种简单方式是对数据进行季节差分 $(1-B^m)y_t$，其中 $m$ 为季节周期长度
+
+更为通用的方法是使用 $\text{SARIMA}(p,d,q)(P,D,Q)_m$ Seasonal ARIMA 建模
+
+其在 $\text{ARIMA}$基础上增加了季节差分$(1-B^m)^D$与参数 $\Phi(B^m)$与$\Theta(B^m)$
+
+使用后移运算表示为 $\phi(B)\Phi(B^m)(1-B)^d(1-B^m)^Dy_t = c +\theta(B)\Theta(B^m)\varepsilon_t$
+
+通常情况下$D\le1,\ P,Q\le 3$
+
+传统的季节性分解模型假设季节性模式会按照完全相同的方式逐周期重复
+
+而 $\text{SARIMA}$模型则允许季节性模式存在随机性，并通过参数 $\Phi(B^m)$与$\Theta(B^m)$进行刻画
+
+需要注意的是，$\text{SARIMA}$ 无法处理多季节性与季节周期长度较大的情况
+
+$\text{SARIMA}$ 可以进一步简化表示为 $\phi^*(B)\Delta^d\Delta^D_m y_t = c +\theta^*(B)\varepsilon_t$
+
+- $\Delta^d\Delta^D_m y_t$ 表示 $(1-B)^d(1-B^m)^D$差分后的数据
+- $\phi^*(B)$是一个由 $\phi(B)\Phi(B^m)$合并而成的 $p+mP$ 阶多项式
+- $\theta^*(B)$是一个由 $\theta(B)\Theta(B^m)$合并而成的 $q+mQ$ 阶多项式
+
+此时 $\Delta^d\Delta^D_m y_t$ 构成一个 $\text{ARMA}(p+mP,q+mQ)$ 过程，其中 $\phi^*(B)$ 与 $\theta^*(B)$部分系数为 0
+
+这意味着可以 $\text{SARIMA}$与$\text{ARMA}$ 可以共用一套似然函数
+
+### 相关性质
+
+如果将 $\text{ARMA}$ 模型看作是一个映射函数 $\mathcal{F}(\cdot)$，输入 $y_{t-1},...,y_{1}$ 看作是一个关于时间的函数 $x(t)$
+
+两者构成一个线性系统，满足 $\mathcal{F}[\lambda_1x_1(t)+\lambda_2x_2(t)]=\lambda_1\mathcal{F}[x_1(t)]+\lambda_2\mathcal{F}[x_2(t)]$
+
+如果 $\text{ARMA}$ 模型的参数固定时，其映射关系不随时间发生变化
+
+可以为其是时不变系统，满足  $y(t) = \mathcal{F}[x(t)] \to y(t-\tau) = \mathcal{F}[x(t-\tau)]$
+
+如果 $\text{ARMA}$ 模型是时不变的，且其输入与输出服从相同的概率分布
+
+则认为其是稳定系统，满足  $y(t) = \mathcal{F}[x(t)] \to y(t),x(t)\sim(\mu,\sigma^2)$
+
+如果 $\text{ARMA}$ 模型是平稳的，且其输出仅取决于已知输入 $x(t)$，与未来的输入 $x(t+\tau)$ 无关
+
+则认为其是因果系统，满足  $y(t) = \mathcal{F}[x(t)]  = \mathcal{F}[x(t+\tau)]$
+
+$\text{ARMA}(p,q)$系数项$\phi(B)$与 $\theta(B)$ 可以分别转换为下面两个多项式
+
+- $\phi(z) = 1 - \phi_1z - ... - \phi_pz^p$
+- $\theta(z) = 1 - \theta_1z - ... - \theta_pz^q$
+
+通过对多项式施加约束，可以保证 $\text{ARMA}(p,q)$ 的性质
+
+- 平稳性条件：$\phi(z) = 1 - \phi_1z - ... - \phi_pz^p \ne 0\ \ \ (\forall |z|=1)$
+- 因果性条件：$\phi(z) = 1 - \phi_1z - ... - \phi_pz^p \ne 0\ \ \ (\forall |z|\le1)$
+- 可逆性条件：$\theta(z) = 1 - \theta_1z - ... - \theta_pz^q\ne 0\ \ \ (\forall |z|\le1)$
+
+对于可逆 $\text{ARMA}(p,q)$ 模型，可以将其统一表示为 $y_t = \sum_{i=0}^\infty\psi_i\varepsilon_{t-i}$，其中 
+
+$$
+\psi_i=
+\begin{cases}
+1,&i=0\\ 
+\theta_i+\sum_{j=1}^{\min(p,i)}\phi_j\psi_{i-j},&i\ge1
+\end{cases}
+$$
+
+由于 $\varepsilon_t\overset{\mathrm{iid}}{\sim} N(0,\sigma_\varepsilon^2)$，其无条件方差 $Var(y_t) = \sum\nolimits_{j=0}^\infty Var(\psi_i\varepsilon_{t-j})
+=\sigma_\varepsilon^2\sum\nolimits_{j=0}^\infty\psi_j^2$
+
+对于因果 $\text{ARMA}(p,q)$ 模型，令 $m =\max(p,q)$
+
+可以将 $y_t$ 其转换为 $w_t = \begin{cases}
+\sigma^{-1}y_t,&t=1,...,m\\
+\sigma^{-1}\phi(B)y_t,&t >m\\
+\end{cases}$
+
+并使用 $w_t$表示自协方差
+
+$$
+\gamma_{w(i,j)}=\begin{cases}
+\sigma^{-2}\gamma_{y(i-j)} & 1\le i,j\le m\\
+\sigma^{-2}[\gamma_{y(i-j)}-\sum_{r=1}^p\phi_r\gamma_{y(r-|i-j|)}] & \min(i,j)\le m < \max(i,j) \le 2m\\
+\sum_{r=1}^q\theta_r\theta_{r+|i-j|} & \min(i,j)> m\\
+0 & \text{otherwise}
+\end{cases}
+$$
+
+给定 $\gamma_w$的计算方式后，接下来可以借助 Innovations 算法求解 $\theta_{t,i}$ 与$r_t$
+
+- 创新方程 $\hat w_{t+1} =\begin{cases}
+\sum\nolimits_{i=0}^t\theta_{t,i}(w_{t+1-i}-\hat w_{t+1-i})&1\le t<m\\
+\sum\nolimits_{i=0}^q\theta_{t,i}(w_{t+1-i}-\hat w_{t+1-i})& t\ge m
+\end{cases}$
+- 预测方差 $r_t = E[(w_{t+1}-\hat w_{t+1})^2]$
+
+此外，误差方差存在关系 
+
+$$
+v_t = E[(y_{t+1}-\hat y_{t+1})^2]=\sigma_\varepsilon^2E[(w_{t+1}-\hat w_{t+1})^2]=\sigma_\varepsilon^2r_t
+$$
+
+### 预测误差
+
+$\text{ARMA}(p,q)$ 模型向前预测 $l$步的公式
+
+$$
+y_{t+l} = c + \phi_1y_{t+l-1} + \phi_2y_{t+l-2} ... + \phi_py_{t-p+l} + \varepsilon_{t+l} + \theta_1\varepsilon_{t+l-1} + \theta_2\varepsilon_{t+l-2} +...+ \theta_q\varepsilon_{t+l-q}
+$$
+
+$\text{ARMA}(p,q)$ 模型向前预测 $l$步的期望
+
+$$
+\hat{y}_{t+l|t} = E(y_{t+l}|I_t) = 
+E(c) + E(\varepsilon_{t+l}|I_t) 
+\\\ \ \hphantom{--} +E(\phi_1y_{t+l-1} + \phi_2y_{t+l-2} ... + \phi_py_{t-p+l}|I_t)
+\\\ \ \hphantom{--} +E(\theta_1\varepsilon_{t+l-1} + \theta_2\varepsilon_{t+l-2} +...+ \theta_q\varepsilon_{t+l-q}|I_t)
+$$
+
+在给定信息集 $I_t = \{y_{t},y_{t-1},...,y_{t-p}\}$的情况下
+
+- $E(\varepsilon_{t+l}) = 0$
+- $E(\phi_1y_{t+l-1} + \phi_2y_{t+l-2} ... + \phi_py_{t-p+l}) = \sum\nolimits_{i=1}^{p}\phi_i\hat{y}_{t+l-i|t}$
+- $E(\theta_1\varepsilon_{t+l-1} + \theta_2\varepsilon_{t+l-2} +...+ \theta_q\varepsilon_{t+l-q})= \begin{cases} \sum\nolimits_{i=1}^p\theta_i\varepsilon_{t+l-i}, & l \le q \\ 0, & l > q \end{cases}$
+
+$\text{ARMA}(p,q)$ 模型预测误差
+
+$$
+e_t(1) = y_{t+1} - \hat{y}_{t+1|t} = \varepsilon_{t+1}
+$$
+
+$$
+e_t(2) = y_{t+2} - \hat{y}_{t+2|t} = \phi_1(y_{t+1} - \hat{y}_{t+1|t}) +\theta_1\varepsilon_{t+1} + \varepsilon_{t+2} 
+\\\ \ \hphantom{--} = \phi_1\varepsilon_{t+1}+\theta_1\varepsilon_{t+1} + \varepsilon_{t+2} \\\ \ \hphantom{--} = (\phi_1+\theta_1)\varepsilon_{t+1} + \varepsilon_{t+2}
+$$
+
+$$
+e_t(3) = y_{t+3} - \hat{y}_{t+3|t} = \phi_1(y_{t+2} -  \hat{y}_{t+2|t}) +\phi_2(y_{t+1} -  \hat{y}_{t+1|t})+\theta_1\varepsilon_{t+2}+\theta_2\varepsilon_{t+1} + \varepsilon_{t+3}
+\\\ \ \hphantom{--} = \phi_1(\phi_1\varepsilon_{t+1}+\theta_1\varepsilon_{t+1} + \varepsilon_{t+2})+ \phi_2\varepsilon_{t+1}+\theta_1\varepsilon_{t+2}+\theta_2\varepsilon_{t+1} + \varepsilon_{t+3}
+\\\ \ \hphantom{--} = (\phi_1(\phi_1+\theta_1)+\phi_2+\theta_2)\varepsilon_{t+1} + (\phi_1+\theta_1)\varepsilon_{t+2} +  \varepsilon_{t+3}
+$$
+
+$$
+e_t(l) = y_{t+l} - \hat{y}_{t+l|t} = \sum\nolimits_{i=1}^{l}\psi_i\varepsilon_{t+l-i} + \varepsilon_{t+l}
+, \ \ \\
+\psi_j = \begin{cases}
+-1, & j=0\\
+-(\sum\nolimits_i^j \phi_i\psi_{j-i})+\theta_j, & 1\le j\le q \\
+-\sum\nolimits_i^j \phi_i\psi_{j-i},& j>q
+\end{cases}
+$$
+
+$\text{ARMA}(p,q)$ 模型预测误差的方差 $Var(e_t(l)) = (\psi_1^2+\psi_2^2+\cdots+\psi_{l-1}^2+1)\sigma_\varepsilon^2$
+
+### 参数估计
+
+条件最小二乘法 CSS
+
+https://github.com/SurajGupta/r-source/blob/a28e609e72ed7c47f6ddfbb86c85279a0750f0b7/src/library/stats/src/arima.c#L753
+
+https://github.com/SurajGupta/r-source/blob/master/src/library/stats/R/arima.R#L248
+
+### 似然函数
+
+给定$\text{ARMA}(p,q)$ 模型
+
+- 一步预测 
+
+$$
+\hat y_{t+1}=\begin{cases}
+\sum\nolimits_{j=1}^n\theta_{j}(y_{t+1-j}-\hat y_{t+1-j}), & 1\le t < \max(p,q) \\
+\sum\nolimits_{j=1}^p\phi_jy_{t+1-j}+
+\sum\nolimits_{j=1}^q\theta_{j}(y_{t+1-j}-\hat y_{t+1-j}), & t > \max(p,q)
+\end{cases}
+$$
+
+- 一步预测方差 
+
+$$
+v_t = E[(y_{t+1}-\hat y_{t+1})^2]
+$$
+
+条件随机变量 $y_t$ 服从正态分布 
+
+$$
+y_t|y_{t-1},...,y_1 \sim N(\hat y_t,v_t)
+$$
+
+概率密度函数 
+
+$$
+P(y_t|y_{t-1},...,y_1)=\frac{1}{\sqrt{2\pi v_t}}\exp\bigg(-\frac{(y_t-\hat y_t)^2}{2v_t}\bigg)
+$$
+
+令 $v_t = \sigma^2 r_t$，$S(\hat\phi,\hat\theta)=\sum_{t=1}^n\frac{(y_t-\hat y_t)^2}{r_{t-1}}$ 可以得到以下似然函数 
+
+$$
+L(\phi,\theta,\sigma^2) = \prod_{t=1}^nP(y_t|y_{t-1},...,y_1) = (2\pi\sigma^2)^{-n/2}(\prod\nolimits_{t=1}^nr_{t-1})^{-1/2}\exp(-\frac{S(\phi,\theta)}{2\sigma^2})
+$$
+
+然后求对数似然 
+
+$$
+-2\ell(\phi,\theta,\sigma^2) = n\log(2\pi\sigma^2) + \sum_{t=1}^n\log r_{t-1} + \frac{ S(\phi,\theta)}{\sigma^2}
+$$
+
+对 $\sigma^2$求偏导得到估计值 $\hat\sigma^2=\frac{S(\hat\phi,\hat\theta)}{n}$，将其代入对数似然函数可消去 $\sigma^2$
+
+忽略常数项，最终得到 
+
+$$
+\ell(\phi,\theta) = \log(\frac{S(\phi,\theta)}{n}) +\frac{1}{n}\sum_{t=1}^n\log r_{t-1}
+$$
+
+由于 $\ell(\phi,\theta)$ 不存在封闭的解析解，需要用到数值优化实现最大似然估计
+
+基于似然函数可以计算一系列的信息准则：
+
+- $AIC = -2\log(L)+2(k+1)$
+- $BIC = -2\log(L)+\log(n)(k+1)$
+- $AIC_C = AIC + \frac{2(k+1)(k+2)}{n-k-2}$
+
+其中 
+
+$$
+k = \begin{cases}
+p+q+P+Q,&c=0\\
+p+q+P+Q+1,&c\ne0
+\end{cases}
+$$
+
+### 建模流程
+
+建模流程主要分为两类
+
+- Box-Jenkins 方法
+- Step-Wise 方法
+
+**Box-Jenkins 方法**
+
+该方法是手工建模，适用于 $\text{AR}(p)$  与 $\text{MA}(q)$ 模型
+
+1. 观察数据，并转换数据
+    1. 应用对数转换或 BoxCox 转换稳定方差
+    2. 对数据差分消除确定性趋势成分
+2. 绘制 ACF与 PACF 图像
+    1. $\text{MA}(q)$ 过程在 ACF 的第 q 阶滞后处截断
+    2. $\text{AR}(p)$ 过程在 PACF 的第 p 阶滞后处截断
+3. 使用此前介绍的参数估计算法拟合模型
+4. 基于 $AIC$进行模型选择
+
+**Step-Wise 方法**
+
+该方法是自动建模，适用于所有模型
+
+其主要流程如下：
+
+- 通过 CH 检验确定季节差分阶数 D
+- 通过 KPSS 检验确定差分阶数 d
+- 通过差分获得平稳序列$\nabla y_t = (1-B)^d(1-B^m)^Dy_t$
+- 使用 $\nabla y_t$ 拟合 $\text{ARMA}(p+mP,q+mQ)$ 模型
+- 尝试不同的 $p,q,P,Q$ 并根据信息准则选择最优组合
+
+使用 ljung_box 假设检验判断模型残差是否存在自相关性
+
+https://otexts.com/fpp3/arima-r.html
+
+### 残差建模
+
+在标准线性回归中，通常假设误差项 $\varepsilon$为白噪声过程
+
+但在检验残差序列 $e = y - \hat y$时，往往会发现其存在自相关性
+
+此时应假设误差项 $\varepsilon$为零均值弱平稳过程
+
+如果使用 $\text{ARMA}(p,q)$ 对残差建模，以上模型可表示为 $\boldsymbol {y = X\beta + \eta} $
+
+- $y_t = \beta_1x_{1,t} + ... + \beta_kx_{k,t} + \eta_t$
+- $\phi(B)\eta_t = \theta(B)\varepsilon_t$
+- $\varepsilon_t \sim \text{WN}(0,\sigma^2)$
+
+如果 $\eta_t$ 是非平稳的，则需要对  $y_t,x_t,\eta_t$ 进行差分，实现$\text{ARIMA}(p,d,q)$ 建模的效果
+
+- $y_t' = \beta_1x'_{1,t} + ... + \beta_kx'_{k,t} + \eta'_t$
+- $\phi(B)\eta'_t = \theta(B)\varepsilon_t$
+
+分别使用  OLS 与 GLS 估计的参数 $\boldsymbol{\hat \beta}$ 可以得到：
+
+- OLS $\min_{\beta}\boldsymbol{(y -X\beta)'(y -X\beta)}$
+    - $\boldsymbol{\hat \beta}_{\text{OLS}} = \boldsymbol{(X'X)^{-1}X'y}$
+    - $Cov(\boldsymbol{\hat \beta}_{\text{OLS}} )= \boldsymbol{(X'X)^{-1}X'\Gamma_nX(X'X)^{-1}}$
+- GLS $\min_{\beta}\boldsymbol{(y -X\beta)'\Gamma_n^{-1}(y -X\beta)}$
+    - $\boldsymbol{\hat \beta}_{\text{GLS}} = \boldsymbol{(X'\Gamma_n^{-1}X)^{-1}X'\Gamma_n^{-1}y}$
+    - $Cov(\boldsymbol{\hat \beta}_{\text{GLS}} )= \boldsymbol{(X'\Gamma_n^{-1}X)^{-1}}$
+
+GLS 在拟合时引入了 $\eta_t$ 的协方差矩阵 $\Gamma_n = E(\boldsymbol{\eta\eta'})$作为权重
+
+$ \boldsymbol{\hat \beta}_{\text{GLS}}$是参数的最优的线性无偏估计，其估计误差比 OLS 更小
+
+但问题在于计算 $\Gamma_n$ 需要用到$\text{ARMA}(p,q)$ 模型的参数
+
+引入矩阵 $V(\phi,\theta)$ 与 $T(\phi,\theta)$，并且满足 $V = \sigma^{-2}\Gamma_n$ 与 $T'T = V^{-1}$
+
+此时得到计算 $Cov(T\eta) = T\Gamma_nT'=$
+
+如果有需要可以
+
+非平稳$\boldsymbol{\hat \beta}_{\text{OLS}}$
+
+此时使用 OLS 得到估计值 $\boldsymbol{\hat \beta}_{\text{OLS}}$ 存在以下问题
+
+- 如果 $\eta_t$ 是非平稳的，该估计值不能保证最优
+- 系数的显著性统计量会失效

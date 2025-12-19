@@ -1,0 +1,1121 @@
+---
+title: State Space Model
+cover: '/cover/Satellite-Tracking.jpg'
+date: 2025-11-12
+tags: ['Statistics','TimeSeriesAnalysis']
+---
+
+State space models (SSM) describe the evolution of unobserved internal states via a state equation, and link those states to observed outputs via an observation equation. They form a core mathematical framework for forecasting and filtering in dynamic systems.
+
+[comment]:summary
+
+# Background
+
+A dynamical system can usually be described by three components:
+
+- Observable system output $y$
+- Latent (unobservable) system state $x$
+- Optional system input $u$
+
+Two common examples:
+
+- View a thermometer as a system: heat is the input, air temperature is the state, and the liquid level is the output.
+- View a micrometer as a system: the true length of the object is the state, and the micrometer reading is the output.
+
+Real systems are subject to errors, typically split into:
+
+- System (process) error, related to model accuracy. For example, the thermal expansion coefficient of the liquid in a thermometer can only be approximated with finite precision.
+- Measurement (observation) error, related to measurement precision. For example, a micrometer can only approximate the actual length of an object.
+
+To obtain accurate measurements, we often repeat observations and average them to get a more precise estimate.
+
+Assume that at time $t$ the input is $u_t$, and the mean $x_t$ is both the system state and the output $y_t$.
+
+The estimation of the true value can be written as an iterative procedure:
+
+$$
+y_t = x_t = x_{t-1} + \frac{1}{t}(u_t - x_{t-1})
+$$
+
+Each iteration refines the state estimate.
+
+This process has a very nice property: the evolution of the state $x_t$ depends only on the current state $x_{t-1}$, and is independent of past and future states $x_{t-2},\dots,x_0$.
+
+The above process can be written as a linear discrete state space system:
+
+$$
+\begin{array}{ll}
+x_t = A_tx_{t-1} + B_tu_{t-1}+ \varepsilon_t,  & \varepsilon_t\sim \mathcal N(0,\sigma_\varepsilon^2) \\
+y_t = C_tx_{t} + \eta_t,  & \eta_t\sim \mathcal N(0,\sigma_\eta^2)\end{array}
+$$
+
+State equation (system dynamics):
+
+- Transition matrix $A_t$ maps the current state $x_{t-1}$ to the next state $x_t$.
+- Input matrix $B_t$ determines how the input $u_{t-1}$ affects state transitions.
+- Process noise $\varepsilon_t$ represents the discrepancy between the estimated and true states.
+
+Observation equation (measurement):
+
+- Measurement matrix $C_t$ maps the state $x_t$ to the observable output $y_t$.
+- Measurement noise $\eta_t$ represents the error introduced in this mapping.
+
+With a state space model we can treat three typical problems:
+
+- Forecasting: given $x_0,\dots,x_t$, predict future states $x_{t+n\mid t}$.
+- Filtering: given $x_0,\dots,x_t$, reconstruct the current state $x_{t\mid t}$ using all information up to $t$.
+- Smoothing: given $x_0,\dots,x_t$, reconstruct past states $x_{t-n\mid t}$ using both past and future information.
+
+Previously we introduced ARMA models. They can be written in state space form in (at least) three equivalent ways.
+
+**Hamilton form**
+
+- State dimension: $r = \max(p,q+1)$
+- State vector: $\boldsymbol x_t=\begin{bmatrix}x_t&x_{t-1}&\cdots&x_{t-r}\end{bmatrix}$
+- State equation:
+
+$$
+\boldsymbol x_t=\begin{bmatrix}
+\phi_1&\phi_2&\cdots&\phi_{r-1}&\phi_{r}\\
+1&0&\cdots&0&0\\
+0&1&\cdots&0&0\\
+\vdots&\vdots&\ddots&\vdots&\vdots\\
+0&0&\cdots&1&0\\
+\end{bmatrix}\boldsymbol x_{t-1} + \begin{bmatrix}\varepsilon_{t}\\0\\0\\\vdots\\0\end{bmatrix}
+$$
+
+- Observation equation:
+
+$$
+y_t = \begin{bmatrix}1&\theta_1&\theta_2&\cdots&\theta_{r-1}\end{bmatrix}\boldsymbol x_t
+$$
+
+The state equation is an AR process: $\phi(B)x_t=\varepsilon_t$.
+
+The observation equation is an ARMA process:
+
+$$y_t=\theta(B)x_t\ \Rightarrow\ \phi(B)y_t=\theta(B)\varepsilon_t$$
+
+**Harvey form**
+
+- State dimension: $r = \max(p,q+1)$
+- State vector: $\boldsymbol x_t=\begin{bmatrix}x_t&x_{t-1}&\cdots&x_{t-r}\end{bmatrix}$
+- State equation:
+
+$$
+\boldsymbol x_t=\begin{bmatrix}
+\phi_1&1&0&\cdots&0\\
+\phi_2&0&1&\cdots&0\\
+\vdots&\vdots&\vdots&\ddots&\vdots\\
+\phi_{r-1}&0&0&\cdots&1\\
+\phi_r&0&0&\cdots&0\\
+\end{bmatrix}\boldsymbol x_{t-1} + \varepsilon_{t}\begin{bmatrix}1\\\theta_1\\\theta_2\\\vdots\\\theta_{r-1}\end{bmatrix}
+$$
+
+- Observation equation:
+
+$$
+y_t = \begin{bmatrix}1&0&0&\cdots&0\end{bmatrix}\boldsymbol x_t
+$$
+
+Expanding the state equation recovers the ARMA representation, for example:
+
+- $x_{t,r}=\phi_rx_{t-1,1}+\theta_{r-1}\varepsilon_t$
+- $x_{t,r-1}=\phi_{r-1}x_{t-1,1}+x_{t-1,r}+\theta_{r-2}\varepsilon_t = \phi_{r-1}x_{t-1,1}+(\phi_rx_{t-2,1}+\theta_{r-1}\varepsilon_{t-1})+\theta_{r-2}\varepsilon_t$
+- ...
+
+**Canonical form**
+
+An ARMA model can be expressed via its Green's function representation:
+
+$$
+y_t = \sum_{i=0}^\infty\psi_i\varepsilon_{t-i}
+$$
+
+which describes the response of the system to white-noise shocks.
+
+Here
+
+$$
+\psi_i=
+\begin{cases}
+1,&i=0\\ 
+	\theta_i+\sum_{j=1}^{\min(p,i)}\phi_j\psi_{i-j},&i\ge1
+\end{cases}
+$$
+
+are the impulse response coefficients, i.e. how a one‑time shock at $t-i$ affects future observations.
+
+The **complementary function** characterizes the intrinsic behaviour of the ARMA model with external noise removed (long‑run trend, seasonality, etc.):
+
+$$
+C_t(l)=y_{t+l}-\sum\nolimits_{j=0}^{l-1}\psi_j\varepsilon_{t+l-j}=C_{t-1}(l+1)+\psi_l\varepsilon_t
+$$
+
+We can use $C_t(l)$ as the initial value for forecasting. At time $t-1$, the $n$‑step ahead forecast is $\hat y_{t+n\mid t-1} = C_{t-1}(n)$. This leads to the following state space system:
+
+- State dimension: $r = \max(p,q)$
+- State vector: $\boldsymbol x_t=\boldsymbol{\hat y_t} =\begin{bmatrix}C_t(0)&C_t(1)&\cdots&C_t(r-1)\end{bmatrix}$
+- State equation:
+
+$$
+\boldsymbol x_t=\begin{bmatrix}
+0&1&0&\cdots&0\\
+0&0&1&\cdots&0\\
+\vdots&\vdots&\vdots&\ddots&\vdots\\
+0&0&0&\cdots&1\\
+\phi_r&\phi_{r-1}&\phi_{r-2}&\cdots&\phi_{1}\\
+\end{bmatrix}\boldsymbol x_{t-1} + \varepsilon_{t}\begin{bmatrix}1\\\psi_1\\\psi_2\\\vdots\\\psi_{r-1}\end{bmatrix}
+$$
+
+- Observation equation:
+
+$$
+y_t = \begin{bmatrix}1&0&0&\cdots&0\end{bmatrix}\boldsymbol x_t
+$$
+
+This form gives a compact expression for forecasting:
+
+- $\hat x_{t\mid t-1} = \hat y_t = y_t - \varepsilon_t = \sum_{i=0}^\infty\psi_i\varepsilon_{t-i} - \varepsilon_t=\sum\nolimits_{i=1}^\infty\psi_i\varepsilon_{t-i}$
+- $x_{t+1} = \varepsilon_{t+1} + \psi_1\varepsilon_{t} + \psi_2\varepsilon_{t-1} + \psi_3\varepsilon_{t-2} + \cdots$
+
+    which can be rearranged as
+
+    $$x_{t+1}=\varepsilon_{t+1}+\psi_1\varepsilon_t+\phi\hat x_{t\mid t-1}$$
+
+- $\hat x_{t+1\mid t}=\phi\hat x_{t\mid t-1}+\psi_1\varepsilon_t$
+- $x_t = \hat x_{t\mid t-1} + \varepsilon_t$
+
+In practice, Hamilton and Harvey forms are more commonly used for implementation. The main differences are:
+
+- In Harvey form, intercepts appear in the state equation; in Hamilton form, intercepts appear in the observation equation.
+- Harvey form naturally supports integration/differencing; Hamilton form is typically applied to already differenced (stationary) series.
+
+Most modern references present ARMA state space models in Harvey form; we follow that convention here.
+
+# Kalman Filter
+
+## Linear projection theorem
+
+In probability and statistics, the **linear projection** of one random vector onto the span of another can be understood as its “shadow” in that space: the best linear approximation of $x$ using $y$.
+
+Given random vectors $x$ and $y$ (possibly living in different vector spaces), we look for the best linear approximation
+
+$$E(x\mid y) \approx \beta + \gamma y$$
+
+in some squared‑error sense. This projection retains as much information about $x$ as possible within the linear span of $y$.
+
+Linear projections underpin:
+
+- Regression analysis: projecting observations onto regressors to build prediction models.
+- Feature extraction: projecting high‑dimensional features into lower‑dimensional subspaces.
+- Signal processing: denoising or reconstructing signals.
+
+For a jointly normal vector
+
+$$
+E\begin{pmatrix}x\\y\end{pmatrix}=\begin{pmatrix}\mu_x\\\mu_y\end{pmatrix}, \quad Var\begin{pmatrix}x\\y\end{pmatrix}=\begin{pmatrix}\Sigma_{xx}&\Sigma_{xy}\\\Sigma_{yx}&\Sigma_{yy}\end{pmatrix}
+$$
+
+the conditional distribution is still normal with
+
+- $E(x\mid y) = \mu_x+ \Sigma_{xy}\Sigma_{yy}^{-1}(y-\mu_y)$
+- $Var(x\mid y) = \Sigma_{xx} -\Sigma_{xy}\Sigma_{yy}^{-1}\Sigma_{xy}'$
+
+This is the key identity used in Kalman filtering.
+
+## State space formulation
+
+For time series we typically use the following linear Gaussian state space model:
+
+$$
+\begin{array}{llll}
+y_t & = Z_t \alpha_t + d_t + \varepsilon_t, & \varepsilon_t\sim \mathcal N(0,H_t), \\[4pt]
+\alpha_t & = T_t \alpha_{t-1} + c_t + R_t \eta_t, & \eta_t\sim \mathcal N(0,Q_t), \\[4pt]
+& & \alpha_1\sim \mathcal N(a_1,P_1). 
+\end{array}
+$$
+
+- Measurement equation
+    - $y_t$: observed vector, $p\times 1$
+    - $d_t$: measurement intercept, $p\times 1$
+    - $\varepsilon_t$: measurement disturbance, $p\times 1$
+    - $Z_t$: design matrix, $p\times m$
+    - $H_t$: observation covariance, $p\times p$
+- State equation
+    - $\alpha_t$: state vector, $m\times 1$
+    - $c_t$: state intercept, $m\times 1$
+    - $\eta_t$: state disturbance, $r\times 1$
+    - $T_t$: transition matrix, $m\times m$
+    - $R_t$: selection matrix, $m\times r$
+    - $Q_t$: state disturbance covariance, $r\times r$
+- Initialization
+    - $a_1$: prior mean of the state, $m\times 1$
+    - $P_1$: prior covariance of the state, $m\times m$
+
+The additional matrix $R_t$ selects which components of the disturbance vector $\eta_t$ actually enter the state equation: if we regard $\eta_t$ as the full set of potential shocks, then $R_t\eta_t$ is the subset that drives the state.
+
+To ensure a valid covariance $Var(R_t\eta_t) = R_tQ_tR_t'$, we require $Q_t$ to be positive semidefinite and $R_t$ to have full column rank.
+
+We typically treat the initial state mean $a_1$ and covariance $P_1$ as given (or estimated via separate initialization schemes described later).
+
+If $y_t$ is a linear function of $\alpha_1$, $\{\varepsilon_t\}$ and $\{\eta_t\}$, then the system is linear. To keep the model linear at all times, the system matrices $Z_t,d_t,H_t,T_t,c_t,R_t,Q_t$ must be deterministic; they may vary with $t$, but only in a pre‑specified way.
+
+If these matrices are constant over time, the system is **time‑invariant**. A stationary AR process is a special case of a time‑invariant state space model.
+
+## Kalman filter
+
+The Kalman filter is an iterative algorithm that provides the optimal (minimum mean‑square error) estimate of the state vector given all information up to time $t$.
+
+Let $Y_{t-1} = \{y_{t-1},\dots,y_1\}$ denote the information set at time $t$ (for $t\ge2$). At $t=1$, $Y_0=\emptyset$.
+
+The filter constructively builds the conditional distributions of $\alpha_t$ and $y_t$ via forward recursion:
+
+- **Prediction step:** $p(y_t\mid \alpha_t) = p(y_t\mid \alpha_1,\dots,\alpha_t, Y_{t-1})$.
+- **Update step:** $p(\alpha_{t+1}\mid \alpha_t) = p(\alpha_{t+1}\mid \alpha_1,\dots,\alpha_t, Y_t)$.
+
+We aim to compute, given $Y_t$:
+
+- Conditional mean of the state: $a_{t\mid t} = E(\alpha_t\mid Y_t)$
+- Conditional covariance: $P_{t\mid t} = Var(\alpha_{t}\mid Y_t)$
+- One‑step ahead state prediction: $a_{t+1} = E(\alpha_{t+1}\mid Y_t)$
+- Its covariance: $P_{t+1} = Var(\alpha_{t+1}\mid Y_t)$
+
+When $y_t$ is not yet observed, the optimal prediction of the observation is
+
+$$
+E(y_t\mid Y_{t-1})=E(Z_t\alpha_t+d_t+\varepsilon_t\mid Y_{t-1})=Z_ta_t+d_t.
+$$
+
+Once $y_t$ is observed, the **prediction error** (innovation) is
+
+$$
+v_t = y_t - E(y_t\mid Y_{t-1})=y_t-Z_ta_t-d_t.
+$$
+
+This is the one‑step‑ahead forecast error of $y_t$ given $Y_{t-1}$. It satisfies
+
+- $E(v_t\mid Y_{t-1})=0$
+- $Cov(y_j,v_t)=0$ for $j\le t-1$
+- Unconditionally, $E(v_t)=0$.
+
+By the linear projection theorem, we have
+
+$$
+\begin{aligned}
+a_{t\mid t}
+&=E(\alpha_t\mid Y_t) \\
+&= E(\alpha_t\mid v_t,Y_{t-1}) \\
+&= E(\alpha_t\mid Y_{t-1})+Cov(\alpha_t,v_t\mid Y_{t-1})Var(v_t\mid Y_{t-1})^{-1}(v_t-E(v_t\mid Y_{t-1})).
+\end{aligned}
+$$
+
+Similarly,
+
+$$
+\begin{aligned}
+P_{t\mid t}
+&=Var(\alpha_t\mid Y_t) \\
+&=Var(\alpha_t\mid Y_{t-1})-Cov(\alpha_t,v_t\mid Y_{t-1})Var(v_t\mid Y_{t-1})^{-1}Cov(\alpha_t,v_t\mid Y_{t-1})'.
+\end{aligned}
+$$
+
+Define
+
+- $Cov(\alpha_t,v_t\mid Y_{t-1})=E[\alpha_t(Z_t\alpha_t + d_t + \varepsilon_t-Z_ta_t-d_t)'\mid Y_{t-1}] = E[\alpha_t(\alpha_t-a_t)'Z_t'\mid Y_{t-1}]=P_tZ_t'$
+- $F_t = Var(v_t\mid Y_{t-1}) = Z_tP_tZ_t'+H_t$
+
+Then
+
+- $a_{t\mid t}=a_t + P_tZ_t'F_t^{-1}v_t$
+- $P_{t\mid t} = P_t-P_tZ_t'F_t^{-1}Z_tP_t$
+
+For the prediction step,
+
+- $a_{t+1} = E(T_t\alpha_t + c_t +R_t\eta_t\mid Y_t)=T_tE(\alpha_t\mid Y_t)+ c_t=T_ta_{t\mid t}+c_t$
+- $P_{t+1} = Var(T_t\alpha_t + c_t + R_t\eta_t\mid Y_t)=T_tP_{t\mid t}T_t'+R_tQ_tR_t'$
+
+It is common to denote the **Kalman gain** as
+
+$$K_t=P_tZ_t'F_t^{-1}.$$
+
+Then $a_{t\mid t}=a_t+K_tv_t$ and $a_{t+1}=T_ta_{t\mid t}+c_t$.
+
+Collecting the main recursions:
+
+- **Innovation and its variance**
+    - $v_t=y_t-Z_ta_t-d_t$
+    - $F_t=Z_tP_tZ_t'+H_t$
+- **Update step**
+    - $a_{t\mid t}=a_t + K_tv_t$
+    - $P_{t\mid t} = P_t-P_tZ_t'F_t^{-1}Z_tP_t$
+- **Prediction step**
+    - $a_{t+1}=T_ta_{t\mid t}+c_t $
+    - $P_{t+1}=T_tP_{t\mid t}T_t' + R_tQ_tR_t'$
+
+To improve numerical stability it is common to:
+
+- Use the **Joseph form** for the covariance update:
+
+    $$P_{t\mid t}=(I-K_tZ_t)P_t(I-K_tZ_t)'+K_tH_tK_t'.$$
+
+- Enforce symmetry of $P_{t+1}$ by replacing it with $(P_{t+1} + P_{t+1}')/2$.
+
+The prediction error $v_t$ is central: the larger the discrepancy between $y_t$ and its forecast $E(y_t\mid Y_{t-1})$, the larger the correction to the state estimate.
+
+Computationally, the Kalman filter is often much cheaper than direct least squares on stacked data. For a regression with $t$ observations and observation dimension $p$, OLS in one shot inverts a $pt\times pt$ matrix, whereas the Kalman filter only inverts $t$ matrices of size $p\times p$ (often with $p=1$).
+
+If the system matrices $Z_t,H_t,T_t,R_t,Q_t$ are constant, the sequence $P_t$ converges to a steady‑state covariance $\bar P$ that solves
+
+$$
+\bar P = T\bar PT' -T\bar PZ'\bar F^{-1}Z\bar PT' + RQR',\quad \bar F = Z\bar PZ' .
+$$
+
+Using $\bar P$ directly can greatly reduce computation in long series.
+
+Define the **state prediction error** $x_t = \alpha_t - a_t$; its covariance is $Var(x_t)=P_t$. From
+
+$$
+v_t = Z_t\alpha_t+d_t+\varepsilon_t-(Z_ta_t+d_t) = Z_tx_t+\varepsilon_t
+$$
+
+and the prediction recursion we obtain
+
+$$
+x_{t+1} = \alpha_{t+1}-a_{t+1}=L_tx_t+R_t\eta_t-K_t\varepsilon_t,\quad L_t=T_t-K_tZ_t.
+$$
+
+The pair $(x_t,v_t)$ is sometimes called the **innovation analogue** of the state space model, and we can show
+
+$$
+P_{t+1}=T_tP_tL_t'+R_tQ_tR_t'.
+$$
+
+Because the innovations $v_t$ are Gaussian and serially independent, the joint density of the observations factorizes as
+
+$$
+p(y_1,\dots,y_n)=p(y_1)\prod\nolimits_{t=2}^np(y_t\mid Y_{t-1})
+$$
+
+or, equivalently,
+
+$$
+p(v_1,\dots,v_n)=\prod\nolimits_{t=1}^np(v_t),
+$$
+
+with $v_t$ independent of $Y_{t-1}$.
+
+## State smoothing
+
+Smoothing problems come in three flavours:
+
+- **Fixed‑interval**: estimate a particular state using all available data, $E(\alpha_t\mid y_1,\dots,y_s)$.
+- **Fixed‑point**: update the estimate of a given state as more data arrive, $\hat\alpha_{t\mid n}=E(\alpha_t\mid Y_n)$ for $n>t$.
+- **Fixed‑lag**: re‑estimate a state with a fixed lag using future data, $\hat\alpha_{n-j\mid n}=E(\alpha_{n-j}\mid Y_n)$ for $n>j$.
+
+Given $Y_n$ (with $n\ge t$), we want
+
+- Smoothed mean: $\hat a_t = E(\alpha_t\mid Y_n)$
+- Smoothed covariance: $V_t = Var(\alpha_{t}\mid Y_n)$
+
+Define $r_t$ as a weighted sum of future innovations $v_{t+1},\dots,v_n$:
+
+$$
+r_t=Z_{t+1}'F_{t+1}^{-1}v_{t+1}+L_{t+1}'Z_{t+2}'F_{t+2}^{-1}v_{t+2}+\cdots+L_{t+1}'\cdots L_{n-1}'Z_n'F_n^{-1}v_n.
+$$
+
+Conditioning on $Y_n$, the past information $Y_{t-1}$ is fixed, and we can write
+
+$$
+\hat \alpha_t = a_t+P_tZ_t'F_t^{-1}v_t+P_tL_t'Z_{t+1}'F_{t+1}^{-1}v_{t+1}+\cdots+P_tL_t'\cdots L_{n-1}'Z_n'F_n^{-1}v_n.
+$$
+
+This leads to the backward recursions (with $r_n=0$):
+
+- $r_{t-1}=Z_t'F_t^{-1}v_t+L_t'r_t$
+- $\hat \alpha_t = a_t+P_tr_{t-1}$
+
+Similarly, let $N_t$ collect second‑order terms (with $N_n=0$):
+
+- $N_{t-1}=Z_t'F_t^{-1}Z_t+L_t'N_tL_t$
+- $V_t = P_t-P_tN_{t-1}P_t$
+
+These four equations are the classic **state smoothing recursions**. They run backwards in time and complement the forward Kalman filter.
+
+In implementation we usually cache $v_t, F_t, K_t, a_t, P_t$ during filtering, then reuse them in smoothing. One can also recompute $v_t, F_t, K_t$ from $a_t, P_t$ if memory is a concern.
+
+## Disturbance smoothing
+
+Given $Y_n$ we may also want smoothed estimates of the disturbances $\varepsilon_t$ and $\eta_t$:
+
+- $\hat \varepsilon_t = E(\varepsilon_t\mid Y_{t-1},v_t,\dots,v_n)$
+- $Var(\varepsilon_t\mid Y_n)$
+- $\hat\eta_t = E(\eta_t\mid Y_{t-1},v_t,\dots,v_n)$
+- $Var(\eta_t\mid Y_n)$
+
+Using linear projection identities, these can be expressed in terms of the smoothed quantities. A convenient form uses the auxiliary sequences
+
+$$u_t = F_t^{-1}v_t-K_t'r_t,\qquad D_t = F_t^{-1}+K_t'N_tK_t.$$
+
+Then, for $t=n,\dots,1$:
+
+- Disturbance in the observation equation
+    - $\hat \varepsilon_t = H_tu_t$
+    - $Var(\varepsilon_t\mid Y_n) = H_t-H_tD_tH_t$
+
+and with the additional backward recursions
+
+$$
+\begin{aligned}
+r_{t-1}&=Z_t'u_t+T_t'r_t,\\
+N_{t-1}&=Z_t'D_tZ_t+T_t'N_tT_t-Z_t'K_t'N_tT_t-T_t'N_tK_tZ_t,
+\end{aligned}
+$$
+
+we obtain, again for $t=n,\dots,1$:
+
+- Disturbance in the state equation
+    - $\hat \eta_t = Q_tR_t'r_t$
+    - $Var(\eta_t\mid Y_n) = Q_t-Q_tR_t'N_tR_tQ_t$
+
+Disturbance smoothing is especially useful for diagnostic checking and for computing exact likelihoods in diffuse initialization.
+
+## Initialization
+
+Reference implementation (for example):
+
+https://github.com/statsmodels/statsmodels/blob/589f167fed77ebf6031d01ad3de1aa7b0040ced3/statsmodels/tsa/statespace/initialization.py
+
+We now consider how to set the initial mean $a_1$ and covariance $P_1$. A general parameterization is
+
+$$
+\alpha_1 = a + A\delta+R_0\eta_0,\qquad \eta_0\sim\mathcal N(0,Q_0),
+$$
+
+where
+
+- $a$ is a deterministic **constant** part.
+- $A\delta$ represents a **nonstationary** part:
+    - $\delta$ is a $q\times1$ vector.
+    - $A$ is an $m\times q$ selection matrix.
+- $R_0\eta_0$ represents a **stationary** part:
+    - $\eta_0$ is an $(m-q)\times1$ vector.
+    - $R_0$ is an $m\times(m-q)$ selection matrix.
+
+This covers four common initialization schemes.
+
+### Known (fixed) initialization
+
+If we have strong prior knowledge about certain state components, we can encode it in $a$ directly. If we have no such information, we can simply set $a=0$.
+
+### Stationary initialization
+
+If $\alpha_t$ is stationary, all state components share constant unconditional means and variances. In that case we can use the known $R_0, Q_0$ to construct the unconditional mean and covariance of $\alpha_1$.
+
+### Diffuse initialization
+
+When we have no prior information at all, we can represent our ignorance by assigning a very large variance to some state components and letting the filter learn them from the data.
+
+Treat the unknown fixed vector $\delta$ as $\delta \sim \mathcal N(0, \kappa I_q)$ with $\kappa$ large. Then
+
+$$
+a_1 = E(\alpha_1)=a,\qquad
+P_1 = Var(\alpha_1) = Var(A\delta) + Var(R_0\eta_0) = \kappa P_{\infty,1}+P_{*,1},
+$$
+
+with $P_{\infty,1}=AA'$ and $P_{*,1}=R_0Q_0R_0'$. As $\kappa\to\infty$, the variance splits into a diffuse part $P_{\infty,1}$ and a proper part $P_{*,1}$.
+
+After a finite number of steps $d$ (depending on the number of diffuse components), the diffuse part is fully absorbed and $P_{\infty,d}=0$; from then on the filter behaves like a standard Kalman filter.
+
+Diffuse initialization is simple but can suffer from numerical rounding error, and if the sample is too short (so diffusion is incomplete) the model can become degenerate.
+
+### Mixed initialization
+
+To reduce the uncertainty introduced by fully diffuse priors, we often split $\alpha_1$ into blocks:
+
+- Some components are initialized with fixed constants.
+- Some components are initialized from a stationary distribution.
+- The remaining unknown components are given diffuse priors.
+
+This also highlights a key practical difference between Harvey and Hamilton representations:
+
+- In Harvey form, once differences are included the state vector is non‑stationary and usually requires diffuse or mixed initialization.
+- In Hamilton form the implied process may be stationary and can often be initialized from its unconditional distribution.
+
+### Exact diffuse initialization
+
+We use $O(\kappa^{-j})$ to denote terms that vanish at rate $\kappa^{-j}$ as $\kappa\to\infty$. In that regime we can expand
+
+$$
+P_t =\kappa P_{\infty,t}+P_{*,t}+O(\kappa^{-1}),\quad t=1,\dots,n.
+$$
+
+For a non‑degenerate model there exists $d$ such that
+
+$$
+P_{\infty,t}\ne 0\ (t\le d),\qquad P_{\infty,t}=0\ (t>d),
+$$
+
+and from then on $P_t=P_{*,t}$.
+
+Let $\delta$ denote the $q$‑dimensional diffuse part of $\alpha_1$, with prior density
+
+$$
+\log p(\delta) = -\frac q2\log2\pi-\frac q2\log\kappa-\frac1{2\kappa}\delta'\delta.
+$$
+
+The joint density with the data is $\log p(\delta,Y_t)$; conditioning on $Y_t$ and differentiating with respect to $\delta$ yields a quadratic form whose maximizer $\tilde\delta$ is the conditional mean. Its (negative) Hessian gives the conditional covariance of $\delta$ once diffusion is complete ($t>d$). This provides an exact, non‑asymptotic estimate of the diffuse variance.
+
+If the sample does not contain enough information to complete the diffusion phase, the model is effectively non‑identifiable (degenerate).
+
+In practice we run the filter on the first $d$ observations keeping track of the diffuse part $P_{\infty,t}$; once $P_{\infty,t}$ hits zero we treat $a_{d+1}$ and $P_{d+1}=P_{*,d+1}$ as the starting values of a standard Kalman filter. This is called **exact diffuse initialization**.
+
+### Stationary initialization from model parameters
+
+If the state follows a stationary, time‑invariant transition,
+
+$$
+\alpha_t = T\alpha_{t-1} + c + R\eta_t,
+$$
+
+then the unconditional mean and covariance are determined solely by $c,T,R,Q$ and can be used as $a_1,P_1$ in the filter.
+
+The unconditional mean solves
+
+$$
+a_1=Ta_1+c\ \Rightarrow\ a_1 = (I-T)^{-1}c.
+$$
+
+The unconditional covariance solves the discrete Lyapunov equation
+
+$$
+P_1=TP_1T'+RQR'.
+$$
+
+Using vectorization and the Kronecker product,
+
+$$
+	ext{vec}(TP_1T') = (T\otimes T) \text{vec}(P_1),
+$$
+
+so
+
+$$
+	ext{vec}(P_1)=[I-T\otimes T]^{-1}\text{vec}(RQR').
+$$
+
+Both equations can be solved efficiently using standard numerical routines.
+
+# Practical aspects
+
+## Regression in state space form
+
+We can incorporate exogenous regressors into the measurement equation,
+
+$$
+y_t = Z_t\alpha_t + X_t\beta + \varepsilon_t,
+$$
+
+where $\beta$ is $k\times1$ and $X_t$ is $p\times k$.
+
+A common construction is to treat $\beta$ as part of the state:
+
+$$
+\begin{aligned}
+y_t &= \begin{bmatrix}Z_t &X_t\end{bmatrix}\begin{pmatrix}\alpha_t\\ \beta_t\end{pmatrix} + \varepsilon_t, \\
+\begin{pmatrix}\alpha_{t+1}\\ \beta_{t+1}\end{pmatrix} &= \begin{bmatrix}T_t & 0\\0 &I_k\end{bmatrix}\begin{pmatrix}\alpha_t\\ \beta_t\end{pmatrix}+\begin{bmatrix}R_t \\0\end{bmatrix}\eta_t.
+\end{aligned}
+$$
+
+With diffuse initialization the joint prior is
+
+$$
+\begin{pmatrix}\alpha_1\\ \beta_1\end{pmatrix} \sim \mathcal N \Bigg(
+\begin{pmatrix}a\\0\end{pmatrix},\kappa
+\begin{bmatrix}P_\infty & 0\\0 &I_k\end{bmatrix}+
+\begin{bmatrix}P_* & 0\\0 &0\end{bmatrix}
+\Bigg).
+$$
+
+We can then define two types of residuals:
+
+- **Recursive residuals**: $v_t=y_t-Z_t\alpha_t-X_t\hat\beta_{t-1}$ ($t=d+1,\dots,n$), where $\hat\beta_{t-1}$ comes from the state estimate.
+- **OLS residuals**: $v_t^+=y_t-Z_t\alpha_t-X_t\hat\beta$ ($t=d+1,\dots,n$), where $\hat\beta$ is estimated using all data.
+
+Recursive residuals are true innovations (serially uncorrelated), while OLS residuals incorporate all information at once. Both are useful for diagnostics.
+
+## Sequential processing (univariate treatment of multivariate series)
+
+In the basic model the observation dimension $p$ is fixed and $H_t$ is a full covariance matrix. For high‑dimensional series this can be expensive. A common trick is to process multivariate observations one component at a time.
+
+Assume now that
+
+- The observation dimension $p_t$ may vary with $t$.
+- $H_t$ is diagonal.
+- The forecast variance $F_t$ may be singular.
+
+Write
+
+$$
+\begin{aligned}
+y_t &= \begin{pmatrix}y_{t,1}\\\vdots\\ y_{t,p_t}\end{pmatrix}, &
+\varepsilon_t &= \begin{pmatrix}\varepsilon_{t,1}\\\vdots\\ \varepsilon_{t,p_t} \end{pmatrix}, &
+Z_t &= \begin{pmatrix}Z_{t,1}\\\vdots\\ Z_{t,p_t} \end{pmatrix}, &
+H_t &= \begin{pmatrix}\sigma^2_{t,1}&0&0\\0&\ddots&0\\ 0&0&\sigma^2_{t,p_t} \end{pmatrix}.
+\end{aligned}
+$$
+
+We can then re‑express the model as a sequence of scalar measurement updates:
+
+$$
+\begin{aligned}
+y_{t,i} &= Z_{t,i} \alpha_{t,i}  + \varepsilon_{t,i}, && i=1,\dots,p_t,\\
+\alpha_{t,i+1} &=\alpha_{t,i}, && i=1,\dots,p_t-1,\\
+\alpha_{t+1,1} &= T_t \alpha_{t,p_t}  + R_t \eta_t, && t=1,\dots,n,\\
+\alpha_{1,1}&\sim\mathcal N(a_1,P_1).
+\end{aligned}
+$$
+
+Define
+
+$$
+\begin{aligned}
+a_{t,1}&=E(\alpha_{t,1}), & P_{t,1}&=Var(\alpha_{t,1}\mid Y_{t-1}),\\
+a_{t,i}&=E(\alpha_{t,i}\mid Y_{t-1},y_{t,1},\dots,y_{t,i-1}), &
+P_{t,i}&=Var(\alpha_{t,i}\mid Y_{t-1},y_{t,1},\dots,y_{t,i-1}).
+\end{aligned}
+$$
+
+The forward recursions become, for $i=1,\dots,p_t$:
+
+- Innovations
+    - $v_{t,i}=y_{t,i}-Z_{t,i}a_{t,i}$
+    - $F_{t,i}=Z_{t,i}P_{t,i}Z_{t,i}'+\sigma^2_{t,i}$
+    - $K_{t,i}=P_{t,i}Z_{t,i}'F_{t,i}^{-1}$
+- Update
+    - $a_{t,i+1}=a_{t,i} + K_{t,i}v_{t,i}$
+    - $P_{t,i+1} = P_{t,i}-K_{t,i}F_{t,i}K_{t,i}'$
+- Prediction
+    - $a_{t+1,1}=T_ta_{t,p_t+1}+c_t$
+    - $P_{t+1,1}=T_tP_{t,p_t+1}T_t' + R_tQ_tR_t'$
+
+Note that the vector innovation $v_t$ in the standard multivariate filter is not simply $(v_{t,1},\dots,v_{t,p_t})'$; only the first components coincide. Likewise for $F_t$ versus $\{F_{t,i}\}$. In the scalar treatment, $F_{t,i}$ is allowed to be zero; when that happens, the corresponding observation is linearly redundant given the information set and can be skipped.
+
+Backward recursions can be written similarly (with $r_{n,p_n}=0$, $N_{n,p_n}=0$ and $L_{t,i}=I_m-K_{t,i}Z_{t,i}$):
+
+- $r_{t,i-1}=Z_{t,i}'F_{t,i}^{-1}v_{t,i}+L_{t,i}'r_{t,i}$
+- $r_{t-1,p_t-1}=T_{t-1}'r_{t,0}$
+- $N_{t,i-1}=Z_{t,i}'F_{t,i}^{-1}Z_{t,i}+L_{t,i}'N_{t,i}L_{t,i}$
+- $N_{t-1,p_t-1}=T_{t-1}N_{t,0}T_{t-1}'$
+
+With $a_t=a_{t,1}, P_t=P_{t,1}, r_{t-1}=r_{t,0}, N_{t-1}=N_{t,0}$ we recover the usual smoothing formulas
+
+- $\hat \alpha_t = a_t+P_tr_{t-1}$
+- $V_t = P_t-P_tN_{t-1}P_t$
+
+For observation disturbance smoothing we have
+
+- $\hat \varepsilon_{t,i}=\sigma_{t,i}^2F_{t,i}^{-1}(v_{t,i}-K_{t,i}'r_{t,i})$
+- $Var(\hat \varepsilon_{t,i})=\sigma_{t,i}^4F_{t,i}^{-2}(F_{t,i}-K_{t,i}'N_{t,i}K_{t,i})$
+
+If $H_t$ is not diagonal (observation disturbances correlated across components), this univariate formulation does not apply directly. In that case we can apply a Cholesky transformation
+
+$$H_t=C_tH_t^*C_t'$$
+
+with diagonal $H_t^*$ and lower‑triangular $C_t$ with ones on the diagonal, and transform the system via $y_t^*=C_t^{-1}y_t$, $Z_t^*=C_t^{-1}Z_t$, $\varepsilon_t^*=C_t^{-1}\varepsilon_t\sim\mathcal N(0,H_t^*)$.
+
+## Observation collapsing
+
+When the observation dimension $p$ is very large, inverting $F_t$ can be very expensive. If $H_t$ is nonsingular and diagonal, $P_t$ is nonsingular, and $m\ll p$, we can use the matrix identity
+
+$$
+F_t^{-1}=(Z_tP_tZ_t'+H_t)^{-1}=H_t^{-1}-H_t^{-1}Z_t(P_t^{-1}+Z_t'H_t^{-1}Z_t)^{-1}Z_t'H_t^{-1}.
+$$
+
+Intuitively, we can split the $p\times 1$ observation vector into two parts:
+
+- $y_t^*$, an $m\times 1$ vector that is informative about $\alpha_t$ and will form a new observation equation.
+- $y_t^+$, a $(p-m)\times 1$ vector that is redundant for the state and can be absorbed into the noise.
+
+Let $A_t^*=(Z_tH_tZ_t')^{-1}Z_t'H_t^{-1}$ and set $y_t^*=A_t^*y_t$. This can be interpreted as the least‑squares estimate of $\alpha_t$ given $y_t$.
+
+Choose $B_t$ so that $A_t^+=B_t(I-Z_tA_t^*)$ has full row rank and satisfies $A_t^*Z_t=I_p$, $A_t^+Z_t=0$. Define $y_t^+=A_t^+y_t$, $\varepsilon_t^*=A_t^*\varepsilon_t$, $\varepsilon_t^+=A_t^+\varepsilon_t$. Then
+
+$$
+\begin{pmatrix}y_t^*\\y_t^+\end{pmatrix} = \begin{bmatrix}A_t^*\\A_t^+\end{bmatrix}y_t=\begin{pmatrix}\alpha_t \\0\end{pmatrix}+ \begin{pmatrix}\varepsilon_t^* \\\\varepsilon_t^+\end{pmatrix}.
+$$
+
+Because $Cov(\varepsilon_t^+,\varepsilon_t^*)=0$, the second equation does not involve the state and can be dropped. We obtain the **collapsed state space system**
+
+$$
+\begin{aligned}
+y_t^*&=\alpha_t+\varepsilon_t^*,&\varepsilon_t^*&\sim\mathcal N(0,H_t^*),\\
+\alpha_{t+1}&=T_t\alpha_t+R_t\eta_t,&\eta_t&\sim\mathcal N(0,Q_t),
+\end{aligned}
+$$
+
+where $H_t^*=A_t^*H_tA_t^*$. If $m\ll p$, this can yield large computational savings, especially in time‑invariant models where $A_t^*,H_t^*$ can be precomputed.
+
+With an additional whitening matrix $C_t$ such that $C_t'C_t=(Z_tH_tZ_t')^{-1}$, we can write an equivalent system with identity observation variance:
+
+$$
+\bar y_t^*=Z_t^*\alpha_t+\bar\varepsilon_t^*,\quad \bar\varepsilon_t^*\sim\mathcal N(0,I_p),
+$$
+
+where
+
+- $\bar A_t^* = C_tZ_tH_t^{-1}$
+- $Z_t^* = \bar A_t^* Z_t = C_tZ_t'H_t^{-1}Z_t=C_t'^{-1}$
+
+## Likelihood
+
+Without diffuse initialization, the likelihood of $Y_n=(y_1,\dots,y_n)$ can be written in terms of the innovations:
+
+- $L(Y_n) = p(y_1,\dots,y_n)=p(y_1)\prod_{t=2}^np(y_t\mid Y_{t-1})$
+- $\log L(Y_n) = \sum_{t=1}^n\log p(y_t\mid Y_{t-1})=-\frac{np}2\log2\pi-\frac12\sum_{t=1}^n(\log|F_t|+v_t'F_t^{-1}v_t)$
+
+With diffuse initialization we must account for the contribution of the diffuse components. Write
+
+$$
+F_t =\kappa F_{\infty,t}+F_{*,t}+O(\kappa^{-1}),\qquad F_{\infty,t}=Z_tP_{\infty,t}Z_t'.
+$$ 
+
+Then the diffuse log‑likelihood is
+
+$$
+\begin{aligned}
+\log L_d(Y_n) 
+&= \lim_{\kappa\to\infty} \Big[\log L(Y_n)+\tfrac q2\log\kappa\Big]\\
+&= -\tfrac{np}2\log2\pi-\tfrac12\sum_{t=1}^dw_t-\tfrac12\sum_{t=d+1}^n(\log|F_t|+v_t'F_t^{-1}v_t),
+\end{aligned}
+$$
+
+with
+
+$$
+w_t=\begin{cases}
+\log|F_{\infty,t}|, & F_{\infty,t} \text{ positive definite},\\
+\log|F_{*,t}|+v_t^{(0)'}F_{*,t}^{-1}v_t^{(0)}, & F_{\infty,t} = 0.
+\end{cases}
+$$
+
+If we treat $\delta$ as an unknown fixed vector rather than a random variable, we can integrate it out and work with a **concentrated likelihood** $\log L_c(Y_n)$ involving only the proper part $F_{\delta,t}$.
+
+## Parameter estimation and variance
+
+Once we have the likelihood we can estimate model parameters by maximum likelihood. The main practical issues for ARIMA‑type models are
+
+- Enforcing parameter constraints (e.g. stationarity, invertibility) during optimization.
+- Efficiently computing gradients or using derivative‑free optimizers.
+
+For a parameter vector $\boldsymbol\theta$ with log‑likelihood $\log L(\boldsymbol\theta)$, the Fisher information matrix is
+
+$$
+\mathcal{I}(\boldsymbol\theta) = -E\Big[\frac{\partial^2\log L(\boldsymbol\theta)}{\partial\boldsymbol\theta\partial\boldsymbol\theta^T}\Big].
+$$
+
+For large samples the covariance matrix of the MLE satisfies
+
+$$
+Var(\hat{\boldsymbol\theta}) \approx \mathcal{I}(\hat{\boldsymbol\theta})^{-1}.
+$$
+
+In practice we approximate $\mathcal{I}$ using either the negative Hessian of the log‑likelihood
+
+$$
+\mathcal{I}(\hat{\boldsymbol\theta}) \approx -\frac{\partial^2\log L(\hat{\boldsymbol\theta})}{\partial\boldsymbol\theta\partial\boldsymbol\theta^T} \approx -\frac1n\sum_{i=1}^n \frac{\partial^2\log f(x_i;\hat{\boldsymbol\theta})}{\partial\boldsymbol\theta\partial\boldsymbol\theta^T},
+$$
+
+or the outer product of gradients
+
+$$
+\mathcal{I}(\hat{\boldsymbol\theta}) \approx \frac1n\sum_{i=1}^n \bigg(\frac{\partial\log f(x_i;\boldsymbol\theta)}{\partial\boldsymbol\theta}\bigg)\bigg(\frac{\partial\log f(x_i;\boldsymbol\theta)}{\partial\boldsymbol\theta}\bigg)^T.
+$$
+
+If analytic derivatives are unavailable we can approximate second derivatives via finite differences, for example
+
+$$
+\frac{\partial^2\log L(\hat{\boldsymbol\theta})}{\partial\theta_i\partial\theta_j} \approx \frac{
+\frac{\partial\log L(\boldsymbol\theta +he_i)}{\partial\theta_j} - 
+\frac{\partial\log L(\boldsymbol\theta -he_i)}{\partial\theta_j} }{2h},
+$$
+
+where $h$ is a small step size and $e_i$ is the $i$‑th unit vector.
+
+A common reparameterization for univariate models separates scale and shape. Let $\psi=(\psi_*',\sigma_*^2)'$, where $\psi_*'$ contains $n-1$ structural parameters and $\sigma_*^2$ scales the disturbance variance. The measurement equation becomes
+
+$$
+y_t = z_t'x_t+d_t+\varepsilon_t,\quad Var(\varepsilon_t)=\sigma_*^2h_t,\quad t=1,\dots,T,
+$$
+
+with $z_t$ an $m\times1$ vector and $h_t$ a scalar. The transition equation is unchanged except that $Var(\eta_t)=\sigma_*^2Q_t$, and the initial covariance is scaled as $Var(\alpha_0)=\sigma_*^2P_0$.
+
+Running the filter does not require knowing $\sigma_*^2$; only the scalar innovation variances change, $F_t=\sigma_*^2f_t$. The log‑likelihood is then
+
+$$
+\log L(\psi_*,\sigma_*^2) = -\tfrac T2\log2\pi-\tfrac T2\log\sigma_*^2-\tfrac12\sum_{t=1}^T\log f_t-\frac1{2\sigma_*^2}\sum_{t=1}^T\frac{v_t^2}{f_t}.
+$$
+
+From this we get the MLE of $\sigma_*^2$ as
+
+$$
+\hat\sigma_*^2=\frac1T\sum_{t=1}^T\frac{v_t^2}{f_t},
+$$
+
+and plugging back yields the **concentrated log‑likelihood**
+
+$$
+\log L_*(\psi_*)=-\tfrac T2\log2(\pi+1)-\tfrac12\sum_{t=1}^T\log f_t-\tfrac T2\sum_{t=1}^T\log \hat\sigma_*^2.
+$$
+
+Maximizing this with respect to $\psi_*$ is equivalent to minimizing a weighted sum of squared innovations.
+
+In Gaussian models the standardized innovations $F_t^{-1/2}v_t$ are i.i.d. $\mathcal N(0,I)$ and can be used for diagnostics. For univariate models we can also work with $\tilde v_t=v_t/\sqrt{f_t} \sim \text{NID}(0,\sigma_*^2)$.
+
+Finally, state space models naturally accommodate missing observations: we simply skip the update step for missing $y_t$ and perform only the prediction step.
+
+# Common state space examples
+
+## Static and time‑varying regression
+
+For a regression
+
+$$
+y_t=X_t\beta+\varepsilon_t,\quad \varepsilon_t\sim\mathcal N(0,H_t)
+$$
+
+with $\beta$ a $k\times1$ coefficient vector and $X_t$ an $n\times k$ regressor matrix, and possibly time‑varying observation variance $H_t$:
+
+- If $\beta$ is constant, a state space representation is
+
+    - Measurement: $y_t = Z_t\alpha_t + \varepsilon_t$ with $Z_t = X_t$.
+    - State: $\alpha_{t+1} = \alpha_t = \beta$ (i.e. $T_t=I_k$, $R_t=0$, $Q_t=0$).
+
+- If $\beta$ varies over time, we let
+
+    - Measurement: $y_t = X_t\beta_t + \varepsilon_t$ ($Z_t=X_t$).
+    - State: $\beta_{t+1} = \beta_t + \eta_t$ with $T_t=I_k$, $R_t=I_k$, $Q_t=\sigma_\eta^2I_k$.
+
+## ARMA as a state space model
+
+For an ARMA$(p,q)$ model
+
+$$
+y_t = \phi_1y_{t-1}+\cdots+\phi_py_{t-p} + \zeta_t+\theta_1\zeta_{t-1}+\cdots+\theta_q\zeta_{t-q},
+$$
+
+let $r=\max(p,q+1)$ and define the state vector
+
+$$
+\alpha_t=\begin{pmatrix}y_t\\
+\phi_2y_{t-1}+\cdots+\phi_ry_{t-r+1}+\theta_1\zeta_t+\cdots+\theta_{r-1}\zeta_{t-r+2}\\
+\vdots\\
+\phi_ry_{t-1}+\theta_{r-1}\zeta_t\\
+\end{pmatrix}.
+$$
+
+With $d_t=c_t=0$, $\varepsilon_t=0$, $H_t=0$, we obtain the state space form
+
+$$
+\alpha_{t}=T_t\alpha_{t-1}+R_t\eta_t,
+$$
+
+where
+
+$$
+T_t=
+\begin{bmatrix}
+\phi_1&1&0&\cdots&0\\
+\phi_2&0&1&\cdots&0\\
+\vdots&\vdots&\vdots&\ddots&\vdots\\
+\phi_{r-1}&0&0&\cdots&1\\
+\phi_r&0&0&\cdots&0\\
+\end{bmatrix},\quad
+R_t=\begin{pmatrix}1\\\theta_1\\\theta_2\\\vdots\\\theta_{r-1}\end{pmatrix},
+$$
+
+and
+
+$$
+y_t = Z_t\alpha_t =\begin{bmatrix}1&0&0&\cdots&0\end{bmatrix}\alpha_t.
+$$
+
+Special cases like ARMA$(1,1)$ or ARMA$(2,1)$ follow directly from this construction.
+
+## ARIMA in state space form
+
+Any $d$‑th order difference can be expressed recursively in terms of $(d-1)$‑th order differences:
+
+$$
+\begin{aligned}
+\Delta y_t &= y_t-y_{t-1},\\
+\Delta^2 y_t &=\Delta y_t-\Delta y_{t-1} \Rightarrow \Delta y_t = \Delta^2 y_t +\Delta y_{t-1},\\
+\Delta^d y_t &= \Delta^{d-1} y_t-\Delta^{d-1} y_{t-1} \Rightarrow \Delta^{d-1} y_t = \Delta^d y_t +\Delta^{d-1} y_{t-1}.
+\end{aligned}
+$$
+
+So we can rewrite $y_t$ in terms of $\Delta^d y_t$ and past differences:
+
+$$
+y_t = \Delta^d y_t +\Delta^{d-1} y_{t-1} + \cdots + \Delta y_{t-1}+ y_{t-1}.
+$$
+
+The measurement equation thus consists of
+
+- one state component for the differenced process $\Delta^d y_t$;
+- $d$ components to reconstruct $y_t$ from past differences.
+
+This can be implemented by augmenting the ARMA state vector with a $d$‑dimensional buffer. 
+
+$$
+y_t = \begin{bmatrix}1_d&1&0\end{bmatrix}'\alpha_t
+$$
+
+Let $y_t^* = \Delta^dy_t$; for an ARIMA$(p,d,q)$ model one convenient state is
+
+$$
+\alpha_t=\begin{pmatrix}
+y_{t-1}\\\Delta y_{t-1}\\\vdots\\\Delta^{d-1}y_{t-1}\\y^*_t\\
+\phi_2y^*_{t-1}+\cdots+\phi_ry^*_{t-r+1}+\theta_1\zeta_t+\cdots+\theta_{r-1}\zeta_{t-r+2}\\
+\vdots\\ \end{pmatrix}
+$$
+
+with a transition matrix $T_t$ of the block form shown in the original derivation and a state equation
+
+$$
+\alpha_{t}=T_t\alpha_{t-1}+R_t\eta_t=
+\left[
+\begin{array}{c|c}
+\begin{matrix}1&1&\cdots&1&1\\
+0&1&\cdots&1&1\\
+\vdots&\vdots&\ddots&\vdots&\vdots\\
+0&0&\cdots&1&1\\
+0&0&\cdots&0&1\\
+\end{matrix} &
+\begin{matrix}1&0&0&\cdots&0&0\\
+1&0&0&\cdots&0&0\\
+\vdots&\vdots&\vdots&\ddots&\vdots&\vdots\\
+1&0&0&\cdots&0&0\\
+1&0&0&\cdots&0&0\\
+\end{matrix}
+\\
+\hline 
+  0_{d\times d}& 
+\begin{matrix}\phi_1&1&0&\cdots&0\\
+\phi_2&0&1&\cdots&0\\
+\vdots&\vdots&\vdots&\ddots&\vdots\\
+\phi_{r-1}&0&0&\cdots&1\\
+\phi_r&0&0&\cdots&0\\
+\end{matrix}
+\end{array}
+\right]\alpha_{t-1} + \begin{pmatrix}\vdots\\0_d\\\vdots\\1\\\theta_1\\\theta_2\\\vdots\\\theta_{r-1}\end{pmatrix}\zeta_{t}
+$$
+
+This yields a linear state space representation for any ARIMA$(p,d,q)$ model.
+
+## SARIMA and SARIMAX
+
+For a seasonal ARIMA model
+
+$$
+\phi_p (L) \tilde \phi_P (L^s) \Delta^d \Delta_s^D y_t = 
+        	heta_q (L) \tilde \theta_Q (L^s) \zeta_t,
+$$
+
+we can combine the non‑seasonal and seasonal polynomials into
+
+$$
+\Phi (L) \Delta^d \Delta_s^D y_t = 
+        \Theta (L) \zeta_t,
+$$
+
+where $\Phi$ is degree $p+sP$ and $\Theta$ is degree $q+sQ$. This is equivalent to an ARMA$(p+sP,q+sQ)$ model for the differenced series $\Delta^d \Delta_s^D y_t$, and can be mapped to state space exactly as in the ARIMA case.
+
+The state equation of SARIMA is
+
+$$
+\alpha_{t}=T_t\alpha_{t-1}+R_t\eta_t=
+\left[
+\begin{array}{c|c}
+\begin{matrix}1&1&\cdots&1&1\\
+0&1&\cdots&1&1\\
+\vdots&\vdots&\ddots&\vdots&\vdots\\
+0&0&\cdots&1&1\\
+0&0&\cdots&0&1\\
+\end{matrix} &
+\begin{matrix}1&0&0&\cdots&0&0\\
+1&0&0&\cdots&0&0\\
+\vdots&\vdots&\vdots&\ddots&\vdots&\vdots\\
+1&0&0&\cdots&0&0\\
+1&0&0&\cdots&0&0\\
+\end{matrix}
+\\
+\hline 
+  0_{d\times d}& 
+\begin{matrix}\phi_1&1&0&\cdots&0\\
+\phi_2&0&1&\cdots&0\\
+\vdots&\vdots&\vdots&\ddots&\vdots\\
+\phi_{r-1}&0&0&\cdots&1\\
+\phi_r&0&0&\cdots&0\\
+\end{matrix}
+\end{array}
+\right]\alpha_{t-1} + \begin{pmatrix}\vdots\\0_d\\\vdots\\1\\\theta_1\\\theta_2\\\vdots\\\theta_{r-1}\end{pmatrix}\zeta_{t}
+$$
+
+
+Adding exogenous regressors leads to SARIMAX models $(p, d, q) \times (P, D, Q)_s$
+
+$$
+\begin{array}{llll}
+\phi_p (L) \tilde \phi_P (L^s) \Delta^d \Delta_s^D y_t = A(t) +
+    	\theta_q (L) \tilde \theta_Q (L^s) \zeta_t\nonumber
+\end{array}
+$$
+
+where the regression part is handled as in the regression‑in‑state‑space section and the residuals follow a SARIMA process
+
+$$
+\begin{array}{llll}
+y_t & = \beta_t x_t + u_t \nonumber\\
+\phi_p (L) \tilde \phi_P (L^s) \Delta^d \Delta_s^D u_t & = A(t) +
+    \theta_q (L) \tilde \theta_Q (L^s) \zeta_t\nonumber
+\end{array}
+$$
+
+## Regression with ARMA errors
+
+Consider
+
+$$
+y_t=X_t\beta+\xi_t,\quad \xi_t\sim\text{ARMA}(p,q).
+$$
+
+We can represent this as a state space system
+
+- Measurement
+
+    $$
+    y_t = Z_t\alpha_t,
+    $$
+
+    with
+
+    $$
+    Z_t = \begin{bmatrix}X_t&1&0&\cdots&0\end{bmatrix},\quad
+    \alpha_t = \begin{bmatrix}\beta_t\\ \alpha_{t,\text{ARMA}}\end{bmatrix}.
+    $$
+
+- State
+
+    $$
+    \alpha_{t+1} = T_t\alpha_t + R_t\eta_t,
+    $$
+
+    where typically
+
+    $$
+    T_t =\begin{bmatrix}I_k & 0 \\ 0 & T_{\text{ARMA}}\end{bmatrix},\quad
+    R_t =\begin{bmatrix}0 \\ R_{\text{ARMA}}\end{bmatrix}.
+    $$
+
+This formulation allows simultaneous estimation of regression coefficients and ARMA error structure using the Kalman filter and smoother.
