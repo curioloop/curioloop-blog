@@ -173,7 +173,7 @@ $$
 
 通过将高维随机向量投影到低维空间，可以实现
 
-- 回归分析**：**将样本数据映射至回归系数，利用投影后的数据建立预测模型
+- 回归分析：将样本数据映射至回归系数，利用投影后的数据建立预测模型
 - 特征提取：将高维特征映射至低维特征，从原始数据中提取出最能代表数据的特征
 - 信号处理：对信号进行降噪滤波或重建
 
@@ -475,19 +475,19 @@ $$
 
 通过该模型可以表示 4 种初始化方式
 
-- 已知
+### 已知
 
 如果用户知晓某些领域先验知识，可以通过常量部分将其引入，用于初始化模型
 
 如果不存在任何确定信息，则可以直接设置 $a=0$
 
-- 平稳
+### 平稳
 
 如果$\alpha_t$是平稳的，则所有状态随机变量具有稳定的均值与方差
 
 因此可以通过已知的 $R_0,\eta_0,Q_0$ 描述模型的初始均值、方差、协方差
 
-- 扩散
+### 扩散
 
 当不存在任何先验知识时，可以指定一个较大的初始状态误差，在迭代过程中逐步矫正
 
@@ -506,7 +506,7 @@ $$
 
 并且当样本数量不足以完成扩散时，模型会发生退化
 
-- 混合
+### 混合
 
 为了减少扩散引入的不确定性，可以在初始化时将 $\alpha_1$划分为多个区间
 
@@ -519,7 +519,7 @@ $$
 - 一旦 Harvey 形式包含了差分过程，其状态向量是非平稳的，只能使用扩散初始化
 - 而 Hamilton 形式表示一个平稳过程 ，可以基于模型参数平稳初始化状态
 
-**精确扩散**
+### 精确扩散
 
 使用$O(\kappa^{-j})$ 表示 $\kappa\to\infty$ 时，函数 $f(\kappa)$ 展开项 $\kappa^jf(\kappa)$的收敛于有限值，其中 $j=1,2$
 
@@ -571,7 +571,7 @@ P_{\infty,t}=0,&t > d
 
 这种初始化方式被称为 exact diffuse init
 
-**平稳参数**
+### 平稳参数
 
 如果状态由平稳过程产生，则卡尔曼滤波器的初始估计 $a_1$ 与初始估计误差 $P_1$ 由其无条件均值和方差给出
 
@@ -744,7 +744,7 @@ $$
 
 $$
 \begin{array}{llll}
-\begin{pmatrix}y_t^*\\y_t^+\end{pmatrix} &= \begin{bmatrix}A_t^*\\A_t^+\end{bmatrix}y_t=\begin{pmatrix}\alpha_0 \\0\end{pmatrix}+ \begin{pmatrix}\varepsilon_t^* \\\\varepsilon_t^+\end{pmatrix}\nonumber
+\begin{pmatrix}y_t^*\\y_t^+\end{pmatrix} &= \begin{bmatrix}A_t^*\\A_t^+\end{bmatrix}y_t=\begin{pmatrix}\alpha_0 \\0\end{pmatrix}+ \begin{pmatrix}\varepsilon_t^* \\ \varepsilon_t^+\end{pmatrix}\nonumber
 \end{array}
 $$
 
@@ -1158,7 +1158,7 @@ SARIMA 模型可以表示为 $(p, d, q) \times (P, D, Q)_s$
 $$
 \begin{array}{llll}
 \phi_p (L) \tilde \phi_P (L^s) \Delta^d \Delta_s^D y_t = A(t) +
-    	heta_q (L) \tilde \theta_Q (L^s) \zeta_t\nonumber
+    	\theta_q (L) \tilde \theta_Q (L^s) \zeta_t\nonumber
 \end{array}
 $$
 
